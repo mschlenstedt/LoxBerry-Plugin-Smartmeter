@@ -1,0 +1,531 @@
+<center>
+<img src="/system/images/icons/<TMPL_VAR NAME=PSUBFOLDER>/icon_128.png">
+<table border=0 cellpadding=10>
+<tr>
+	<td>
+	<a id="btnrescan" data-icon="refresh" data-role="button" data-mini="true" href="javascript:location.reload(true)"><TMPL_VAR NAME=T::BUTTON.RESCAN></a>
+	</td>
+	<td>
+	<a id="btnshowlog" data-icon="search" data-role="button" data-mini="true" href="./logfiles.cgi" target="_blank"><TMPL_VAR NAME=T::BUTTON.SHOWLOGFILE></a>
+	</td>
+	<td>
+	<a  id="btnlog" data-icon="delete" data-role="button" data-mini="true" target="log" href="./index.cgi&clearcache=1"><TMPL_VAR NAME=T::BUTTON.CLEARCACHE></a>
+	</td>
+</tr>
+</table>
+</center>
+
+<form method="post" data-ajax="false" name="main_form" id="main_form" action="./index.cgi">
+<input type="hidden" name="saveformdata" value="1">
+
+<table border=0 width="100%" cellpadding="10">
+<tr>
+	<td colspan=4>
+	<h2><TMPL_VAR NAME=T::FORMTABLE.GENERALSETTINGS></h2>
+	</td>
+</tr>
+<tr>
+	<td width="20%">
+	<label id="labelauto"><TMPL_VAR NAME=T::FORMTABLE.READ_METERS></label>
+	</td>
+	<td width="55%">
+	<table border=0 width="100%">
+	<tr>
+		<td width="20%">
+		<fieldset>
+		<select onChange="disable_cron();" id="read" name="read" data-role="flipswitch">
+		<option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option>
+		<option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option>
+		</select>
+		</fieldset>
+		<script>
+		// Select option depending on saved config
+		$( "#read").val( "<TMPL_VAR NAME=READ>" );
+		</script>
+		</td>
+		<td>
+		<select id="cron" name="cron" data-mini="true" data-native-menu="true">
+		<option value="1"><TMPL_VAR NAME=T::FORMTABLE.1MINUTE></option>
+		<option value="3"><TMPL_VAR NAME=T::FORMTABLE.3MINUTE></option>
+		<option value="5"><TMPL_VAR NAME=T::FORMTABLE.5MINUTE></option>
+		<option value="10"><TMPL_VAR NAME=T::FORMTABLE.10MINUTE></option>
+		<option value="15"><TMPL_VAR NAME=T::FORMTABLE.15MINUTE></option>
+		<option value="30"><TMPL_VAR NAME=T::FORMTABLE.30MINUTE></option>
+		<option value="60"><TMPL_VAR NAME=T::FORMTABLE.60MINUTE></option>
+		</select>
+		<script>
+		// Select option depending on saved config
+		$( "#cron").val( "<TMPL_VAR NAME=CRON>" );
+		</script>
+		</td>
+	</tr>
+	</table>
+	</td>
+	<td width="5%" valign="middle">
+	&nbsp;
+	</td>
+	<td width="20%">
+	<font size="-1"><TMPL_VAR NAME=T::FORMTABLE.READ_METERS_HELP></font>
+	</td>
+</tr>
+<tr>
+	<td width="20%">
+		<label id="labelsendudp"><TMPL_VAR NAME=T::FORMTABLE.SEND_UDP></label>
+	</td>
+	<td width="55%">
+		<table border=0	width="100%">
+		<tr>
+			<td width="20%">
+			<fieldset>
+			<select onChange="disable_udp();" id="sendudp" name="sendudp" data-role="flipswitch">
+			<option	value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option>
+			<option	value="1"><TMPL_VAR NAME=T::GENERIC.ON></option>
+			</select>
+			</fieldset>
+			<script>
+			// Select option depending on saved config
+			$( "#sendudp").val( "<TMPL_VAR NAME=SENDUDP>" );
+			</script>
+			</td>
+			<td>
+			<table border=0 width="100%">
+			<tr>
+				<td>
+				<label id="labeludpport"><TMPL_VAR NAME=T::FORMTABLE.UDP_PORT></label>
+				</td>
+				<td>
+				<input id="udpport" name="udpport" type="text" data-validation="number" class="textfield" value="<TMPL_VAR NAME=UDPPORT>"
+				data-validation-allowing="range[1;65000]"
+				data-validation-error-msg="<TMPL_VAR NAME=SERIAL> <TMPL_VAR NAME=T::FORMTABLE.UDP_PORT> <TMPL_VAR NAME=T::FORMTABLE.UDP_PORT_VALIDATION>">
+				</td>
+			</tr>
+			</table>
+			</td>
+		</tr>
+		</table>
+	</td>
+	<td width="5%" valign="middle">
+	 &nbsp;
+	</td>
+	<td width="20%">
+	 <font size="-1"><TMPL_VAR NAME=T::FORMTABLE.SEND_UDP_HELP></font>
+	</td>
+</tr>
+<tr>
+	<td width="20%">
+	<label id="labelsendhtml"><TMPL_VAR NAME=T::FORMTABLE.SEND_HTTP></label>
+	</td>
+	<td width="55%">
+	<fieldset>
+	<select id="sendhtml" name="sendhtml" data-role="flipswitch" disabled=disabled>
+	<option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option>
+	<option selected=selected value="1"><TMPL_VAR NAME=T::GENERIC.ON></option>
+	</select>
+	</fieldset>
+	</td>
+	<td width="5%" valign="middle">
+	&nbsp;
+	</td>
+	<td width="20%">
+	<font size="-1"><TMPL_VAR NAME=T::FORMTABLE.SEND_HTTP_HELP></font>
+	</td>
+</tr>
+<tr>
+	<td colspan=4>
+	&nbsp;
+	</td>
+</tr>
+
+<TMPL_LOOP NAME=ROWS>
+
+<tr>
+	<td colspan=4>
+	<h2><TMPL_VAR NAME=__counter__>. <TMPL_VAR NAME=T::FORMTABLEROWS.ROWTITLE> <TMPL_VAR NAME=SERIAL></h2>
+	</td>
+</tr>
+<tr>
+	<td width="20%">
+	<label id="label<TMPL_VAR NAME=SERIAL>_name"><TMPL_VAR NAME=T::FORMTABLEROWS.NAME></label>
+	</td>
+	<td width="55%">
+	<input id="<TMPL_VAR NAME=SERIAL>_name" name="<TMPL_VAR NAME=SERIAL>_name" type="text" data-validation="alphanumeric" data-validation-allowing="-_"
+	class="textfield" value="<TMPL_VAR NAME=NAME>"
+	data-validation-error-msg="<TMPL_VAR NAME=SERIAL> <TMPL_VAR NAME=T::FORMTABLEROWS.NAME> <TMPL_VAR NAME=T::FORMTABLEROWS.NAME_VALIDATION>">
+	</td>
+	<td width="5%">
+	&nbsp;
+	</td>
+	<td width="20%">
+	<font size="-1"><TMPL_VAR NAME=T::FORMTABLEROWS.NAME_HELP></font>
+	</td>
+</tr>
+<tr>
+	<td width="20%">
+	<label id="label<TMPL_VAR NAME=SERIAL>_link"><TMPL_VAR NAME=T::FORMTABLEROWS.VIRTUALHTTPINPUT></label>
+	</td>
+	<td width="55%">
+	<font size="-1"><a id="<TMPL_VAR NAME=SERIAL>_link" href="./show.cgi?serial=<TMPL_VAR NAME=SERIAL>" target="_blank">http://<TMPL_VAR NAME=LOGINNAME>:<TMPL_VAR NAME=T::FORMTABLEROWS.PASSWORD>@<TMPL_VAR NAME=HOST>/admin/plugins/<TMPL_VAR NAME=PSUBFOLDER>/show.cgi?serial=<TMPL_VAR NAME=SERIAL></a></font>
+	</td>
+	<td width="5%">
+	&nbsp;
+	</td>
+	<td width="20%">
+	<font size="-1"><TMPL_VAR NAME=T::FORMTABLEROWS.VIRTUALHTTPINPUT_HELP></font>
+	</td>
+</tr>
+<tr>
+	<td width="20%">
+	<label id="label<TMPL_VAR NAME=SERIAL>_meter"><TMPL_VAR NAME=T::FORMTABLEROWS.METER></label>
+	</td>
+	<td width="55%">
+	<select onChange="disable_<TMPL_VAR NAME=SERIAL>_meter();" id="<TMPL_VAR NAME=SERIAL>_meter" name="<TMPL_VAR NAME=SERIAL>_meter" data-mini="true" data-native-menu="true">
+	<option value="0"><TMPL_VAR NAME=T::FORMTABLEROWS.PLEASESELECT></option>
+	<option value="manual"><TMPL_VAR NAME=T::FORMTABLEROWS.MANUAL></option>
+	<option value="genericd0">Generic D0-Protocol</option>
+	<option value="genericsml">Generic SML-Protocol</option>
+	<option value="iskra173d0">Iskra MT173 (D0-Protocol)</option>
+	<option value="iskra173sml">Iskra MT173 (SML-Protocol)</option>
+	<option value="iskra174d0">Iskra MT174 (D0-Protocol)</option>
+	<option value="iskra174sml">Iskra MT174 (SML-Protocol)</option>
+	<option value="iskra175d0">Iskra MT175 (D0-Protocol)</option>
+	<option value="iskra175sml">Iskra MT175 (SML-Protocol)</option>
+	<option value="iskra681sml">Iskra MT681 (SML-Protocol)</option>
+	<option value="pafal20ec3gr">Pafal 20ec3gr (D0-Protocol)</option>
+	</select>
+	<script>
+	// Select option depending on saved config
+	$( "#<TMPL_VAR NAME=SERIAL>_meter").val( "<TMPL_VAR NAME=METER>" );
+	// Disable some options on Load depending on selected value
+	disable_<TMPL_VAR NAME=SERIAL>_meter();
+	// Disable some options if not manual configuration
+	function disable_<TMPL_VAR NAME=SERIAL>_meter() {
+		if ( $( "#<TMPL_VAR NAME=SERIAL>_meter" ).val() == "manual" ) {
+			$( "#label<TMPL_VAR NAME=SERIAL>_protocol" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_protocol" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_protocol" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_protocol" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_baudrate" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_baudrate" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_baudrate" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_baudrate" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_startbaudrate" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_startbaudrate" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_startbaudrate" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_startbaudrate" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_parity" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_parity" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_parity" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_parity" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_handshake" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_handshake" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_handshake" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_handshake" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_databits" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_databits" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_databits" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_databits" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_stopbits" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_stopbits" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_stopbits" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_stopbits" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_timeout" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_timeout" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_timeout" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_timeout" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_delay" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).selectmenu('refresh', true);
+		} else {
+			$( "#label<TMPL_VAR NAME=SERIAL>_protocol" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_protocol" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_protocol" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_protocol" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_baudrate" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_baudrate" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_baudrate" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_baudrate" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_startbaudrate" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_startbaudrate" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_startbaudrate" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_startbaudrate" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_parity" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_parity" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_parity" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_parity" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_handshake" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_handshake" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_handshake" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_handshake" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_databits" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_databits" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_databits" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_databits" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_stopbits" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_stopbits" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_stopbits" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_stopbits" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_timeout" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_timeout" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_timeout" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_timeout" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_delay" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).selectmenu('refresh', true);
+		}
+	}
+	</script>
+	</td>
+	<td width="5%">
+	&nbsp;
+	</td>
+	<td width="20%">
+	<font size="-1"><TMPL_VAR NAME=T::FORMTABLEROWS.METER_HELP></font>
+	</td>
+</tr>
+<tr>
+	<td width="20%" valign="top">
+	<label id="label<TMPL_VAR NAME=SERIAL>_manualsettings"><TMPL_VAR NAME=T::FORMTABLEROWS.MANUALSETTINGS></label>
+	</td>
+	<td width="55%">
+	<table border=0 width="100%">
+	<tr>
+		<td>
+		<label id="label<TMPL_VAR NAME=SERIAL>_protocol"><TMPL_VAR NAME=T::FORMTABLEROWS.PROTOCOL></label>
+		</td>
+		<td colspan=3>
+		<select id="<TMPL_VAR NAME=SERIAL>_protocol" name="<TMPL_VAR NAME=SERIAL>_protocol" data-mini="true" data-native-menu="true">
+		<option value="genericd0">Generic D0-Protocol</option>
+		<option value="genericsml">Generic SML-Protocol</option>
+		<option value="iskra173d0">Iskra MT173 (D0-Protocol)</option>
+		<option value="iskra173sml">Iskra MT173 (SML-Protocol)</option>
+		<option value="iskra174d0">Iskra MT174 (D0-Protocol)</option>
+		<option value="iskra174sml">Iskra MT174 (SML-Protocol)</option>
+		<option value="iskra175d0">Iskra MT175 (D0-Protocol)</option>
+		<option value="iskra175sml">Iskra MT175 (SML-Protocol)</option>
+		<option value="iskra681sml">Iskra MT681 (SML-Protocol)</option>
+		<option value="pafal20ec3gr">Pafal 20ec3gr (D0-Protocol)</option>
+		</select>
+		<script>
+		// Select option depending on saved config
+		$( "#<TMPL_VAR NAME=SERIAL>_protocol").val( "<TMPL_VAR NAME=PROTOCOL>" );
+		</script>
+		</td>
+	</tr>
+	<tr>
+		<td>
+		<label id="label<TMPL_VAR NAME=SERIAL>_baudrate"><TMPL_VAR NAME=T::FORMTABLEROWS.BAUDRATE></label>
+		<td>
+		<select id="<TMPL_VAR NAME=SERIAL>_baudrate" name="<TMPL_VAR NAME=SERIAL>_baudrate" data-mini="true" data-native-menu="true">
+		<option value="300">300 Baud</option>
+		<option value="600">600 Baud</option>
+		<option value="1200">1200 Baud</option>
+		<option value="2400">2400 Baud</option>
+		<option value="4800">4800 Baud</option>
+		<option value="9600">9600 Baud</option>
+		<option value="19200">19200 Baud</option>
+		<option value="57600">57600 Baud</option>
+		<option value="115300">115300 Baud</option>
+		</select>
+		<script>
+		// Select option depending on saved config
+		$( "#<TMPL_VAR NAME=SERIAL>_baudrate").val( "<TMPL_VAR NAME=BAUDRATE>" );
+		</script>
+		</td>
+		<td>
+		<label id="label<TMPL_VAR NAME=SERIAL>_startbaudrate"><TMPL_VAR NAME=T::FORMTABLEROWS.STARTBAUDRATE></label>
+		<td>
+		<select id="<TMPL_VAR NAME=SERIAL>_startbaudrate" name="<TMPL_VAR NAME=SERIAL>_startbaudrate" data-mini="true" data-native-menu="true">
+		<option value="300">300 Baud</option>
+		<option value="600">600 Baud</option>
+		<option value="1200">1200 Baud</option>
+		<option value="2400">2400 Baud</option>
+		<option value="4800">4800 Baud</option>
+		<option value="9600">9600 Baud</option>
+		<option value="19200">19200 Baud</option>
+		<option value="57600">57600 Baud</option>
+		<option value="115300">115300 Baud</option>
+		</select>
+		<script>
+		// Select option depending on saved config
+		$( "#<TMPL_VAR NAME=SERIAL>_startbaudrate").val( "<TMPL_VAR NAME=STARTBAUDRATE>" );
+		</script>
+		</td>
+	</tr>
+	<tr>
+		<td>
+		<label id="label<TMPL_VAR NAME=SERIAL>_parity"><TMPL_VAR NAME=T::FORMTABLEROWS.PARITY></label>
+		<td>
+		<select id="<TMPL_VAR NAME=SERIAL>_parity" name="<TMPL_VAR NAME=SERIAL>_parity" data-mini="true" data-native-menu="true">
+		<option value="none">None</option>
+		<option value="odd">Odd</option>
+		<option value="even">Even</option>
+		</select>
+		<script>
+		// Select option depending on saved config
+		$( "#<TMPL_VAR NAME=SERIAL>_parity").val( "<TMPL_VAR NAME=PARITY>" );
+		</script>
+		</td>
+		<td>
+		<label id="label<TMPL_VAR NAME=SERIAL>_handshake"><TMPL_VAR NAME=T::FORMTABLEROWS.HANDSHAKE></label>
+		<td>
+		<select id="<TMPL_VAR NAME=SERIAL>_handshake" name="<TMPL_VAR NAME=SERIAL>_handshake" data-mini="true" data-native-menu="true">
+		<option value="none">None</option>
+		<option value="rts">RTS</option>
+		<option value="xoff">XOFF</option>
+		</select>
+		<script>
+		// Select option depending on saved config
+		$( "#<TMPL_VAR NAME=SERIAL>_handshake").val( "<TMPL_VAR NAME=HANDSHAKE>" );
+		</script>
+		</td>
+	</tr>
+	<tr>
+		<td>
+		<label id="label<TMPL_VAR NAME=SERIAL>_databits"><TMPL_VAR NAME=T::FORMTABLEROWS.DATABITS></label>
+		<td>
+		<select id="<TMPL_VAR NAME=SERIAL>_databits" name="<TMPL_VAR NAME=SERIAL>_databits" data-mini="true" data-native-menu="true">
+		<option value="5">5</option>
+		<option value="6">6</option>
+		<option value="7">7</option>
+		<option value="8">8</option>
+		</select>
+		<script>
+		// Select option depending on saved config
+		$( "#<TMPL_VAR NAME=SERIAL>_databits").val( "<TMPL_VAR NAME=DATABITS>" );
+		</script>
+		</td>
+		<td>
+		<label id="label<TMPL_VAR NAME=SERIAL>_stopbits"><TMPL_VAR NAME=T::FORMTABLEROWS.STOPBITS></label>
+		<td>
+		<select id="<TMPL_VAR NAME=SERIAL>_stopbits" name="<TMPL_VAR NAME=SERIAL>_stopbits" data-mini="true" data-native-menu="true">
+		<option value="1">1</option>
+		<option value="2">2</option>
+		</select>
+		<script>
+		// Select option depending on saved config
+		$( "#<TMPL_VAR NAME=SERIAL>_stopbits").val( "<TMPL_VAR NAME=STOPBITS>" );
+		</script>
+		</td>
+	</tr>
+	<tr>
+		<td>
+		<label id="label<TMPL_VAR NAME=SERIAL>_timeout"><TMPL_VAR NAME=T::FORMTABLEROWS.TIMEOUT></label>
+		<td>
+		<select id="<TMPL_VAR NAME=SERIAL>_timeout" name="<TMPL_VAR NAME=SERIAL>_timeout" data-mini="true" data-native-menu="true">
+		<option value="5">5s</option>
+		<option value="10">10s</option>
+		<option value="20">20s</option>
+		<option value="30">30s</option>
+		<option value="60">60s</option>
+		<option value="120">120s</option>
+		<option value="180">180s</option>
+		<option value="240">240s</option>
+		<option value="300">300s</option>
+		</select>
+		<script>
+		// Select option depending on saved config
+		$( "#<TMPL_VAR NAME=SERIAL>_timeout").val( "<TMPL_VAR NAME=TIMEOUT>" );
+		</script>
+		</td>
+		<td>
+		<label id="label<TMPL_VAR NAME=SERIAL>_delay"><TMPL_VAR NAME=T::FORMTABLEROWS.DELAY></label>
+		<td>
+		<select id="<TMPL_VAR NAME=SERIAL>_delay" name="<TMPL_VAR NAME=SERIAL>_delay" data-mini="true" data-native-menu="true">
+		<option value="1">1s</option>
+		<option value="2">2s</option>
+		<option value="3">3s</option>
+		<option value="4">4s</option>
+		<option value="5">5s</option>
+		<option value="10">10s</option>
+		<option value="20">20s</option>
+		<option value="30">30s</option>
+		</select>
+		<script>
+		// Select option depending on saved config
+		$( "#<TMPL_VAR NAME=SERIAL>_delay").val( "<TMPL_VAR NAME=DELAY>" );
+		</script>
+		</td>
+	</tr>
+	</table>
+	</td>
+	<td width="5%">
+	&nbsp;
+	</td>
+	<td width="20%" valign="top">
+	<font size="-1"><TMPL_VAR NAME=T::FORMTABLEROWS.MANUALSETTINGS_HELP></font>
+	</td>
+</tr>
+<tr>
+	<td colspan=4>
+	&nbsp;
+	</td>
+</tr>
+
+</TMPL_LOOP>
+
+<tr>
+	<td>
+	&nbsp;
+	</td>
+	<td colspan=3>
+	<div id="form-error-message" class="form-error-message"></div>
+	</td>
+</tr>
+
+</table>
+
+<p>
+&nbsp;
+</p>
+
+<p>
+<center>
+	<a id="btncancel" data-role="button" data-inline="true" data-mini="true" data-icon="delete"
+	href="/admin/index.cgi"><TMPL_VAR NAME=T::BUTTON.CANCEL></a>
+	<button type="submit" form="main_form" id="btnsubmit" data-role="button" data-inline="true"
+	data-mini="true" data-icon="check"><TMPL_VAR NAME=T::BUTTON.SAVE></button>
+</center>
+</p>
+
+</form>
+
+<script>
+	// Error messages
+	var $messages = $('#form-error-message');
+	$.validate({
+		modules : 'security',
+		scrollToTopOnError : true,
+		errorMessagePosition : $messages,
+	});
+
+	// Disable some options on Load depending on selected value
+	disable_cron();
+	disable_udp();
+
+	function disable_cron() {
+		if ( $( "#read" ).val() == "0" ) {
+			$( "#cron" ).addClass('ui-disabled');
+			$( "#cron" ).selectmenu();
+			$( "#cron" ).selectmenu('refresh', true);
+		}
+		if ( $( "#read" ).val() == "1" ) {
+			$( "#cron" ).removeClass('ui-disabled');
+			$( "#cron" ).selectmenu();
+			$( "#cron" ).selectmenu('refresh', true);
+		}
+	}
+
+	function disable_udp() {
+		if ( $( "#sendudp" ).val() == "0" ) {
+			$( "#udpport" ).addClass('ui-disabled');
+			$( "#labeludpport" ).addClass('ui-disabled');
+		}
+		if ( $( "#sendudp" ).val() == "1" ) {
+			$( "#udpport" ).removeClass('ui-disabled');
+			$( "#labeludpport" ).removeClass('ui-disabled');
+		}
+	}
+</script>
+

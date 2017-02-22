@@ -1,0 +1,28 @@
+<center><h3><TMPL_VAR NAME=T::LOGFILETABLEROWS.TITLE></h3></center>
+
+<table border=0 width="100%" cellpadding="10">
+
+<TMPL_LOOP NAME=ROWS>
+
+	<tr>
+		<td colspan=2>
+		<h3><TMPL_VAR NAME=__counter__>. <TMPL_VAR NAME=T::LOGFILETABLEROWS.ROWTITLE> <TMPL_VAR NAME=SERIAL></h3>
+		</td>
+	</tr>
+
+	<TMPL_LOOP NAME=FILES>
+
+		<tr>
+		<td width="20%"><TMPL_VAR NAME=T::LOGFILETABLEROWS.LABEL></td>
+		<td width="80%"><a href="/admin/system/tools/logfile.cgi?logfile=plugins/<TMPL_VAR NAME=PSUBFOLDER>/shm/<TMPL_VAR NAME=LOGFILE>&header=html&format=template" target="_blank"><TMPL_VAR NAME=LOGFILE></a></td>
+		</tr>
+
+	</TMPL_LOOP>
+
+	<tr>
+		<td colspan=2>&nbsp;</td>
+	</tr>
+
+</TMPL_LOOP>
+
+</table>
