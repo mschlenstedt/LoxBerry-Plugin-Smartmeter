@@ -6,10 +6,13 @@
 	<a id="btnrescan" data-icon="refresh" data-role="button" data-mini="true" href="javascript:location.reload(true)"><TMPL_VAR NAME=T::BUTTON.RESCAN></a>
 	</td>
 	<td>
+	<a  id="btnfetch" data-icon="star" data-role="button" data-mini="true" href="./fetch.cgi" target="_blank"><TMPL_VAR NAME=T::BUTTON.FETCH></a>
+	</td>
+	<td>
 	<a id="btnshowlog" data-icon="search" data-role="button" data-mini="true" href="./logfiles.cgi" target="_blank"><TMPL_VAR NAME=T::BUTTON.SHOWLOGFILE></a>
 	</td>
 	<td>
-	<a  id="btnlog" data-icon="delete" data-role="button" data-mini="true" target="log" href="./index.cgi&clearcache=1"><TMPL_VAR NAME=T::BUTTON.CLEARCACHE></a>
+	<a  id="btnlog" data-icon="delete" data-role="button" data-mini="true" href="./index.cgi?clearcache=1"><TMPL_VAR NAME=T::BUTTON.CLEARCACHE></a>
 	</td>
 </tr>
 </table>

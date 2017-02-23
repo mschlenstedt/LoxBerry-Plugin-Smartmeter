@@ -23,6 +23,7 @@ use Config::Simple;
 use File::HomeDir;
 use Cwd 'abs_path';
 use IO::Socket; # For sending UDP packages
+use Getopt::Long;
 #use warnings;
 use strict;
 no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
@@ -59,6 +60,8 @@ our $sendudp;
 my  $udpstring;
 my  @lines;
 my  $i;
+my  $verbose;
+my  $force;
 
 ##########################################################################
 # Read Settings
@@ -83,6 +86,15 @@ $pname          = $plugin_cfg->param("MAIN.SCRIPTNAME");
 $udpport        = $plugin_cfg->param("MAIN.UDPPORT");
 $sendudp        = $plugin_cfg->param("MAIN.SENDUDP");
 
+# Commandline options
+GetOptions (    "verbose"          => \$verbose,
+                "force"            => \$force,
+);
+
+if ($verbose) {
+	$verbose = "--verbose";
+}
+
 # Create temp folder if not already exist
 system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
 system("ln -s /var/run/shm/$psubfolder/  $installfolder/log/plugins/$psubfolder/shm");
@@ -92,7 +104,7 @@ system("ln -s /var/run/shm/$psubfolder/  $installfolder/log/plugins/$psubfolder/
 system("rm /var/run/shm/$psubfolder/fetch.log > /dev/null 2>&1");
 
 # Check if we should read automatically
-if ( !$plugin_cfg->param("MAIN.READ") ) {
+if ( !$plugin_cfg->param("MAIN.READ") && !$force ) {
 	&LOG ("Reading serial devices is currently deactivated. Giving up.", "FAIL");
 	exit;
 }
@@ -137,12 +149,12 @@ foreach (@heads) {
 		&LOG ("$_: Delay: $delay", "INFO");
 		&LOG ("$_: Device: $device", "INFO");
 		&LOG ("$_: Baudrate:$baudrate/$startbaudrate Databits:$databits Stopbits:$stopbits Parity:$parity Handshake:$handshake", "INFO");
-		system("$installfolder/webfrontend/cgi/plugins/$psubfolder/bin/sm_logger.pl --device $device --protocol $protocol --startbaudrate $startbaudrate --baudrate $baudrate --timeout $timeout --delay $delay --handshake $handshake --databits $databits --stopbits $stopbits --parity $parity");
+		system("$installfolder/webfrontend/cgi/plugins/$psubfolder/bin/sm_logger.pl --device $device --protocol $protocol --startbaudrate $startbaudrate --baudrate $baudrate --timeout $timeout --delay $delay --handshake $handshake --databits $databits --stopbits $stopbits --parity $parity $verbose");
 		#next;
 	} else {
 		# If set to  a meter, use standard settings for this meter
 		&LOG ("$_: Presetting: $meter.", "INFO");
-		system("$installfolder/webfrontend/cgi/plugins/$psubfolder/bin/sm_logger.pl --device $device --protocol $meter");
+		system("$installfolder/webfrontend/cgi/plugins/$psubfolder/bin/sm_logger.pl --device $device --protocol $meter $verbose");
 		#next;
 	}
 

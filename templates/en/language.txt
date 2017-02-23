@@ -4,6 +4,7 @@ SHOWLOGFILE="Show Logfiles"
 CLEARCACHE="Clear Cache"
 SAVE="Save"
 CANCEL="Cancel"
+FETCH="Read meters manually"
 
 [GENERIC]
 ON="On"
