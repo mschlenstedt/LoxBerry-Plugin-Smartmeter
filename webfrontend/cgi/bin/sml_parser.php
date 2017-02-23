@@ -1,5 +1,6 @@
 #!/usr/bin/php
 
+<?php
 // Copyright 2017 Michael Schlenstedt, michael@loxberry.de
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +15,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-<?php
 require_once	'php_sml_parser.class.php';
 
 if ($argc != 2 || in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
