@@ -56,6 +56,7 @@ my  $helplink;
 my  @help;
 my  $helptext;
 my  $saveformdata;
+my  $clearcache;
 
 ##########################################################################
 # Read Settings
@@ -127,6 +128,12 @@ if ( $cgi->url_param('saveformdata') ) {
 }
 elsif ( $cgi->param('saveformdata') ) {
 	$saveformdata = quotemeta( $cgi->param('saveformdata') );
+}
+if ( $cgi->url_param('clearcache') ) {
+	$clearcache = quotemeta( $cgi->url_param('clearcache') );
+}
+elsif ( $cgi->param('clearcache') ) {
+	$clearcache = quotemeta( $cgi->param('clearcache') );
 }
 
 ##########################################################################
@@ -203,6 +210,11 @@ exit;
 
 sub form 
 {
+
+	# Clear Cache
+	if ( $clearcache ) {
+		system("rm /var/run/shm/$psubfolder/* > /dev/null 2>&1");
+	}
 
 	# If the form was saved, update config file
 	if ( $saveformdata ) {
@@ -287,6 +299,28 @@ sub form
 				unlink ("$installfolder/system/cron/cron.03min/$pname");
 				unlink ("$installfolder/system/cron/cron.05min/$pname");
 				unlink ("$installfolder/system/cron/cron.10min/$pname");
+				unlink ("$installfolder/system/cron/cron.30min/$pname");
+				unlink ("$installfolder/system/cron/cron.hourly/$pname");
+			}
+			if ($cgi->param('cron') eq "30") 
+			{
+				system ("ln -s $installfolder/webfrontend/cgi/plugins/$psubfolder/bin/fetch.pl $installfolder/system/cron/cron.30min/$pname");
+				unlink ("$installfolder/system/cron/cron.01min/$pname");
+				unlink ("$installfolder/system/cron/cron.03min/$pname");
+				unlink ("$installfolder/system/cron/cron.05min/$pname");
+				unlink ("$installfolder/system/cron/cron.10min/$pname");
+				unlink ("$installfolder/system/cron/cron.15min/$pname");
+				unlink ("$installfolder/system/cron/cron.hourly/$pname");
+			}
+			if ($cgi->param('cron') eq "60") 
+			{
+				system ("ln -s $installfolder/webfrontend/cgi/plugins/$psubfolder/bin/fetch.pl $installfolder/system/cron/cron.hourly/$pname");
+				unlink ("$installfolder/system/cron/cron.01min/$pname");
+				unlink ("$installfolder/system/cron/cron.03min/$pname");
+				unlink ("$installfolder/system/cron/cron.05min/$pname");
+				unlink ("$installfolder/system/cron/cron.10min/$pname");
+				unlink ("$installfolder/system/cron/cron.15min/$pname");
+				unlink ("$installfolder/system/cron/cron.30min/$pname");
 			}
 			  
 		} else {

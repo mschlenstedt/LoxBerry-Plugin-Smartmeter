@@ -411,11 +411,11 @@ sub READ_SERIAL
 	eval {
   		alarm($timeout);
 		our $count = 5;
-		our $buffer="";
+		our $buffer = "";
 		while ($count > 0) {
-			my ($count,$saw)=$port->read(255); # Read 255 signs each
+			my ($count,$saw) = $port->read(255); # Read 255 signs each
   			if ($count > 0) {
-				$buffer.=$saw;
+				$buffer .= $saw;
 				### Debug: print received signs
 				if ($verbose){
 					if ($hex eq "HEX"){
