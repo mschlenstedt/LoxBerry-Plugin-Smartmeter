@@ -122,6 +122,8 @@ elsif ( $protocol eq "iskra173d0" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $precommand = "";
+	our $postcommand = "";
 
 	&PROTO_GENERICD0;
 }
@@ -137,6 +139,8 @@ elsif ( $protocol eq "iskra174d0" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $precommand = "";
+	our $postcommand = "";
 
 	&PROTO_GENERICD0;
 }
@@ -152,11 +156,30 @@ elsif ( $protocol eq "iskra175d0" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $precommand = "";
+	our $postcommand = "";
 
 	&PROTO_GENERICD0;
 }
 
-elsif ( $protocol eq "pafal20ec3gr" ) {
+elsif ( $protocol eq "siemenstd3511d0" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 300 if !$startbaudrate;
+	our $databits = 7 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "even" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "10" if !$timeout;
+	our $delay = "2" if !$delay;
+	our $precommand = "303531";
+	our $postcommand = "";
+
+	&PROTO_GENERICD0;
+}
+
+elsif ( $protocol eq "pafal20ec3grd0" ) {
 
 	### Defaults
 	our $baudrate = 300 if !$baudrate;
@@ -167,6 +190,8 @@ elsif ( $protocol eq "pafal20ec3gr" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "120" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $precommand = "";
+	our $postcommand = "";
 
 	&PROTO_GENERICD0;
 }
@@ -182,6 +207,8 @@ elsif ( $protocol eq "iskra681sml" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "60" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $precommand = "";
+	our $postcommand = "";
 
 	&PROTO_GENERICSML;
 }
@@ -228,7 +255,7 @@ sub PROTO_GENERICD0
 	&D0_STARTINGSEQUENZE("2f3f210d0a");
 
 	### Changing Baudrate
-	&D0_CHANGEBAUDRATE("$baudrate");
+	&D0_CHANGEBAUDRATE("$baudrate", "$precommand", "$postcommand");
 
 	### Read serial device
 	&READ_SERIAL();
@@ -308,6 +335,8 @@ sub D0_CHANGEBAUDRATE
 {
 
 	our $baudratetarget = shift;
+	our $precmd = shift; # http://wiki.selfhtml.org/wiki/Perl/Subroutinen
+	our $postcmd = shift; # http://wiki.selfhtml.org/wiki/Perl/Subroutinen
 
 	### Wait for Meter
 	sleep $delay;
@@ -316,6 +345,7 @@ sub D0_CHANGEBAUDRATE
 	### 303030 (Ascii: 000) = 300baud
 	### 303430 (Ascii: 040) = 4800baud
 	### 303530 (Ascii: 050) = 9600baud
+	### 303530 (Ascii: 060) = 19200baud
 	if ( $baudratetarget eq "300" ) {
 		our $baudchange = 1;
 		our $baudrateh = "303030";
@@ -327,6 +357,10 @@ sub D0_CHANGEBAUDRATE
 	elsif ( $baudratetarget eq "9600" ) {
  	 	our $baudchange = 1;
   		our $baudrateh = "303530";
+	}
+	elsif ( $baudratetarget eq "19200" ) {
+ 	 	our $baudchange = 1;
+  		our $baudrateh = "303630";
 	} else {
 		&LOG ("The baudrate $baudratetarget is not implemented by this protocol. Using default baudrate: 300 baud.", "WARNING");
 		our $baudchange = 0;
@@ -339,6 +373,30 @@ sub D0_CHANGEBAUDRATE
 		### Debug
 		&LOG ("Changing Baudrate to $baudratetarget", "INFO");
 
+		# Pre-Command to change Baudrate
+		if ( $precmd ) {
+  			my $data3="06".$precmd."0d0a"; # ACK and precmd in HEX, z. B. "<ACK>040<CR><LF>"
+	  		my $precommand = pack('H*',$data3);
+			my $precommandlog = $precommand;
+			$precommandlog =~ s/\r\n\z//; # chomp doesn't work here...
+  			my $num_out3 = $port->write($precommand);
+	
+			### Debug
+  			&LOG ("Send: $precommandlog", "INFO");
+			if ( !$num_out3 ) {
+				$verbose = 1;
+				&LOG ("Write failed.", "FAIL");
+				exit;
+			}
+			if ( $num_out3 ne length($precommand) ) {
+				$verbose = 1;
+				&LOG ("Write incomplete.", "FAIL");
+				exit;
+			}
+			&LOG ("$num_out3 Bytes written.", "INFO");
+		}
+
+		# Command to change Baudrate
   		my $data2="06".$baudrateh."0d0a"; # ACK and new baudrate in HEX, z. B. "<ACK>040<CR><LF>"
   		my $baudwechsel = pack('H*',$data2);
 		my $baudwechsellog = $baudwechsel;
@@ -358,6 +416,28 @@ sub D0_CHANGEBAUDRATE
 			exit;
 		}
 		&LOG ("$num_out2 Bytes written.", "INFO");
+
+		# Post-Command to change Baudrate
+		if ( $postcmd ) {
+	  		my $baudwechsel = pack('H*',$postcmd);
+			my $baudwechsellog = $baudwechsel;
+			$baudwechsellog =~ s/\r\n\z//; # chomp doesn't work here...
+  			my $num_out2 = $port->write($baudwechsel);
+	
+			### Debug
+  			&LOG ("Send: $baudwechsellog", "INFO");
+			if ( !$num_out2 ) {
+				$verbose = 1;
+				&LOG ("Write failed.", "FAIL");
+				exit;
+			}
+			if ( $num_out2 ne length($baudwechsel) ) {
+				$verbose = 1;
+				&LOG ("Write incomplete.", "FAIL");
+				exit;
+			}
+			&LOG ("$num_out2 Bytes written.", "INFO");
+		}
 
 		### Activate new baudrate on device
 		sleep 1;
