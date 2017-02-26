@@ -85,6 +85,15 @@ $lang		= $cfg->param("BASE.LANG");
 $plugin_cfg 	= new Config::Simple("$installfolder/config/plugins/$psubfolder/smartmeter.cfg") or die $plugin_cfg->error();
 $pname          = $plugin_cfg->param("MAIN.SCRIPTNAME");
 
+# Create temp folder if not already exist
+if (!-d "/var/run/shm/$psubfolder") {
+	system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
+}
+# Check for temporary log folder
+if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
+	system("ln -s /var/run/shm/$psubfolder $installfolder/log/plugins/$psubfolder/shm > /dev/null 2>&1");
+}
+
 # Detect which IR Heads are connected
 my @devices = split(/\n/,`ls /dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_*`);
 foreach (@devices)

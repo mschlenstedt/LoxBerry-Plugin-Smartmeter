@@ -39,6 +39,7 @@ our $protocol = "";
 GetOptions (    "verbose"          => \$verbose,
                 "device=s"         => \$device,
                 "protocol=s"       => \$protocol,
+                "parse=s"          => \$parse,
                 "handshake=s"      => \$handshake,
                 "baudrate=i"       => \$baudrate,
                 "startbaudrate=i"  => \$startbaudrate,
@@ -55,6 +56,7 @@ GetOptions (    "verbose"          => \$verbose,
 if ( $help ) {
 	print "Usage: $0 --device TTYDEVICE [--protocol PROTOCOL] [--startbaudrate STARTBAUDRAT] [--baudrate BAUDRATE] [--timeout TIMEOUT] \n";
 	print "       [--delay DELAY} [--handshake HANDSHAKE] [--databits DATABITS] [--stopbits STOPBITS] [--parity PARITY] [--help] [--verbose]\n";
+	print "       [--help] [--verbose] [--parse DUMPFILE]\n";
 	exit;
 }
 
@@ -66,31 +68,45 @@ if ( !$verbose ) {
 }
 
 ### Serieller Port
-if ( !$device || !-e $device ) {
+if ( (!$device || !-e $device) && !$parse ) {
 	print "Please use --device to specify TTY device. Use --help to get help.\n";
 	exit;
 }
-if ( $device !~ /usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller/ ) {
+if ( $device !~ /usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller/  && !$parse ) {
 	print "Your serial device seems not to be support.\n";
 	exit;
 }
 
 ### Serial of I/R Head
-$serial	= $device;
-$serial	=~ s/([\n])//g;
-$serial	=~ s%/dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_%%g;
-$serial	=~ s%-if00-port0%%g;
+if ( !$parse ) {
+	$serial	= $device;
+	$serial	=~ s/([\n])//g;
+	$serial	=~ s%/dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_%%g;
+	$serial	=~ s%-if00-port0%%g;
+} else {
+	$serial	= $parse;
+	$serial	=~ s/([\n])//g;
+	$serial	=~ s%\.dump%%g;
+}
 
 ### Figure out in which subfolder we are installed
 our $psubfolder = abs_path($0);
 $psubfolder =~ s/(.*)\/(.*)\/bin\/(.*)$/$2/g;
 
 # Create temp folder if not already exist
-system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
+if (!-d "/var/run/shm/$psubfolder") {
+	system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
+}
+# Check for temporary log folder
+if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
+	system("ln -s /var/run/shm/$psubfolder  $installfolder/log/plugins/$psubfolder/shm > /dev/null 2>&1");
+}
 
 # Clear Log
 system("rm /var/run/shm/$psubfolder/$serial\.log > /dev/null 2>&1");
-system("rm /var/run/shm/$psubfolder/$serial\.dump > /dev/null 2>&1");
+if ( !$parse ) {
+	system("rm /var/run/shm/$psubfolder/$serial\.dump > /dev/null 2>&1");
+}
 
 ################################
 ### Determine which protocol to use
@@ -242,23 +258,31 @@ exit;
 sub PROTO_GENERICD0
 {
 
-	&LOG ("Initial Baudrate: $startbaudrate", "INFO");
-	&LOG ("Max Baudrate: $baudrate", "INFO");
-	&LOG ("Protocol: $protocol", "INFO");
-	&LOG ("Timeout: $timeout", "INFO");
-	&LOG ("Delay: $delay", "INFO");
+	if ( !$parse ) {
 
-	### Open serial port
-	&INITIALIZE_PORT();
+		&LOG ("Initial Baudrate: $startbaudrate", "INFO");
+		&LOG ("Max Baudrate: $baudrate", "INFO");
+		&LOG ("Protocol: $protocol", "INFO");
+		&LOG ("Timeout: $timeout", "INFO");
+		&LOG ("Delay: $delay", "INFO");
 
-	### Sending Starting Sequenze
-	&D0_STARTINGSEQUENZE("2f3f210d0a");
+		### Open serial port
+		&INITIALIZE_PORT();
 
-	### Changing Baudrate
-	&D0_CHANGEBAUDRATE("$baudrate", "$precommand", "$postcommand");
+		### Sending Starting Sequenze
+		&D0_STARTINGSEQUENZE("2f3f210d0a");
 
-	### Read serial device
-	&READ_SERIAL();
+		### Changing Baudrate
+		&D0_CHANGEBAUDRATE("$baudrate", "$precommand", "$postcommand");
+
+		### Read serial device
+		&READ_SERIAL();
+
+	} else {
+
+		&LOG ("Parsing previous dump file $parse", "INFO");
+
+	}
 
 	&PARSE_DUMP("D0");
 
@@ -273,17 +297,25 @@ sub PROTO_GENERICD0
 sub PROTO_GENERICSML
 {
 
-	&LOG ("Initial Baudrate: $startbaudrate", "INFO");
-	&LOG ("Max Baudrate: $baudrate", "INFO");
-	&LOG ("Protocol: $protocol", "INFO");
-	&LOG ("Timeout: $timeout", "INFO");
-	&LOG ("Delay: $delay", "INFO");
+	if ( !$parse ) {
 
-	### Open serial port
-	&INITIALIZE_PORT();
+		&LOG ("Initial Baudrate: $startbaudrate", "INFO");
+		&LOG ("Max Baudrate: $baudrate", "INFO");
+		&LOG ("Protocol: $protocol", "INFO");
+		&LOG ("Timeout: $timeout", "INFO");
+		&LOG ("Delay: $delay", "INFO");
 
-	### Read serial device
-	&READ_SERIAL("HEX");
+		### Open serial port
+		&INITIALIZE_PORT();
+
+		### Read serial device
+		&READ_SERIAL("HEX");
+
+	} else {
+
+		&LOG ("Parsing previous dump file $parse", "INFO");
+
+	}
 
 	&PARSE_DUMP("SML");
 

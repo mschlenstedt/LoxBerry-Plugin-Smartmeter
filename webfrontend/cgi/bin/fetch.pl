@@ -96,9 +96,13 @@ if ($verbose) {
 }
 
 # Create temp folder if not already exist
-system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
-system("ln -s /var/run/shm/$psubfolder/  $installfolder/log/plugins/$psubfolder/shm");
-#system("ln -s /var/run/shm/smartmeter /opt/loxberry/log/plugins/smartmeter/shm");
+if (!-d "/var/run/shm/$psubfolder") {
+	system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
+}
+# Check for temporary log folder
+if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
+	system("ln -s /var/run/shm/$psubfolder  $installfolder/log/plugins/$psubfolder/shm > /dev/null 2>&1");
+}
 
 # Delete old Logfile
 system("rm /var/run/shm/$psubfolder/fetch.log > /dev/null 2>&1");

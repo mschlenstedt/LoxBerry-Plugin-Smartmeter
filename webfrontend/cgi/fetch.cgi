@@ -64,6 +64,14 @@ $lang		= $cfg->param("BASE.LANG");
 # Main program
 ##########################################################################
 
+# Create temp folder if not already exist
+if (!-d "/var/run/shm/$psubfolder") {
+	system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
+}
+# Check for temporary log folder
+if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
+	system("ln -s /var/run/shm/$psubfolder  $installfolder/log/plugins/$psubfolder/shm > /dev/null 2>&1");
+}
 # Create Logfile
 $logfile = "/var/run/shm/$psubfolder/fetch_manually.log";
 system("rm /var/run/shm/$psubfolder/$logfile");
