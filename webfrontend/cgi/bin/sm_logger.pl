@@ -72,7 +72,9 @@ if ( (!$device || !-e $device) && !$parse ) {
 	print "Please use --device to specify TTY device. Use --help to get help.\n";
 	exit;
 }
-if ( $device !~ /usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller/  && !$parse ) {
+if ( $device !~ /usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller/  &&
+     $device !~ /FTDI_usb_serial_converter/  &&
+     !$parse ) {
 	print "Your serial device seems not to be support.\n";
 	exit;
 }
@@ -82,6 +84,7 @@ if ( !$parse ) {
 	$serial	= $device;
 	$serial	=~ s/([\n])//g;
 	$serial	=~ s%/dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_%%g;
+	$serial	=~ s%/dev/serial/by-id/usb-FTDI_usb_serial_converter_%%g;
 	$serial	=~ s%-if00-port0%%g;
 } else {
 	$serial	= $parse;
