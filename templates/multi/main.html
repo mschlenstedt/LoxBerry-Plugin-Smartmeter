@@ -119,12 +119,21 @@
 	<label id="labelsendhtml"><TMPL_VAR NAME=T::FORMTABLE.SEND_HTTP></label>
 	</td>
 	<td width="55%">
-	<fieldset>
-	<select id="sendhtml" name="sendhtml" data-role="flipswitch" disabled=disabled>
-	<option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option>
-	<option selected=selected value="1"><TMPL_VAR NAME=T::GENERIC.ON></option>
-	</select>
-	</fieldset>
+	<table border=0 width="100%">
+	<tr>
+		<td>
+		<fieldset>
+		<select id="sendhtml" name="sendhtml" data-role="flipswitch" disabled=disabled>
+		<option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option>
+		<option selected=selected value="1"><TMPL_VAR NAME=T::GENERIC.ON></option>
+		</select>
+		</fieldset>
+		</td>
+		<td>
+		<TMPL_VAR NAME=T::FORMTABLE.VIRTUALHTTPINPUT> <a href="/plugins/<TMPL_VAR NAME=PSUBFOLDER>/index.php" target="_blank">http://<TMPL_VAR NAME=HOST>/plugins/<TMPL_VAR NAME=PSUBFOLDER>/index.php</a>
+		</td>
+	</tr>
+	</table>
 	</td>
 	<td width="5%" valign="middle">
 	&nbsp;
@@ -160,20 +169,6 @@
 	</td>
 	<td width="20%">
 	<font size="-1"><TMPL_VAR NAME=T::FORMTABLEROWS.NAME_HELP></font>
-	</td>
-</tr>
-<tr>
-	<td width="20%">
-	<label id="label<TMPL_VAR NAME=SERIAL>_link"><TMPL_VAR NAME=T::FORMTABLEROWS.VIRTUALHTTPINPUT></label>
-	</td>
-	<td width="55%">
-	<font size="-1"><a id="<TMPL_VAR NAME=SERIAL>_link" href="./show.cgi?serial=<TMPL_VAR NAME=SERIAL>" target="_blank">http://<TMPL_VAR NAME=LOGINNAME>:<TMPL_VAR NAME=T::FORMTABLEROWS.PASSWORD>@<TMPL_VAR NAME=HOST>/admin/plugins/<TMPL_VAR NAME=PSUBFOLDER>/show.cgi?serial=<TMPL_VAR NAME=SERIAL></a></font>
-	</td>
-	<td width="5%">
-	&nbsp;
-	</td>
-	<td width="20%">
-	<font size="-1"><TMPL_VAR NAME=T::FORMTABLEROWS.VIRTUALHTTPINPUT_HELP></font>
 	</td>
 </tr>
 <tr>
