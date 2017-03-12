@@ -101,34 +101,34 @@ if ( !$serial ) {
 # If no data exist, give dummy file
 if ( !-e "/var/run/shm/$psubfolder/$serial\.data" ) {
 
-	print "Last_Update: 01.01.2009 00:00:00\n";
-	print "Last_UpdateLoxEpoche: 1230764400\n";
-	print "Consumption_Total_OBIS_1.8.0: \n";
-	print "Consumption_Tarif1_OBIS_1.8.1: \n";
-	print "Consumption_Tarif2_OBIS_1.8.2: \n";
-	print "Consumption_Tarif3_OBIS_1.8.3: \n";
-	print "Consumption_Tarif4_OBIS_1.8.4: \n";
-	print "Consumption_Tarif5_OBIS_1.8.5: \n";
-	print "Consumption_Tarif6_OBIS_1.8.6: \n";
-	print "Consumption_Tarif7_OBIS_1.8.7: \n";
-	print "Consumption_Tarif8_OBIS_1.8.8: \n";
-	print "Consumption_Tarif9_OBIS_1.8.9: \n";
-	print "Consumption_CalculatedPower_OBIS_1.99.0: \n";
-	print "Consumption_Power_OBIS_1.7.0: \n";
-	print "Delivery_Total_OBIS_2.8.0: \n";
-	print "Delivery_Tarif1_OBIS_2.8.1: \n";
-	print "Delivery_Tarif2_OBIS_2.8.2: \n";
-	print "Delivery_Tarif3_OBIS_2.8.3: \n";
-	print "Delivery_Tarif4_OBIS_2.8.4: \n";
-	print "Delivery_Tarif5_OBIS_2.8.5: \n";
-	print "Delivery_Tarif6_OBIS_2.8.6: \n";
-	print "Delivery_Tarif7_OBIS_2.8.7: \n";
-	print "Delivery_Tarif8_OBIS_2.8.8: \n";
-	print "Delivery_Tarif9_OBIS_2.8.9: \n";
-	print "Delivery_CalculatedPower_OBIS_2.99.0: \n";
-	print "Delivery_Power_OBIS_2.7.0: \n";
-	print "Total_Power_OBIS_15.7.0: \n";
-	print "Total_Power_OBIS_16.7.0: \n";
+	print "$serial:Last_Update:01.01.2009 00:00:00\n";
+	print "$serial:Last_UpdateLoxEpoche:1230764400\n";
+	print "$serial:Consumption_Total_OBIS_1.8.0:\n";
+	print "$serial:Consumption_Tarif1_OBIS_1.8.1:\n";
+	print "$serial:Consumption_Tarif2_OBIS_1.8.2:\n";
+	print "$serial:Consumption_Tarif3_OBIS_1.8.3:\n";
+	print "$serial:Consumption_Tarif4_OBIS_1.8.4:\n";
+	print "$serial:Consumption_Tarif5_OBIS_1.8.5:\n";
+	print "$serial:Consumption_Tarif6_OBIS_1.8.6:\n";
+	print "$serial:Consumption_Tarif7_OBIS_1.8.7:\n";
+	print "$serial:Consumption_Tarif8_OBIS_1.8.8:\n";
+	print "$serial:Consumption_Tarif9_OBIS_1.8.9:\n";
+	print "$serial:Consumption_CalculatedPower_OBIS_1.99.0:\n";
+	print "$serial:Consumption_Power_OBIS_1.7.0:\n";
+	print "$serial:Delivery_Total_OBIS_2.8.0:\n";
+	print "$serial:Delivery_Tarif1_OBIS_2.8.1:\n";
+	print "$serial:Delivery_Tarif2_OBIS_2.8.2:\n";
+	print "$serial:Delivery_Tarif3_OBIS_2.8.3:\n";
+	print "$serial:Delivery_Tarif4_OBIS_2.8.4:\n";
+	print "$serial:Delivery_Tarif5_OBIS_2.8.5:\n";
+	print "$serial:Delivery_Tarif6_OBIS_2.8.6:\n";
+	print "$serial:Delivery_Tarif7_OBIS_2.8.7:\n";
+	print "$serial:Delivery_Tarif8_OBIS_2.8.8:\n";
+	print "$serial:Delivery_Tarif9_OBIS_2.8.9:\n";
+	print "$serial:Delivery_CalculatedPower_OBIS_2.99.0:\n";
+	print "$serial:Delivery_Power_OBIS_2.7.0:\n";
+	print "$serial:Total_Power_OBIS_15.7.0:\n";
+	print "$serial:Total_Power_OBIS_16.7.0:\n";
 
 	exit;
 

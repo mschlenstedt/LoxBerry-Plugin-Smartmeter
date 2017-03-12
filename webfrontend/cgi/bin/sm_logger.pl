@@ -90,6 +90,7 @@ if ( !$parse ) {
 }
 
 ### Figure out in which subfolder we are installed
+our $home = File::HomeDir->my_home;
 our $psubfolder = abs_path($0);
 $psubfolder =~ s/(.*)\/(.*)\/bin\/(.*)$/$2/g;
 
@@ -584,43 +585,44 @@ sub PARSE_DUMP
 
 	if ($proto eq "SML") {
 		&LOG ("Parse /var/run/shm/$psubfolder/$serial\.dump as SML-Protocol.", "INFO");
-		our $buffer = `php ./sml_parser.php /var/run/shm/$psubfolder/$serial\.dump`;
+		our $dumpbuffer = `php $home/webfrontend/cgi/plugins/$psubfolder/bin/sml_parser.php /var/run/shm/$psubfolder/$serial\.dump`;
+		print "Buffer: $dumpbuffer\n";
 	} else {
 		&LOG ("Parse /var/run/shm/$psubfolder/$serial\.dump as D0-Protocol.", "INFO");
 		open(F,"</var/run/shm/$psubfolder/$serial\.dump");
-			our $buffer = do { local $/; <F> };
+			our $dumpbuffer = do { local $/; <F> };
 		close (F);
 	}
 
 	### Energy consumption: Readings  (OBIS 1.8.x*255)
-	($readingconsT0) = $buffer =~ /1\.8\.0\*[255|00]+\(([\d\.]+)/;
-	($readingconsT1) = $buffer =~ /1\.8\.1\*[255|00]+\(([\d\.]+)/;
-	($readingconsT2) = $buffer =~ /1\.8\.2\*[255|00]+\(([\d\.]+)/;
-	($readingconsT3) = $buffer =~ /1\.8\.3\*[255|00]+\(([\d\.]+)/;
-	($readingconsT4) = $buffer =~ /1\.8\.4\*[255|00]+\(([\d\.]+)/;
-	($readingconsT5) = $buffer =~ /1\.8\.5\*[255|00]+\(([\d\.]+)/;
-	($readingconsT6) = $buffer =~ /1\.8\.6\*[255|00]+\(([\d\.]+)/;
-	($readingconsT7) = $buffer =~ /1\.8\.7\*[255|00]+\(([\d\.]+)/;
-	($readingconsT8) = $buffer =~ /1\.8\.8\*[255|00]+\(([\d\.]+)/;
-	($readingconsT9) = $buffer =~ /1\.8\.9\*[255|00]+\(([\d\.]+)/;
+	($readingconsT0) = $dumpbuffer =~ /1\.8\.0\*[255|00]+\(([\d\.]+)/;
+	($readingconsT1) = $dumpbuffer =~ /1\.8\.1\*[255|00]+\(([\d\.]+)/;
+	($readingconsT2) = $dumpbuffer =~ /1\.8\.2\*[255|00]+\(([\d\.]+)/;
+	($readingconsT3) = $dumpbuffer =~ /1\.8\.3\*[255|00]+\(([\d\.]+)/;
+	($readingconsT4) = $dumpbuffer =~ /1\.8\.4\*[255|00]+\(([\d\.]+)/;
+	($readingconsT5) = $dumpbuffer =~ /1\.8\.5\*[255|00]+\(([\d\.]+)/;
+	($readingconsT6) = $dumpbuffer =~ /1\.8\.6\*[255|00]+\(([\d\.]+)/;
+	($readingconsT7) = $dumpbuffer =~ /1\.8\.7\*[255|00]+\(([\d\.]+)/;
+	($readingconsT8) = $dumpbuffer =~ /1\.8\.8\*[255|00]+\(([\d\.]+)/;
+	($readingconsT9) = $dumpbuffer =~ /1\.8\.9\*[255|00]+\(([\d\.]+)/;
 
 	### Energy delivery: Readings  (OBIS 2.8.x*255)
-	($readingdelT0) = $buffer =~ /2\.8\.0\*[255|00]+\(([\d\.]+)/;
-	($readingdelT1) = $buffer =~ /2\.8\.1\*[255|00]+\(([\d\.]+)/;
-	($readingdelT2) = $buffer =~ /2\.8\.2\*[255|00]+\(([\d\.]+)/;
-	($readingdelT3) = $buffer =~ /2\.8\.3\*[255|00]+\(([\d\.]+)/;
-	($readingdelT4) = $buffer =~ /2\.8\.4\*[255|00]+\(([\d\.]+)/;
-	($readingdelT5) = $buffer =~ /2\.8\.5\*[255|00]+\(([\d\.]+)/;
-	($readingdelT6) = $buffer =~ /2\.8\.6\*[255|00]+\(([\d\.]+)/;
-	($readingdelT7) = $buffer =~ /2\.8\.7\*[255|00]+\(([\d\.]+)/;
-	($readingdelT8) = $buffer =~ /2\.8\.8\*[255|00]+\(([\d\.]+)/;
-	($readingdelT9) = $buffer =~ /2\.8\.9\*[255|00]+\(([\d\.]+)/;
+	($readingdelT0) = $dumpbuffer =~ /2\.8\.0\*[255|00]+\(([\d\.]+)/;
+	($readingdelT1) = $dumpbuffer =~ /2\.8\.1\*[255|00]+\(([\d\.]+)/;
+	($readingdelT2) = $dumpbuffer =~ /2\.8\.2\*[255|00]+\(([\d\.]+)/;
+	($readingdelT3) = $dumpbuffer =~ /2\.8\.3\*[255|00]+\(([\d\.]+)/;
+	($readingdelT4) = $dumpbuffer =~ /2\.8\.4\*[255|00]+\(([\d\.]+)/;
+	($readingdelT5) = $dumpbuffer =~ /2\.8\.5\*[255|00]+\(([\d\.]+)/;
+	($readingdelT6) = $dumpbuffer =~ /2\.8\.6\*[255|00]+\(([\d\.]+)/;
+	($readingdelT7) = $dumpbuffer =~ /2\.8\.7\*[255|00]+\(([\d\.]+)/;
+	($readingdelT8) = $dumpbuffer =~ /2\.8\.8\*[255|00]+\(([\d\.]+)/;
+	($readingdelT9) = $dumpbuffer =~ /2\.8\.9\*[255|00]+\(([\d\.]+)/;
 
 	### Energy consumption: Power  (OBIS mixture - no standard?)
-	($power1) = $buffer =~ /1\.7\.0\*[255|00]+\(([\d\.]+)/;
-	($power2) = $buffer =~ /2\.7\.0\*[255|00]+\(([\d\.]+)/;
-	($power3) = $buffer =~ /15\.7\.0\*[255|00]+\(([\d\.]+)/;
-	($power4) = $buffer =~ /16\.7\.0\*[255|00]+\(([\d\.]+)/;
+	($power1) = $dumpbuffer =~ /1\.7\.0\*[255|00]+\(([\d\.]+)/;
+	($power2) = $dumpbuffer =~ /2\.7\.0\*[255|00]+\(([\d\.]+)/;
+	($power3) = $dumpbuffer =~ /15\.7\.0\*[255|00]+\(([\d\.]+)/;
+	($power4) = $dumpbuffer =~ /16\.7\.0\*[255|00]+\(([\d\.]+)/;
 
 	### Calculate Avg. Power
 	my $powercalccons = &CALCULATE_POWER("$readingconsT0","CONS");
@@ -642,8 +644,8 @@ sub PARSE_DUMP
 	my $dt = DateTime->new( year   => $year, month  => $mon, day    => $mday, hour   => $hour, minute => $min, 
 				second => $sec, nanosecond => 500000000, time_zone => 'local' );
 	my $epoch_time = $dt->epoch;
-#	my $tz = DateTime::TimeZone->new( name => 'local' );
-#	my $offset = $tz->offset_for_datetime($dt);
+	my $tz = DateTime::TimeZone->new( name => 'local' );
+	my $offset = $tz->offset_for_datetime($dt);
 
 	# Date Reference: Convert into Loxone Epoche (1.1.2009)
 	my $dateref = DateTime->new(
@@ -651,7 +653,7 @@ sub PARSE_DUMP
 		month     => 1,
 		day       => 1,
 	);
-	my $epoche_time_lox = $epoch_time - $dateref->epoch();
+	my $epoche_time_lox = $epoch_time - $dateref->epoch() + $offset;
 
 #	print "Epoche Date: $epoch_time\n";
 #	print "Epoche Date Lox: $epoche_time_lox\n";
@@ -660,34 +662,34 @@ sub PARSE_DUMP
 	### Save to data file
 	&LOG ("Save Meter data to /var/run/shm/$psubfolder/$serial\.data.", "INFO");
 	open(F,">/var/run/shm/$psubfolder/$serial\.data");
-		print F "Last_Update: $datereadable\n";
-		print F "Last_UpdateLoxEpoche: $epoche_time_lox\n";
-		print F "Consumption_Total_OBIS_1.8.0: $readingconsT0\n";
-		print F "Consumption_Tarif1_OBIS_1.8.1: $readingconsT1\n";
-		print F "Consumption_Tarif2_OBIS_1.8.2: $readingconsT2\n";
-		print F "Consumption_Tarif3_OBIS_1.8.3: $readingconsT3\n";
-		print F "Consumption_Tarif4_OBIS_1.8.4: $readingconsT4\n";
-		print F "Consumption_Tarif5_OBIS_1.8.5: $readingconsT5\n";
-		print F "Consumption_Tarif6_OBIS_1.8.6: $readingconsT6\n";
-		print F "Consumption_Tarif7_OBIS_1.8.7: $readingconsT7\n";
-		print F "Consumption_Tarif8_OBIS_1.8.8: $readingconsT8\n";
-		print F "Consumption_Tarif9_OBIS_1.8.9: $readingconsT9\n";
-		print F "Consumption_CalculatedPower_OBIS_1.99.0: $powercalccons\n";
-		print F "Consumption_Power_OBIS_1.7.0: $power1\n";
-		print F "Delivery_Total_OBIS_2.8.0: $readingdelT0\n";
-		print F "Delivery_Tarif1_OBIS_2.8.1: $readingdelT1\n";
-		print F "Delivery_Tarif2_OBIS_2.8.2: $readingdelT2\n";
-		print F "Delivery_Tarif3_OBIS_2.8.3: $readingdelT3\n";
-		print F "Delivery_Tarif4_OBIS_2.8.4: $readingdelT4\n";
-		print F "Delivery_Tarif5_OBIS_2.8.5: $readingdelT5\n";
-		print F "Delivery_Tarif6_OBIS_2.8.6: $readingdelT6\n";
-		print F "Delivery_Tarif7_OBIS_2.8.7: $readingdelT7\n";
-		print F "Delivery_Tarif8_OBIS_2.8.8: $readingdelT8\n";
-		print F "Delivery_Tarif9_OBIS_2.8.9: $readingdelT9\n";
-		print F "Delivery_CalculatedPower_OBIS_2.99.0: $powercalcdel\n";
-		print F "Delivery_Power_OBIS_2.7.0: $power2\n";
-		print F "Total_Power_OBIS_15.7.0: $power3\n";
-		print F "Total_Power_OBIS_16.7.0: $power4\n";
+		print F "$serial:Last_Update:$datereadable\n";
+		print F "$serial:Last_UpdateLoxEpoche:$epoche_time_lox\n";
+		print F "$serial:Consumption_Total_OBIS_1.8.0:$readingconsT0\n";
+		print F "$serial:Consumption_Tarif1_OBIS_1.8.1:$readingconsT1\n";
+		print F "$serial:Consumption_Tarif2_OBIS_1.8.2:$readingconsT2\n";
+		print F "$serial:Consumption_Tarif3_OBIS_1.8.3:$readingconsT3\n";
+		print F "$serial:Consumption_Tarif4_OBIS_1.8.4:$readingconsT4\n";
+		print F "$serial:Consumption_Tarif5_OBIS_1.8.5:$readingconsT5\n";
+		print F "$serial:Consumption_Tarif6_OBIS_1.8.6:$readingconsT6\n";
+		print F "$serial:Consumption_Tarif7_OBIS_1.8.7:$readingconsT7\n";
+		print F "$serial:Consumption_Tarif8_OBIS_1.8.8:$readingconsT8\n";
+		print F "$serial:Consumption_Tarif9_OBIS_1.8.9:$readingconsT9\n";
+		print F "$serial:Consumption_CalculatedPower_OBIS_1.99.0:$powercalccons\n";
+		print F "$serial:Consumption_Power_OBIS_1.7.0:$power1\n";
+		print F "$serial:Delivery_Total_OBIS_2.8.0:$readingdelT0\n";
+		print F "$serial:Delivery_Tarif1_OBIS_2.8.1:$readingdelT1\n";
+		print F "$serial:Delivery_Tarif2_OBIS_2.8.2:$readingdelT2\n";
+		print F "$serial:Delivery_Tarif3_OBIS_2.8.3:$readingdelT3\n";
+		print F "$serial:Delivery_Tarif4_OBIS_2.8.4:$readingdelT4\n";
+		print F "$serial:Delivery_Tarif5_OBIS_2.8.5:$readingdelT5\n";
+		print F "$serial:Delivery_Tarif6_OBIS_2.8.6:$readingdelT6\n";
+		print F "$serial:Delivery_Tarif7_OBIS_2.8.7:$readingdelT7\n";
+		print F "$serial:Delivery_Tarif8_OBIS_2.8.8:$readingdelT8\n";
+		print F "$serial:Delivery_Tarif9_OBIS_2.8.9:$readingdelT9\n";
+		print F "$serial:Delivery_CalculatedPower_OBIS_2.99.0:$powercalcdel\n";
+		print F "$serial:Delivery_Power_OBIS_2.7.0:$power2\n";
+		print F "$serial:Total_Power_OBIS_15.7.0:$power3\n";
+		print F "$serial:Total_Power_OBIS_16.7.0:$power4\n";
 	close (F);
 
 	return();

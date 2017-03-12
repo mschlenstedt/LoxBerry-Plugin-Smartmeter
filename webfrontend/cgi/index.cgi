@@ -27,9 +27,9 @@ use File::HomeDir;
 use String::Escape qw( unquotemeta );
 use Cwd 'abs_path';
 use HTML::Template;
-use warnings;
-use strict;
-no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
+#use warnings;
+#use strict;
+#no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
 
 ##########################################################################
 # Variables
@@ -47,6 +47,7 @@ my  $pname;
 my  $languagefileplugin;
 my  %TPhrases;
 my  @heads;
+my  %head;
 my  @rows;
 my  %hash;
 my  $maintemplate;
@@ -57,6 +58,10 @@ my  @help;
 my  $helptext;
 my  $saveformdata;
 my  $clearcache;
+my  %plugin_config;
+my  $name;
+my  $device;
+my  $serial;
 
 ##########################################################################
 # Read Settings
@@ -95,32 +100,51 @@ if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
 }
 
 # Detect which IR Heads are connected
-my @devices = split(/\n/,`ls /dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_*`);
+$i = 0;
+my @devices = split(/\n/,`ls /dev/serial/by-id/*`);
 foreach (@devices)
 {
-	my $device 	= $_;
-	$device 	=~ s/([\n])//g;
-	$device		=~ s%/dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_%%g;
-	$device		=~ s%-if00-port0%%g;
-	push (@heads, $device);
+	# Check for supported devicdes
+	if ( 	$_ !~ /Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller/ &&
+		$_ !~ /FTDI_usb_serial_converter/ 
+	) {
+		next;
+	}
+
+	# Create Array of Hashes for known heads
+	$device		= $_;
+	$name		= $_;
+	$name		=~ s/([\n])//g;
+	$name		=~ s%/dev/serial/by-id/%%g;
+	$serial 	= $_;
+	$serial 	=~ s/([\n])//g;
+	$serial		=~ s%/dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_%%g;
+	$serial		=~ s%/dev/serial/by-id/usb-FTDI_usb_serial_converter_%%g;
+	$serial		=~ s%-if00-port0%%g;
+	%{"head".$i} = ( serial => $serial, device => $device, name => $name );
+	push ( @heads, \%{"head".$i} );
+	$i++;
 }
 
 # Save a config set if it not already exists
 foreach (@heads) {
-	if ( !$plugin_cfg->param("$_.DEVICE") ) {
-		$plugin_cfg->param("$_.NAME", "usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_".$_."-if00-port0");
-		$plugin_cfg->param("$_.SERIAL", "$_");
-		$plugin_cfg->param("$_.DEVICE", "/dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_".$_."-if00-port0");
-		$plugin_cfg->param("$_.METER", "0");
-		$plugin_cfg->param("$_.PROTOCOL", "");
-		$plugin_cfg->param("$_.STARTBAUDRATE", "");
-		$plugin_cfg->param("$_.BAUDRATE", "");
-		$plugin_cfg->param("$_.TIMEOUT", "");
-		$plugin_cfg->param("$_.DELAY", "");
-		$plugin_cfg->param("$_.HANDSHAKE", "");
-		$plugin_cfg->param("$_.DATABITS", "");
-		$plugin_cfg->param("$_.STOPBITS", "");
-		$plugin_cfg->param("$_.PARITY", "");
+	$serial = $_->{serial};
+	$device = $_->{device};
+	$name   = $_->{name};
+	if ( !$plugin_cfg->param("$serial\.DEVICE") ) {
+		$plugin_cfg->param("$serial\.NAME", "$name");
+		$plugin_cfg->param("$serial\.SERIAL", "$serial");
+		$plugin_cfg->param("$serial\.DEVICE", "$device");
+		$plugin_cfg->param("$serial\.METER", "0");
+		$plugin_cfg->param("$serial\.PROTOCOL", "");
+		$plugin_cfg->param("$serial\.STARTBAUDRATE", "");
+		$plugin_cfg->param("$serial\.BAUDRATE", "");
+		$plugin_cfg->param("$serial\.TIMEOUT", "");
+		$plugin_cfg->param("$serial\.DELAY", "");
+		$plugin_cfg->param("$serial\.HANDSHAKE", "");
+		$plugin_cfg->param("$serial\.DATABITS", "");
+		$plugin_cfg->param("$serial\.STOPBITS", "");
+		$plugin_cfg->param("$serial\.PARITY", "");
 	}
 }
 $plugin_cfg->save;
@@ -232,28 +256,29 @@ sub form
 		$plugin_cfg->param( "MAIN.SENDUDP", $cgi->param('sendudp') );
 		$plugin_cfg->param( "MAIN.UDPPORT", $cgi->param('udpport') );
 		foreach (@heads) {
-			$plugin_cfg->param("$_.NAME", $cgi->param("$_\_name") );
-			$plugin_cfg->param("$_.METER", $cgi->param("$_\_meter") );
-			if ( $cgi->param("$_\_meter") eq "manual" ) {
-				$plugin_cfg->param("$_.PROTOCOL", $cgi->param("$_\_protocol") );
-				$plugin_cfg->param("$_.STARTBAUDRATE", $cgi->param("$_\_startbaudrate") );
-				$plugin_cfg->param("$_.BAUDRATE", $cgi->param("$_\_baudrate") );
-				$plugin_cfg->param("$_.TIMEOUT", $cgi->param("$_\_timeout") );
-				$plugin_cfg->param("$_.DELAY", $cgi->param("$_\_delay") );
-				$plugin_cfg->param("$_.HANDSHAKE", $cgi->param("$_\_handshake") );
-				$plugin_cfg->param("$_.DATABITS", $cgi->param("$_\_databits") );
-				$plugin_cfg->param("$_.STOPBITS", $cgi->param("$_\_stopbits") );
-				$plugin_cfg->param("$_.PARITY", $cgi->param("$_\_parity") );
+			$serial = $_->{serial};
+			$plugin_cfg->param("$serial.NAME", $cgi->param("$serial\_name") );
+			$plugin_cfg->param("$serial.METER", $cgi->param("$serial\_meter") );
+			if ( $cgi->param("$serial\_meter") eq "manual" ) {
+				$plugin_cfg->param("$serial.PROTOCOL", $cgi->param("$serial\_protocol") );
+				$plugin_cfg->param("$serial.STARTBAUDRATE", $cgi->param("$serial\_startbaudrate") );
+				$plugin_cfg->param("$serial.BAUDRATE", $cgi->param("$serial\_baudrate") );
+				$plugin_cfg->param("$serial.TIMEOUT", $cgi->param("$serial\_timeout") );
+				$plugin_cfg->param("$serial.DELAY", $cgi->param("$serial\_delay") );
+				$plugin_cfg->param("$serial.HANDSHAKE", $cgi->param("$serial\_handshake") );
+				$plugin_cfg->param("$serial.DATABITS", $cgi->param("$serial\_databits") );
+				$plugin_cfg->param("$serial.STOPBITS", $cgi->param("$serial\_stopbits") );
+				$plugin_cfg->param("$serial.PARITY", $cgi->param("$serial\_parity") );
 			} else {
-				$plugin_cfg->param("$_.PROTOCOL", "");
-				$plugin_cfg->param("$_.STARTBAUDRATE", "");
-				$plugin_cfg->param("$_.BAUDRATE", "");
-				$plugin_cfg->param("$_.TIMEOUT", "");
-				$plugin_cfg->param("$_.DELAY", "");
-				$plugin_cfg->param("$_.HANDSHAKE", "");
-				$plugin_cfg->param("$_.DATABITS", "");
-				$plugin_cfg->param("$_.STOPBITS", "");
-				$plugin_cfg->param("$_.PARITY", "");
+				$plugin_cfg->param("$serial.PROTOCOL", "");
+				$plugin_cfg->param("$serial.STARTBAUDRATE", "");
+				$plugin_cfg->param("$serial.BAUDRATE", "");
+				$plugin_cfg->param("$serial.TIMEOUT", "");
+				$plugin_cfg->param("$serial.DELAY", "");
+				$plugin_cfg->param("$serial.HANDSHAKE", "");
+				$plugin_cfg->param("$serial.DATABITS", "");
+				$plugin_cfg->param("$serial.STOPBITS", "");
+				$plugin_cfg->param("$serial.PARITY", "");
 			}
 		}
 		$plugin_cfg->save;
@@ -359,43 +384,29 @@ sub form
 	$maintemplate->param( SENDUDP 		=> $plugin_cfg->param("MAIN.SENDUDP") );
 	$maintemplate->param( UDPPORT 		=> $plugin_cfg->param("MAIN.UDPPORT") );
 
-  	# See if we already have a config for this head
+  	# Read the config for all found heads
 	my $i = 0;
 	foreach (@heads) {
-		if ( $plugin_cfg->param("$_.DEVICE") ) {
+		$serial = $_->{serial};
+		if ( $plugin_cfg->param("$serial.DEVICE") ) {
 			%{"hash".$i} = (
-			NAME 		=>	$plugin_cfg->param("$_.NAME"),
-			SERIAL		=>	$plugin_cfg->param("$_.SERIAL"),
-			DEVICE		=>	$plugin_cfg->param("$_.DEVICE"),
-			METER		=>	$plugin_cfg->param("$_.METER"),
-			PROTOCOL	=>	$plugin_cfg->param("$_.PROTOCOL"),
-			STARTBAUDRATE	=>	$plugin_cfg->param("$_.STARTBAUDRATE"),
-			BAUDRATE	=>	$plugin_cfg->param("$_.BAUDRATE"),
-			TIMEOUT		=>	$plugin_cfg->param("$_.TIMEOUT"),
-			DELAY		=>	$plugin_cfg->param("$_.DELAY"),
-			HANDSHAKE	=>	$plugin_cfg->param("$_.HANDSHAKE"),
-			DATABITS	=>	$plugin_cfg->param("$_.DATABITS"),
-			STOPBITS	=>	$plugin_cfg->param("$_.STOPBITS"),
-			PARITY		=>	$plugin_cfg->param("$_.PARITY"),
+			NAME 		=>	$plugin_cfg->param("$serial.NAME"),
+			SERIAL		=>	$plugin_cfg->param("$serial.SERIAL"),
+			DEVICE		=>	$plugin_cfg->param("$serial.DEVICE"),
+			METER		=>	$plugin_cfg->param("$serial.METER"),
+			PROTOCOL	=>	$plugin_cfg->param("$serial.PROTOCOL"),
+			STARTBAUDRATE	=>	$plugin_cfg->param("$serial.STARTBAUDRATE"),
+			BAUDRATE	=>	$plugin_cfg->param("$serial.BAUDRATE"),
+			TIMEOUT		=>	$plugin_cfg->param("$serial.TIMEOUT"),
+			DELAY		=>	$plugin_cfg->param("$serial.DELAY"),
+			HANDSHAKE	=>	$plugin_cfg->param("$serial.HANDSHAKE"),
+			DATABITS	=>	$plugin_cfg->param("$serial.DATABITS"),
+			STOPBITS	=>	$plugin_cfg->param("$serial.STOPBITS"),
+			PARITY		=>	$plugin_cfg->param("$serial.PARITY"),
 			);
 			push (@rows, \%{"hash".$i});
 			$i++;
-		} else {
-			$plugin_cfg->param("$_.NAME", "usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_".$_."-if00-port0");
-			$plugin_cfg->param("$_.SERIAL", "$_");
-			$plugin_cfg->param("$_.DEVICE", "/dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_".$_."-if00-port0");
-			$plugin_cfg->param("$_.METER", "0");
-			$plugin_cfg->param("$_.PROTOCOL", "");
-			$plugin_cfg->param("$_.STARTBAUDRATE", "");
-			$plugin_cfg->param("$_.BAUDRATE", "");
-			$plugin_cfg->param("$_.TIMEOUT", "");
-			$plugin_cfg->param("$_.DELAY", "");
-			$plugin_cfg->param("$_.HANDSHAKE", "");
-			$plugin_cfg->param("$_.DATABITS", "");
-			$plugin_cfg->param("$_.STOPBITS", "");
-			$plugin_cfg->param("$_.PARITY", "");
-			$plugin_cfg->save;
-		}
+		} 
 	}
 	$maintemplate->param( ROWS => \@rows );
 

@@ -25,7 +25,7 @@ use Cwd 'abs_path';
 use IO::Socket; # For sending UDP packages
 use Getopt::Long;
 #use warnings;
-use strict;
+#use strict;
 no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
 no strict "subs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
 
@@ -34,6 +34,7 @@ no strict "subs"; # we need it for template system and for contructs like ${"ska
 ##########################################################################
 my  $cfg;
 my  $plugin_cfg;
+my  %plugin_cfg_hash;
 my  $installfolder;
 my  $version;
 my  $home = File::HomeDir->my_home;
@@ -114,118 +115,113 @@ if ( !$plugin_cfg->param("MAIN.READ") && !$force ) {
 }
 
 # Detect which IR Heads are connected
-my @devices = split(/\n/,`ls /dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_*`);
-foreach (@devices)
-{
-	my $device 	= $_;
-	$device 	=~ s/([\n])//g;
-	$device		=~ s%/dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_%%g;
-	$device		=~ s%-if00-port0%%g;
-	push (@heads, $device);
-}
+Config::Simple->import_from("$installfolder/config/plugins/$psubfolder/smartmeter.cfg", \%plugin_config_hash);
+while (my ($configname, $configvalue) = each %plugin_config_hash){
+	if ( $configname =~ /SERIAL/ ) {
+		$name 		=	$plugin_cfg->param("$configvalue.NAME");
+		$serial		=	$plugin_cfg->param("$configvalue.SERIAL");
+		$device		=	$plugin_cfg->param("$configvalue.DEVICE");
+		$meter		=	$plugin_cfg->param("$configvalue.METER");
+		$protocol	=	$plugin_cfg->param("$configvalue.PROTOCOL");
+		$startbaudrate	=	$plugin_cfg->param("$configvalue.STARTBAUDRATE");
+		$baudrate	=	$plugin_cfg->param("$configvalue.BAUDRATE");
+		$timeout	=	$plugin_cfg->param("$configvalue.TIMEOUT");
+		$handshake	=	$plugin_cfg->param("$configvalue.HANDSHAKE");
+		$databits	=	$plugin_cfg->param("$configvalue.DATABITS");
+		$stopbits	=	$plugin_cfg->param("$configvalue.STOPBITS");
+		$parity		=	$plugin_cfg->param("$configvalue.PARITY");
+		$delay 		=	$plugin_cfg->param("$configvalue.DELAY");
+		&LOG ("$serial: Found configuration for $name", "INFO");
 
-foreach (@heads) {
-	# Read Config for each configured I/R head
-	if ( $plugin_cfg->param("$_.DEVICE") && $plugin_cfg->param("$_.METER") ne "0" ) {
-		$name 		=	$plugin_cfg->param("$_.NAME");
-		$serial		=	$plugin_cfg->param("$_.SERIAL");
-		$device		=	$plugin_cfg->param("$_.DEVICE");
-		$meter		=	$plugin_cfg->param("$_.METER");
-		$protocol	=	$plugin_cfg->param("$_.PROTOCOL");
-		$startbaudrate	=	$plugin_cfg->param("$_.STARTBAUDRATE");
-		$baudrate	=	$plugin_cfg->param("$_.BAUDRATE");
-		$timeout	=	$plugin_cfg->param("$_.TIMEOUT");
-		$handshake	=	$plugin_cfg->param("$_.HANDSHAKE");
-		$databits	=	$plugin_cfg->param("$_.DATABITS");
-		$stopbits	=	$plugin_cfg->param("$_.STOPBITS");
-		$parity		=	$plugin_cfg->param("$_.PARITY");
-		$delay 		=	$plugin_cfg->param("$_.DELAY");
-		&LOG ("$_: Found configuration for $name", "INFO");
-	} else {
-		&LOG ("$_: No configuration found. Skipping.", "INFO");
-		next;
-	}
-	# If set to manual, use manual settings
-	if ( $meter eq "manual" ) {
-		&LOG ("$_: Manual settings.", "INFO");
-		&LOG ("$_: Protocol: $protocol", "INFO");
-		&LOG ("$_: Timeout: $timeout", "INFO");
-		&LOG ("$_: Delay: $delay", "INFO");
-		&LOG ("$_: Device: $device", "INFO");
-		&LOG ("$_: Baudrate:$baudrate/$startbaudrate Databits:$databits Stopbits:$stopbits Parity:$parity Handshake:$handshake", "INFO");
-		system("$installfolder/webfrontend/cgi/plugins/$psubfolder/bin/sm_logger.pl --device $device --protocol $protocol --startbaudrate $startbaudrate --baudrate $baudrate --timeout $timeout --delay $delay --handshake $handshake --databits $databits --stopbits $stopbits --parity $parity $verbose");
-		#next;
-	} else {
-		# If set to  a meter, use standard settings for this meter
-		&LOG ("$_: Presetting: $meter.", "INFO");
-		system("$installfolder/webfrontend/cgi/plugins/$psubfolder/bin/sm_logger.pl --device $device --protocol $meter $verbose");
-		#next;
-	}
-
-	# Send data by UDP to all configured miniservers
-	# If we should send by UDP, figure out which Miniservers are configured
-	if ($sendudp) {
-
-	  $udpstring = "";
-	  $serial = $_;
-
-
-	  # Read Data file
-	  if ( !-e "/var/run/shm/$psubfolder/$serial\.data" ) {
-		$udpstring = "$serial: No data found";
- 	  } else {
-		open(F,"</var/run/shm/$psubfolder/$serial\.data");
-			@lines = <F>;
-		close(F);
-
-		foreach ( @lines ) {
-		  chomp ($_);
-		  $udpstring .= "$serial:$_; ";
+		# Check if head is connected and config is complete
+		if ( !-e $plugin_cfg->param("$configvalue.DEVICE") ) {
+			&LOG ("$serial: Device does not exist. Skipping.", "INFO");
+			next;
 		}
-	  }
+		if ( $plugin_cfg->param("$configvalue.METER") eq "0" ) {
+			&LOG ("$serial: Configuration for $name is not complete. Skipping.", "INFO");
+			next;
+		}
 
-	  &LOG("$serial: UDP String to send: $udpstring", "INFO");
+		# If set to manual, use manual settings
+		if ( $meter eq "manual" ) {
+			&LOG ("$serial: Manual settings.", "INFO");
+			&LOG ("$serial: Protocol: $protocol", "INFO");
+			&LOG ("$serial: Timeout: $timeout", "INFO");
+			&LOG ("$serial: Delay: $delay", "INFO");
+			&LOG ("$serial: Device: $device", "INFO");
+			&LOG ("$serial: Baudrate:$baudrate/$startbaudrate Databits:$databits Stopbits:$stopbits Parity:$parity Handshake:$handshake", "INFO");
+			system("$installfolder/webfrontend/cgi/plugins/$psubfolder/bin/sm_logger.pl --device $device --protocol $protocol --startbaudrate $startbaudrate --baudrate $baudrate --timeout $timeout --delay $delay --handshake $handshake --databits $databits --stopbits $stopbits --parity $parity $verbose");
+		} else {
+			# If set to  a meter, use standard settings for this meter
+			&LOG ("$serial: Presetting: $meter.", "INFO");
+			system("$installfolder/webfrontend/cgi/plugins/$psubfolder/bin/sm_logger.pl --device $device --protocol $meter $verbose");
+		}
 
-	  for (my $i=1;$i<=$miniservers;$i++) {
+		# Send data by UDP to all configured miniservers
+		# If we should send by UDP, figure out which Miniservers are configured
+		if ($sendudp) {
 
-	    ${miniservername . "$i"} = $cfg->param("MINISERVER$i.NAME");
+		  $udpstring = "";
 
-	    if ( $cfg->param("MINISERVER$i.USECLOUDDNS") ) {
-	      my $miniservermac = $cfg->param("MINISERVER$i.CLOUDURL");
-	      my $dns_info = `$home/webfrontend/cgi/system/tools/showclouddns.pl $miniservermac`;
-	      my @dns_info_pieces = split /:/, $dns_info;
-	      if ($dns_info_pieces[0]) {
-	        $dns_info_pieces[0] =~ s/^\s+|\s+$//g;
-	        ${miniserverip . "$i"} = $dns_info_pieces[0];
-	        &LOG("$serial: Send Data to " . ${miniservername . "$i"} . " at " . ${miniserverip . "$i"} . " using CloudDNS.", "INFO");
-	      } else {
-	        ${miniserverip . "$i"} = "127.0.0.1";
-	        &LOG("$serial: Could not find IP Address for " . ${miniservername . "$i"} . " using CloudDNS.", "WARN");
-	      }
-	    } else {
-	      if ( $cfg->param("MINISERVER$i.IPADDRESS") ) {
-	        ${miniserverip . "$i"} = $cfg->param("MINISERVER$i.IPADDRESS");
-	        &LOG("$serial: Send Data to " . ${miniservername . "$i"}  . " at " . ${miniserverip . "$i"} . ".", "INFO");
-	      } else {
-	        ${miniserverip . "$i"} = "127.0.0.1";
-	        &LOG("$serial: Could not find IP Address for " . ${miniservername . "$i"} . ".", "WARN");
-	      }
-	    }
+		  # Read Data file
+		  if ( !-e "/var/run/shm/$psubfolder/$serial\.data" ) {
+			$udpstring = "$serial: No data found";
+ 		  } else {
+			open(F,"</var/run/shm/$psubfolder/$serial\.data");
+				@lines = <F>;
+			close(F);
 
-	  }
+			foreach ( @lines ) {
+			  chomp ($_);
+			  $udpstring .= "$_; ";
+			}
+		  }
 
-	  # Send Data
-	  for ($i=1;$i<=$miniservers;$i++) {
+		  &LOG("$serial: UDP String to send: $udpstring", "INFO");
 
-	    # Send value
-	    my $sock = IO::Socket::INET->new(
-	      Proto    => 'udp',
-	      PeerPort => $udpport,
-	      PeerAddr => ${miniserverip . "$i"},
-	    ) or die "<ERROR> Could not create socket: $!\n";
-	    $sock->send($udpstring) or die "Send error: $!\n";
-	    &LOG("$serial: Send OK to " . ${miniservername . "$i"} . ". IP:" . ${miniserverip . "$i"} . " Port:$udpport", "OK");
-	  }
+		  for (my $i=1;$i<=$miniservers;$i++) {
+
+		    ${miniservername . "$i"} = $cfg->param("MINISERVER$i.NAME");
+
+		    if ( $cfg->param("MINISERVER$i.USECLOUDDNS") ) {
+		      my $miniservermac = $cfg->param("MINISERVER$i.CLOUDURL");
+		      my $dns_info = `$home/webfrontend/cgi/system/tools/showclouddns.pl $miniservermac`;
+		      my @dns_info_pieces = split /:/, $dns_info;
+		      if ($dns_info_pieces[0]) {
+		        $dns_info_pieces[0] =~ s/^\s+|\s+$//g;
+		        ${miniserverip . "$i"} = $dns_info_pieces[0];
+		        &LOG("$serial: Send Data to " . ${miniservername . "$i"} . " at " . ${miniserverip . "$i"} . " using CloudDNS.", "INFO");
+		      } else {
+		        ${miniserverip . "$i"} = "127.0.0.1";
+		        &LOG("$serial: Could not find IP Address for " . ${miniservername . "$i"} . " using CloudDNS.", "WARN");
+		      }
+		    } else {
+		      if ( $cfg->param("MINISERVER$i.IPADDRESS") ) {
+		        ${miniserverip . "$i"} = $cfg->param("MINISERVER$i.IPADDRESS");
+		        &LOG("$serial: Send Data to " . ${miniservername . "$i"}  . " at " . ${miniserverip . "$i"} . ".", "INFO");
+		      } else {
+		        ${miniserverip . "$i"} = "127.0.0.1";
+		        &LOG("$serial: Could not find IP Address for " . ${miniservername . "$i"} . ".", "WARN");
+		      }
+		    }
+
+		  }
+
+		  # Send Data
+		  for ($i=1;$i<=$miniservers;$i++) {
+
+		    # Send value
+		    my $sock = IO::Socket::INET->new(
+		      Proto    => 'udp',
+		      PeerPort => $udpport,
+		      PeerAddr => ${miniserverip . "$i"},
+		    ) or die "<ERROR> Could not create socket: $!\n";
+		    $sock->send($udpstring) or die "Send error: $!\n";
+		    &LOG("$serial: Send OK to " . ${miniservername . "$i"} . ". IP:" . ${miniserverip . "$i"} . " Port:$udpport", "OK");
+		  }
+
+		}
 
 	}
 
