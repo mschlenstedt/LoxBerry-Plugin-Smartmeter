@@ -120,6 +120,7 @@ foreach (@devices)
 	$serial 	=~ s/([\n])//g;
 	$serial		=~ s%/dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_%%g;
 	$serial		=~ s%/dev/serial/by-id/usb-FTDI_usb_serial_converter_%%g;
+	$serial		=~ s%/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_%%g;
 	$serial		=~ s%-if00-port0%%g;
 	%{"head".$i} = ( serial => $serial, device => $device, name => $name );
 	push ( @heads, \%{"head".$i} );

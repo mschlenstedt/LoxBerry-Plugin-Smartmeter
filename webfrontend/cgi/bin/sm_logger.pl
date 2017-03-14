@@ -74,6 +74,7 @@ if ( (!$device || !-e $device) && !$parse ) {
 }
 if ( $device !~ /usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller/  &&
      $device !~ /FTDI_usb_serial_converter/  &&
+     $device !~ /usb-FTDI_FT232R_USB_UART/  &&
      !$parse ) {
 	print "Your serial device seems not to be support.\n";
 	exit;
@@ -85,6 +86,7 @@ if ( !$parse ) {
 	$serial	=~ s/([\n])//g;
 	$serial	=~ s%/dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_%%g;
 	$serial	=~ s%/dev/serial/by-id/usb-FTDI_usb_serial_converter_%%g;
+	$serial	=~ s%/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_%%g;
 	$serial	=~ s%-if00-port0%%g;
 } else {
 	$serial	= $parse;
