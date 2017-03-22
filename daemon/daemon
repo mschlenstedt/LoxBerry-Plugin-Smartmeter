@@ -1,0 +1,13 @@
+#!/bin/bash
+
+logfile=REPLACEBYBASEFOLDER/log/plugins/REPLACEBYSUBFOLDER/smartmeter.log
+
+echo "`date` - Start Init " >>$logfile
+echo "`date` - Creating new UDEV Rules for I/R heads: /etc/udev/rules.d/99-smartmeter.rules " >>$logfile
+echo "# LoxBerry SML-eMon Plugin device rule file - DO NOT EDIT BY HAND!" >/etc/udev/rules.d/99-smartmeter.rules
+echo "KERNEL==\"ttyUSB[0-9]*\",GROUP=\"loxberry\",MODE=\"0666\",SYMLINK+=\"serial/smartmeter/\$env{ID_SERIAL_SHORT}\"" >>/etc/udev/rules.d/99-smartmeter.rules
+echo "`date` - New UDEV-Rule for I/R heads created. " >>$logfile
+echo "`date` - Reload rules... " >>$logfile
+udevadm control --reload-rules >>$logfile && udevadm trigger >>$logfile
+echo "`date` - End Init " >>$logfile
+exit 0

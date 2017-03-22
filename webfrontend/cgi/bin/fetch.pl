@@ -114,7 +114,7 @@ if ( !$plugin_cfg->param("MAIN.READ") && !$force ) {
 	exit;
 }
 
-# Detect which IR Heads are connected
+# Detect which IR Heads are connected / configured
 Config::Simple->import_from("$installfolder/config/plugins/$psubfolder/smartmeter.cfg", \%plugin_config_hash);
 while (my ($configname, $configvalue) = each %plugin_config_hash){
 	if ( $configname =~ /SERIAL/ ) {

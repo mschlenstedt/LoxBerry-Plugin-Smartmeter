@@ -68,26 +68,24 @@ if ( !$verbose ) {
 }
 
 ### Serieller Port
-if ( (!$device || !-e $device) && !$parse ) {
+if ( !$device && !$parse ) {
 	print "Please use --device to specify TTY device. Use --help to get help.\n";
 	exit;
 }
-if ( $device !~ /usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller/  &&
-     $device !~ /FTDI_usb_serial_converter/  &&
-     $device !~ /usb-FTDI_FT232R_USB_UART/  &&
-     !$parse ) {
-	print "Your serial device seems not to be support.\n";
+if ( $device !~ /\/dev\/serial\/smartmeter/ && !$parse ) {
+	print "Only devices from /dev/serial/smartmeter/* are supported.\n";
+	exit;
+}
+if ( !-e $device && !$parse ) {
+	print "The device $device does not exist.\n";
 	exit;
 }
 
 ### Serial of I/R Head
 if ( !$parse ) {
-	$serial	= $device;
+	$serial = $device;
 	$serial	=~ s/([\n])//g;
-	$serial	=~ s%/dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_%%g;
-	$serial	=~ s%/dev/serial/by-id/usb-FTDI_usb_serial_converter_%%g;
-	$serial	=~ s%/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_%%g;
-	$serial	=~ s%-if00-port0%%g;
+	$serial =~ s%/dev/serial/smartmeter/%%g;
 } else {
 	$serial	= $parse;
 	$serial	=~ s/([\n])//g;

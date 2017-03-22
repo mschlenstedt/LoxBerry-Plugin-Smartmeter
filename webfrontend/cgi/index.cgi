@@ -100,52 +100,26 @@ if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
 }
 
 # Detect which IR Heads are connected
-$i = 0;
-my @devices = split(/\n/,`ls /dev/serial/by-id/*`);
-foreach (@devices)
-{
-	# Check for supported devicdes
-	if ( 	$_ !~ /Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller/ &&
-		$_ !~ /FTDI_usb_serial_converter/ 
-	) {
-		next;
-	}
-
-	# Create Array of Hashes for known heads
-	$device		= $_;
-	$name		= $_;
-	$name		=~ s/([\n])//g;
-	$name		=~ s%/dev/serial/by-id/%%g;
-	$serial 	= $_;
-	$serial 	=~ s/([\n])//g;
-	$serial		=~ s%/dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_%%g;
-	$serial		=~ s%/dev/serial/by-id/usb-FTDI_usb_serial_converter_%%g;
-	$serial		=~ s%/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_%%g;
-	$serial		=~ s%-if00-port0%%g;
-	%{"head".$i} = ( serial => $serial, device => $device, name => $name );
-	push ( @heads, \%{"head".$i} );
-	$i++;
-}
+my @heads = split(/\n/,`ls /dev/serial/smartmeter/*`);
 
 # Save a config set if it not already exists
 foreach (@heads) {
-	$serial = $_->{serial};
-	$device = $_->{device};
-	$name   = $_->{name};
-	if ( !$plugin_cfg->param("$serial\.DEVICE") ) {
-		$plugin_cfg->param("$serial\.NAME", "$name");
-		$plugin_cfg->param("$serial\.SERIAL", "$serial");
-		$plugin_cfg->param("$serial\.DEVICE", "$device");
-		$plugin_cfg->param("$serial\.METER", "0");
-		$plugin_cfg->param("$serial\.PROTOCOL", "");
-		$plugin_cfg->param("$serial\.STARTBAUDRATE", "");
-		$plugin_cfg->param("$serial\.BAUDRATE", "");
-		$plugin_cfg->param("$serial\.TIMEOUT", "");
-		$plugin_cfg->param("$serial\.DELAY", "");
-		$plugin_cfg->param("$serial\.HANDSHAKE", "");
-		$plugin_cfg->param("$serial\.DATABITS", "");
-		$plugin_cfg->param("$serial\.STOPBITS", "");
-		$plugin_cfg->param("$serial\.PARITY", "");
+	$serial = $_;
+	$serial =~ s%/dev/serial/smartmeter/%%g;
+	if ( !$plugin_cfg->param("$serial.DEVICE") ) {
+		$plugin_cfg->param("$serial.NAME", "$serial");
+		$plugin_cfg->param("$serial.SERIAL", "$serial");
+		$plugin_cfg->param("$serial.DEVICE", "$_");
+		$plugin_cfg->param("$serial.METER", "0");
+		$plugin_cfg->param("$serial.PROTOCOL", "");
+		$plugin_cfg->param("$serial.STARTBAUDRATE", "");
+		$plugin_cfg->param("$serial.BAUDRATE", "");
+		$plugin_cfg->param("$serial.TIMEOUT", "");
+		$plugin_cfg->param("$serial.DELAY", "");
+		$plugin_cfg->param("$serial.HANDSHAKE", "");
+		$plugin_cfg->param("$serial.DATABITS", "");
+		$plugin_cfg->param("$serial.STOPBITS", "");
+		$plugin_cfg->param("$serial.PARITY", "");
 	}
 }
 $plugin_cfg->save;
@@ -257,7 +231,8 @@ sub form
 		$plugin_cfg->param( "MAIN.SENDUDP", $cgi->param('sendudp') );
 		$plugin_cfg->param( "MAIN.UDPPORT", $cgi->param('udpport') );
 		foreach (@heads) {
-			$serial = $_->{serial};
+			$serial = $_;
+			$serial =~ s%/dev/serial/smartmeter/%%g;
 			$plugin_cfg->param("$serial.NAME", $cgi->param("$serial\_name") );
 			$plugin_cfg->param("$serial.METER", $cgi->param("$serial\_meter") );
 			if ( $cgi->param("$serial\_meter") eq "manual" ) {
@@ -388,7 +363,8 @@ sub form
   	# Read the config for all found heads
 	my $i = 0;
 	foreach (@heads) {
-		$serial = $_->{serial};
+		$serial = $_;
+		$serial =~ s%/dev/serial/smartmeter/%%g;
 		if ( $plugin_cfg->param("$serial.DEVICE") ) {
 			%{"hash".$i} = (
 			NAME 		=>	$plugin_cfg->param("$serial.NAME"),
