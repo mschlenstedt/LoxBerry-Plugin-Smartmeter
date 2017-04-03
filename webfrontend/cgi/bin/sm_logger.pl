@@ -54,9 +54,9 @@ GetOptions (    "verbose"          => \$verbose,
 
 ### Usage
 if ( $help ) {
-	print "Usage: $0 --device TTYDEVICE [--protocol PROTOCOL] [--startbaudrate STARTBAUDRAT] [--baudrate BAUDRATE] [--timeout TIMEOUT] \n";
-	print "       [--delay DELAY} [--handshake HANDSHAKE] [--databits DATABITS] [--stopbits STOPBITS] [--parity PARITY] [--help] [--verbose]\n";
-	print "       [--help] [--verbose] [--parse DUMPFILE]\n";
+	print "Usage: $0 --device TTYDEVICE [--protocol PROTOCOL] [--startbaudrate STARTBAUDRATE]\n";
+	print "       [--baudrate BAUDRATE] [--timeout TIMEOUT] [--delay DELAY} [--handshake HANDSHAKE] [--databits DATABITS]\n";
+	print "       [--stopbits STOPBITS] [--parity PARITY] [--help] [--verbose] [--help] [--verbose] [--parse DUMPFILE]\n";
 	exit;
 }
 
@@ -182,18 +182,35 @@ elsif ( $protocol eq "iskra175d0" ) {
 	&PROTO_GENERICD0;
 }
 
-elsif ( $protocol eq "siemenstd3511d0" ) {
+elsif ( $protocol eq "iskra681sml" ) {
 
 	### Defaults
 	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "60" if !$timeout;
+	our $delay = "2" if !$delay;
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "landisgyre320d0" ) {
+
+	### Defaults
+	our $baudrate = 4800 if !$baudrate;
 	our $startbaudrate = 300 if !$startbaudrate;
 	our $databits = 7 if !$databits;
 	our $stopbits = 1 if !$stopbits;
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $precommand = "303531";
+	our $timeout = "20" if !$timeout;
+	our $delay = "4" if !$delay;
+	our $precommand = "";
 	our $postcommand = "";
 
 	&PROTO_GENERICD0;
@@ -216,21 +233,21 @@ elsif ( $protocol eq "pafal20ec3grd0" ) {
 	&PROTO_GENERICD0;
 }
 
-elsif ( $protocol eq "iskra681sml" ) {
+elsif ( $protocol eq "siemenstd3511d0" ) {
 
 	### Defaults
 	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 8 if !$databits;
+	our $startbaudrate = 300 if !$startbaudrate;
+	our $databits = 7 if !$databits;
 	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
+	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
-	our $timeout = "60" if !$timeout;
+	our $timeout = "10" if !$timeout;
 	our $delay = "2" if !$delay;
-	our $precommand = "";
+	our $precommand = "303531";
 	our $postcommand = "";
 
-	&PROTO_GENERICSML;
+	&PROTO_GENERICD0;
 }
 
 else {
@@ -598,34 +615,34 @@ sub PARSE_DUMP
 	}
 
 	### Energy consumption: Readings  (OBIS 1.8.x*255)
-	($readingconsT0) = $dumpbuffer =~ /1\.8\.0\*[255|00]+\(([\d\.]+)/;
-	($readingconsT1) = $dumpbuffer =~ /1\.8\.1\*[255|00]+\(([\d\.]+)/;
-	($readingconsT2) = $dumpbuffer =~ /1\.8\.2\*[255|00]+\(([\d\.]+)/;
-	($readingconsT3) = $dumpbuffer =~ /1\.8\.3\*[255|00]+\(([\d\.]+)/;
-	($readingconsT4) = $dumpbuffer =~ /1\.8\.4\*[255|00]+\(([\d\.]+)/;
-	($readingconsT5) = $dumpbuffer =~ /1\.8\.5\*[255|00]+\(([\d\.]+)/;
-	($readingconsT6) = $dumpbuffer =~ /1\.8\.6\*[255|00]+\(([\d\.]+)/;
-	($readingconsT7) = $dumpbuffer =~ /1\.8\.7\*[255|00]+\(([\d\.]+)/;
-	($readingconsT8) = $dumpbuffer =~ /1\.8\.8\*[255|00]+\(([\d\.]+)/;
-	($readingconsT9) = $dumpbuffer =~ /1\.8\.9\*[255|00]+\(([\d\.]+)/;
+	($readingconsT0) = $dumpbuffer =~ /1\.8\.0[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT1) = $dumpbuffer =~ /1\.8\.1[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT2) = $dumpbuffer =~ /1\.8\.2[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT3) = $dumpbuffer =~ /1\.8\.3[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT4) = $dumpbuffer =~ /1\.8\.4[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT5) = $dumpbuffer =~ /1\.8\.5[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT6) = $dumpbuffer =~ /1\.8\.6[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT7) = $dumpbuffer =~ /1\.8\.7[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT8) = $dumpbuffer =~ /1\.8\.8[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT9) = $dumpbuffer =~ /1\.8\.9[\*255|\*00]*\(([\d\.]+)/;
 
 	### Energy delivery: Readings  (OBIS 2.8.x*255)
-	($readingdelT0) = $dumpbuffer =~ /2\.8\.0\*[255|00]+\(([\d\.]+)/;
-	($readingdelT1) = $dumpbuffer =~ /2\.8\.1\*[255|00]+\(([\d\.]+)/;
-	($readingdelT2) = $dumpbuffer =~ /2\.8\.2\*[255|00]+\(([\d\.]+)/;
-	($readingdelT3) = $dumpbuffer =~ /2\.8\.3\*[255|00]+\(([\d\.]+)/;
-	($readingdelT4) = $dumpbuffer =~ /2\.8\.4\*[255|00]+\(([\d\.]+)/;
-	($readingdelT5) = $dumpbuffer =~ /2\.8\.5\*[255|00]+\(([\d\.]+)/;
-	($readingdelT6) = $dumpbuffer =~ /2\.8\.6\*[255|00]+\(([\d\.]+)/;
-	($readingdelT7) = $dumpbuffer =~ /2\.8\.7\*[255|00]+\(([\d\.]+)/;
-	($readingdelT8) = $dumpbuffer =~ /2\.8\.8\*[255|00]+\(([\d\.]+)/;
-	($readingdelT9) = $dumpbuffer =~ /2\.8\.9\*[255|00]+\(([\d\.]+)/;
+	($readingdelT0) = $dumpbuffer =~ /2\.8\.0[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT1) = $dumpbuffer =~ /2\.8\.1[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT2) = $dumpbuffer =~ /2\.8\.2[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT3) = $dumpbuffer =~ /2\.8\.3[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT4) = $dumpbuffer =~ /2\.8\.4[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT5) = $dumpbuffer =~ /2\.8\.5[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT6) = $dumpbuffer =~ /2\.8\.6[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT7) = $dumpbuffer =~ /2\.8\.7[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT8) = $dumpbuffer =~ /2\.8\.8[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT9) = $dumpbuffer =~ /2\.8\.9[\*255|\*00]*\(([\d\.]+)/;
 
 	### Energy consumption: Power  (OBIS mixture - no standard?)
-	($power1) = $dumpbuffer =~ /1\.7\.0\*[255|00]+\(([\d\.]+)/;
-	($power2) = $dumpbuffer =~ /2\.7\.0\*[255|00]+\(([\d\.]+)/;
-	($power3) = $dumpbuffer =~ /15\.7\.0\*[255|00]+\(([\d\.]+)/;
-	($power4) = $dumpbuffer =~ /16\.7\.0\*[255|00]+\(([\d\.]+)/;
+	($power1) = $dumpbuffer =~ /1\.7\.0[\*255|\*00]*\(([\d\.]+)/;
+	($power2) = $dumpbuffer =~ /2\.7\.0[\*255|\*00]*\(([\d\.]+)/;
+	($power3) = $dumpbuffer =~ /15\.7\.0[\*255|\*00]*\(([\d\.]+)/;
+	($power4) = $dumpbuffer =~ /16\.7\.0[\*255|\*00]*\(([\d\.]+)/;
 
 	### Calculate Avg. Power
 	my $powercalccons = &CALCULATE_POWER("$readingconsT0","CONS");
