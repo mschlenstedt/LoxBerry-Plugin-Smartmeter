@@ -216,6 +216,23 @@ elsif ( $protocol eq "landisgyre320d0" ) {
 	&PROTO_GENERICD0;
 }
 
+elsif ( $protocol eq "landisgyre350d0" ) {
+
+	### Defaults
+	our $baudrate = 4800 if !$baudrate;
+	our $startbaudrate = 300 if !$startbaudrate;
+	our $databits = 7 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "even" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "20" if !$timeout;
+	our $delay = "4" if !$delay;
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICD0;
+}
+
 elsif ( $protocol eq "pafal20ec3grd0" ) {
 
 	### Defaults
