@@ -700,34 +700,34 @@ sub PARSE_DUMP
 	}
 
 	### Energy consumption: Readings  (OBIS 1.8.x*255)
-	($readingconsT0) = $dumpbuffer =~ /[:^]1\.8\.0[\*255|\*00]*\(([\d\.]+)/;
-	($readingconsT1) = $dumpbuffer =~ /[:^]1\.8\.1[\*255|\*00]*\(([\d\.]+)/;
-	($readingconsT2) = $dumpbuffer =~ /[:^]1\.8\.2[\*255|\*00]*\(([\d\.]+)/;
-	($readingconsT3) = $dumpbuffer =~ /[:^]1\.8\.3[\*255|\*00]*\(([\d\.]+)/;
-	($readingconsT4) = $dumpbuffer =~ /[:^]1\.8\.4[\*255|\*00]*\(([\d\.]+)/;
-	($readingconsT5) = $dumpbuffer =~ /[:^]1\.8\.5[\*255|\*00]*\(([\d\.]+)/;
-	($readingconsT6) = $dumpbuffer =~ /[:^]1\.8\.6[\*255|\*00]*\(([\d\.]+)/;
-	($readingconsT7) = $dumpbuffer =~ /[:^]1\.8\.7[\*255|\*00]*\(([\d\.]+)/;
-	($readingconsT8) = $dumpbuffer =~ /[:^]1\.8\.8[\*255|\*00]*\(([\d\.]+)/;
-	($readingconsT9) = $dumpbuffer =~ /[:^]1\.8\.9[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT0) = $dumpbuffer =~ /[\n|\r|:]1\.8\.0[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT1) = $dumpbuffer =~ /[\n|\r|:]1\.8\.1[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT2) = $dumpbuffer =~ /[\n|\r|:]1\.8\.2[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT3) = $dumpbuffer =~ /[\n|\r|:]1\.8\.3[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT4) = $dumpbuffer =~ /[\n|\r|:]1\.8\.4[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT5) = $dumpbuffer =~ /[\n|\r|:]1\.8\.5[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT6) = $dumpbuffer =~ /[\n|\r|:]1\.8\.6[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT7) = $dumpbuffer =~ /[\n|\r|:]1\.8\.7[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT8) = $dumpbuffer =~ /[\n|\r|:]1\.8\.8[\*255|\*00]*\(([\d\.]+)/;
+	($readingconsT9) = $dumpbuffer =~ /[\n|\r|:]1\.8\.9[\*255|\*00]*\(([\d\.]+)/;
 
 	### Energy delivery: Readings  (OBIS 2.8.x*255)
-	($readingdelT0) = $dumpbuffer =~ /[:^]2\.8\.0[\*255|\*00]*\(([\d\.]+)/;
-	($readingdelT1) = $dumpbuffer =~ /[:^]2\.8\.1[\*255|\*00]*\(([\d\.]+)/;
-	($readingdelT2) = $dumpbuffer =~ /[:^]2\.8\.2[\*255|\*00]*\(([\d\.]+)/;
-	($readingdelT3) = $dumpbuffer =~ /[:^]2\.8\.3[\*255|\*00]*\(([\d\.]+)/;
-	($readingdelT4) = $dumpbuffer =~ /[:^]2\.8\.4[\*255|\*00]*\(([\d\.]+)/;
-	($readingdelT5) = $dumpbuffer =~ /[:^]2\.8\.5[\*255|\*00]*\(([\d\.]+)/;
-	($readingdelT6) = $dumpbuffer =~ /[:^]2\.8\.6[\*255|\*00]*\(([\d\.]+)/;
-	($readingdelT7) = $dumpbuffer =~ /[:^]2\.8\.7[\*255|\*00]*\(([\d\.]+)/;
-	($readingdelT8) = $dumpbuffer =~ /[:^]2\.8\.8[\*255|\*00]*\(([\d\.]+)/;
-	($readingdelT9) = $dumpbuffer =~ /[:^]2\.8\.9[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT0) = $dumpbuffer =~ /[\n|\r|:]2\.8\.0[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT1) = $dumpbuffer =~ /[\n|\r|:]2\.8\.1[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT2) = $dumpbuffer =~ /[\n|\r|:]2\.8\.2[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT3) = $dumpbuffer =~ /[\n|\r|:]2\.8\.3[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT4) = $dumpbuffer =~ /[\n|\r|:]2\.8\.4[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT5) = $dumpbuffer =~ /[\n|\r|:]2\.8\.5[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT6) = $dumpbuffer =~ /[\n|\r|:]2\.8\.6[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT7) = $dumpbuffer =~ /[\n|\r|:]2\.8\.7[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT8) = $dumpbuffer =~ /[\n|\r|:]2\.8\.8[\*255|\*00]*\(([\d\.]+)/;
+	($readingdelT9) = $dumpbuffer =~ /[\n|\r|:]2\.8\.9[\*255|\*00]*\(([\d\.]+)/;
 
 	### Energy consumption: Power  (OBIS mixture - no standard?)
-	($power1) = $dumpbuffer =~ /[:^]1\.7\.0[\*255|\*00]*\(([\d\.]+)/;
-	($power2) = $dumpbuffer =~ /[:^]2\.7\.0[\*255|\*00]*\(([\d\.]+)/;
-	($power3) = $dumpbuffer =~ /[:^]15\.7\.0[\*255|\*00]*\(([\d\.]+)/;
-	($power4) = $dumpbuffer =~ /[:^]16\.7\.0[\*255|\*00]*\(([\d\.]+)/;
+	($power1) = $dumpbuffer =~ /[\n|\r|:]1\.7\.0[\*255|\*00]*\(([\d\.]+)/;
+	($power2) = $dumpbuffer =~ /[\n|\r|:]2\.7\.0[\*255|\*00]*\(([\d\.]+)/;
+	($power3) = $dumpbuffer =~ /[\n|\r|:]15\.7\.0[\*255|\*00]*\(([\d\.]+)/;
+	($power4) = $dumpbuffer =~ /[\n|\r|:]16\.7\.0[\*255|\*00]*\(([\d\.]+)/;
 
 	### Calculate Avg. Power
 	my $powercalccons = &CALCULATE_POWER("$readingconsT0","CONS");
