@@ -127,6 +127,9 @@ if ( $protocol eq "genericd0" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "120" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
 
 	&PROTO_GENERICD0;
 }
@@ -142,6 +145,9 @@ elsif ( $protocol eq "genericsml" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "120" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
 
 	&PROTO_GENERICSML;
 }
@@ -157,6 +163,7 @@ elsif ( $protocol eq "iskra173d0" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
 
@@ -174,6 +181,7 @@ elsif ( $protocol eq "iskra173sml" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
 
@@ -192,6 +200,7 @@ elsif ( $protocol eq "iskra174d0" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
 
@@ -209,6 +218,7 @@ elsif ( $protocol eq "iskra174sml" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
 
@@ -227,6 +237,7 @@ elsif ( $protocol eq "iskra175d0" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "60" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
 
@@ -244,6 +255,7 @@ elsif ( $protocol eq "iskra175sml" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "60" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
 
@@ -261,6 +273,7 @@ elsif ( $protocol eq "iskra681sml" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "60" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
 
@@ -278,6 +291,7 @@ elsif ( $protocol eq "landisgyre320d0" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "20" if !$timeout;
 	our $delay = "4" if !$delay;
+	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
 
@@ -295,6 +309,7 @@ elsif ( $protocol eq "landisgyre350d0" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "20" if !$timeout;
 	our $delay = "4" if !$delay;
+	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
 
@@ -312,6 +327,7 @@ elsif ( $protocol eq "pafal20ec3grd0" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "120" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
 
@@ -329,7 +345,26 @@ elsif ( $protocol eq "siemenstd3511d0" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
 	our $precommand = "303531";
+	our $postcommand = "";
+
+	&PROTO_GENERICD0;
+}
+
+elsif ( $protocol eq "landisgyret550d0" || $protocol eq "siemensuh50do" ) {
+
+	### Defaults
+	our $baudrate = 2400 if !$baudrate;
+	our $startbaudrate = 300 if !$startbaudrate;
+	our $databits = 7 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "even" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "10" if !$timeout;
+	our $delay = "1" if !$delay;
+	our $preinitcommand = "0000000000000000000000000000000000000000";
+	our $precommand = "";
 	our $postcommand = "";
 
 	&PROTO_GENERICD0;
@@ -376,7 +411,7 @@ sub PROTO_GENERICD0
 		&INITIALIZE_PORT();
 
 		### Sending Starting Sequenze
-		&D0_STARTINGSEQUENZE("2f3f210d0a");
+		&D0_STARTINGSEQUENZE("2f3f210d0a", "$preinitcommand");
 
 		### Changing Baudrate
 		&D0_CHANGEBAUDRATE("$baudrate", "$precommand", "$postcommand");
@@ -441,12 +476,36 @@ sub D0_STARTINGSEQUENZE
 
 	### Send Initial Sequenze
 	my $data = shift; # http://wiki.selfhtml.org/wiki/Perl/Subroutinen
+	my $init = shift; # http://wiki.selfhtml.org/wiki/Perl/Subroutinen
 	if ( !$data) { $data = "2f3f210d0a" }; # Std. if empty: Send as HEX "/?!<CR><LF>"
 
-	my $request = pack('H*',$data);
-	my $requestlog = $request;
+	# PreInit
+	my $request = pack('H*',$init);
+	my $requestlog = "$request";
 	$requestlog =~ s/\r\n\z//; # chomp doesn't work here...
 	my $num_out = $port->write($request);
+
+	### Debug
+  	&LOG ("Send: $requestlog", "INFO");
+	if ( !$num_out ) {
+		$verbose = 1;
+		&LOG ("Write failed.", "FAIL");
+		exit;
+	}
+	if ( $num_out ne length($request) ) {
+		$verbose = 1;
+		&LOG ("Write incomplete.", "FAIL");
+		exit;
+	}
+	&LOG ("$num_out Bytes written.", "INFO");
+
+	sleep 0.5;
+
+	# Initialize
+	$request = pack('H*',$data);
+	$requestlog = "$request";
+	$requestlog =~ s/\r\n\z//; # chomp doesn't work here...
+	$num_out = $port->write($request);
 
 	### Debug
   	&LOG ("Send: $requestlog", "INFO");
@@ -487,6 +546,10 @@ sub D0_CHANGEBAUDRATE
 	if ( $baudratetarget eq "300" ) {
 		our $baudchange = 1;
 		our $baudrateh = "303030";
+	}
+	elsif ( $baudratetarget eq "2400" ) {
+		our $baudchange = 1;
+		our $baudrateh = "303330";
 	}
 	elsif ( $baudratetarget eq "4800" ) {
 		our $baudchange = 1;
