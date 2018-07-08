@@ -152,6 +152,42 @@ elsif ( $protocol eq "genericsml" ) {
 	&PROTO_GENERICSML;
 }
 
+elsif ( $protocol eq "emhed300sml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "20" if !$timeout;
+	our $delay = "1" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "emhehzksml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "30" if !$timeout;
+	our $delay = "30" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
 elsif ( $protocol eq "iskra173d0" ) {
 
 	### Defaults
@@ -188,7 +224,6 @@ elsif ( $protocol eq "iskra173sml" ) {
 	&PROTO_GENERICSML;
 }
 
-
 elsif ( $protocol eq "iskra174d0" ) {
 
 	### Defaults
@@ -224,7 +259,6 @@ elsif ( $protocol eq "iskra174sml" ) {
 
 	&PROTO_GENERICSML;
 }
-
 
 elsif ( $protocol eq "iskra175d0" ) {
 
@@ -278,6 +312,24 @@ elsif ( $protocol eq "iskra681sml" ) {
 	our $postcommand = "";
 
 	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "itronace3000type260d0" ) {
+
+	### Defaults
+	our $baudrate = 300 if !$baudrate;
+	our $startbaudrate = 300 if !$startbaudrate;
+	our $databits = 7 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "even" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "10" if !$timeout;
+	our $delay = "4" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICD0;
 }
 
 elsif ( $protocol eq "landisgyre320d0" ) {
@@ -416,20 +468,23 @@ sub PROTO_GENERICD0
 		&D0_STARTINGSEQUENZE("2f3f210d0a", "$preinitcommand");
 
 		### Changing Baudrate
-		&D0_CHANGEBAUDRATE("$baudrate", "$precommand", "$postcommand");
+		### Change baud rate only if different
+		if ( $startbaudrate ne $baudrate ) {
+    			&D0_CHANGEBAUDRATE("$baudrate", "$precommand", "$postcommand");
+    		}
 
-		### Read serial device
-		&READ_SERIAL();
+    		### Read serial device
+    		&READ_SERIAL();
+    
+    	} else {
+    
+    		&LOG ("Parsing previous dump file $parse", "INFO");
+    
+    	}
+    
+    	if ( $type eq "HEAT" ) {
 
-	} else {
-
-		&LOG ("Parsing previous dump file $parse", "INFO");
-
-	}
-
-	if ( $type eq "HEAT" ) {
-
-		&PARSE_DUMP("D0", "HEAT");
+    		&PARSE_DUMP("D0", "HEAT");
 
 	} else {
 
