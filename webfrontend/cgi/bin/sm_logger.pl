@@ -490,26 +490,28 @@ sub D0_STARTINGSEQUENZE
 	if ( !$data) { $data = "2f3f210d0a" }; # Std. if empty: Send as HEX "/?!<CR><LF>"
 
 	# PreInit
-	my $request = pack('H*',$init);
-	my $requestlog = "$request";
-	$requestlog =~ s/\r\n\z//; # chomp doesn't work here...
-	my $num_out = $port->write($request);
+	if ($init) {
+		my $request = pack('H*',$init);
+		my $requestlog = "$request";
+		$requestlog =~ s/\r\n\z//; # chomp doesn't work here...
+		my $num_out = $port->write($request);
 
-	### Debug
-  	&LOG ("Send: $requestlog", "INFO");
-	if ( !$num_out ) {
-		$verbose = 1;
-		&LOG ("Write failed.", "FAIL");
-		exit;
-	}
-	if ( $num_out ne length($request) ) {
-		$verbose = 1;
-		&LOG ("Write incomplete.", "FAIL");
-		exit;
-	}
-	&LOG ("$num_out Bytes written.", "INFO");
+		### Debug
+  		&LOG ("Send: $requestlog", "INFO");
+		if ( !$num_out ) {
+			$verbose = 1;
+			&LOG ("Write failed.", "FAIL");
+			exit;
+		}
+		if ( $num_out ne length($request) ) {
+			$verbose = 1;
+			&LOG ("Write incomplete.", "FAIL");
+			exit;
+		}
+		&LOG ("$num_out Bytes written.", "INFO");
 
-	sleep 0.5;
+		sleep 0.5;
+	}
 
 	# Initialize
 	$request = pack('H*',$data);
