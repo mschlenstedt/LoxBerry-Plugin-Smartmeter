@@ -140,9 +140,64 @@ class SML_PARSER {
                 #return $this->hex2bin($this->read($LEN-1));
                 return $this->read($LEN-1);
                 break;
-            case '5x': # Integer
-                return hexdec($this->read($LEN-1));
-                break;
+			case '5x': # Integer
+				if ($LEN==2) {
+					# 8 Bit signed Integer
+					$temp = hexdec($this->read($LEN-1));
+					$this->debug('Value: ('.$temp.')');
+					if($temp & 0x80) {
+						# negativer Wert, Umrechnung 2er Komplement	
+						$temp -= pow(2,8); # 256
+						# $this->debug('Value mit Vorzeichenbetrachtung: ('.$temp.')');
+						return $temp;
+					}
+					else{
+						return $temp;
+					}
+				}
+				if ($LEN==3) {
+					# 16 Bit signed Integer
+					$temp = hexdec($this->read($LEN-1));
+					$this->debug('Value Rohwert: ('.$temp.')');
+					if($temp & 0x8000) {
+						# negativer Wert, Umrechnung 2er Komplement	
+						$temp -= pow(2,16); # 65536
+						# $this->debug('Value mit Vorzeichenbetrachtung: ('.$temp.')');
+						return $temp;
+					}
+					else{
+						return $temp;
+					}
+				}
+				if ($LEN==5) {
+					# 32 Bit signed Integer
+					$temp = hexdec($this->read($LEN-1));
+					$this->debug('Value Rohwert: ('.$temp.')');
+					if($temp & 0x80000000) {
+						# negativer Wert, Umrechnung 2er Komplement	
+						$temp -= pow(2,32); # 4294967296
+						# $this->debug('Value mit Vorzeichenbetrachtung: ('.$temp.')');
+						return $temp;
+					}
+					else{
+						return $temp;
+					}
+				}
+				if ($LEN==9) {
+					# 64 Bit signed Integer
+					$temp = hexdec($this->read($LEN-1));
+					$this->debug('Value Rohwert: ('.$temp.')');
+					if($temp & 0x8000000000000000) {
+						# negativer Wert, Umrechnung 2er Komplement	
+						$temp -= pow(2,64); # 18446744073709551616
+						# $this->debug('Value mit Vorzeichenbetrachtung: ('.$temp.')');
+						return $temp;
+					}
+					else{
+						return $temp;
+					}
+				}
+				break;
             case '6x': # UnsignedInt
                 return hexdec($this->read($LEN-1));
                 break;
