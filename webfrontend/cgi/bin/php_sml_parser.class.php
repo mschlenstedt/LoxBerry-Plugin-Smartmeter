@@ -259,6 +259,27 @@ class SML_PARSER {
         if($val & 0x80) $val = 0xfe - $val;
         return $val;
     }
+	private function readSmlTime() {
+        $TYPE_LEN = $this->read(1);
+	    if($TYPE_LEN=='01') return; # SML Time optional
+	
+		if($TYPE_LEN=='72') {
+			$result['choice']  = $this->readUnsigned($this->data);
+			switch($result['choice']) {
+				case '01': # secIndex
+					$sml_time = $this->readUnsigned($this->data);
+					break;
+				case '02': # timestamp
+					$sml_time = $this->readUnsigned($this->data);
+					break;
+				default:
+					$this->debug('SML_Time UnknownRequest ('.$result['choice'].')');
+			} 	
+        }else{
+            return "[Error, cant read SML_Time]";
+        }
+		return $sml_time;
+    }
     # =============================================================================================
     # High-Level SML-Funktionen
     # =============================================================================================
@@ -268,8 +289,8 @@ class SML_PARSER {
         $result['clientId']    = $this->readOctet($this->data);
         $result['reqFileId']   = $this->readOctet($this->data);
         $result['serverId']    = $this->readOctet($this->data);
-        $result['refTime']     = $this->readOctet($this->data);
-        $result['sml-Version'] = $this->readOctet($this->data);
+        $result['refTime']     = $this->readSmlTime();
+        $result['sml-Version'] = $this->readUnsigned($this->data);
         return $result;
     }
     private function readCloseResponse() {
