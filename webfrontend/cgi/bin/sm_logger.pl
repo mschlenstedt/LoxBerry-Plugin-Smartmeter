@@ -314,7 +314,7 @@ elsif ( $protocol eq "iskra681sml" ) {
 	&PROTO_GENERICSML;
 }
 
-elsif ( $protocol eq "iskra682sml" ) {
+elsif ( $protocol eq "iskra691sml" ) {
 
 	### Defaults
 	our $baudrate = 9600 if !$baudrate;
