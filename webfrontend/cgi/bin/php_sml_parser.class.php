@@ -18,7 +18,7 @@ class SML_PARSER {
         '0100000009FF' => array('1-0:0.0.9*255',' Geraeteeinzelidentifikation'),
         '00006001FFFF' => array('0-0:60.1.255*255','Fabriknummer'),
         '0100100700FF' => array('1-0:16.7.0*255','aktuelle Gesamtwirkleistung'),
-		'0100020800FF' => array('1-0:2.8.0*255','Wirkarbeit Lieferung Total: Zaehlerstand')
+	'0100020800FF' => array('1-0:2.8.0*255','Wirkarbeit Lieferung Total: Zaehlerstand')
     );
 	
     private $data;
