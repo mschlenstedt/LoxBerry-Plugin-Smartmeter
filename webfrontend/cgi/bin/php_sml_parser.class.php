@@ -142,7 +142,7 @@ class SML_PARSER {
                 #return $this->hex2bin($this->read($LEN-1));
                 return $this->read($LEN-1);
                 break;
-			case '5x': # Integer
+			case '5x': #  Integer
 				if ($LEN==2) {
 					# 8 Bit signed Integer
 					$temp = hexdec($this->read($LEN-1));
