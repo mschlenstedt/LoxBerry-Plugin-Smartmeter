@@ -314,6 +314,24 @@ elsif ( $protocol eq "iskra681sml" ) {
 	&PROTO_GENERICSML;
 }
 
+elsif ( $protocol eq "iskra682sml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "5" if !$timeout;
+	our $delay = "1" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
 elsif ( $protocol eq "itronace3000type260d0" ) {
 
 	### Defaults
