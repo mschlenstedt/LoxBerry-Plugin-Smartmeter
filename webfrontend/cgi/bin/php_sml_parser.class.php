@@ -17,8 +17,10 @@ class SML_PARSER {
         '0100010800FF' => array('1-0:1.8.0*255','Wirkarbeit Bezug Total: Zaehlerstand'),
         '0100000009FF' => array('1-0:0.0.9*255',' Geraeteeinzelidentifikation'),
         '00006001FFFF' => array('0-0:60.1.255*255','Fabriknummer'),
-        '0100100700FF' => array('1-0:16.7.0*255','aktuelle Gesamtwirkleistung')
+        '0100100700FF' => array('1-0:16.7.0*255','aktuelle Gesamtwirkleistung'),
+	'0100020800FF' => array('1-0:2.8.0*255','Wirkarbeit Lieferung Total: Zaehlerstand')
     );
+	
     private $data;
     private $crc16_global;
     private $crc16_message;
@@ -140,9 +142,71 @@ class SML_PARSER {
                 #return $this->hex2bin($this->read($LEN-1));
                 return $this->read($LEN-1);
                 break;
-            case '5x': # Integer
-                return hexdec($this->read($LEN-1));
-                break;
+			case '5x': # Integer
+				if ($LEN==2) {
+					# 8 Bit signed Integer
+					$temp = hexdec($this->read($LEN-1));
+					if($temp & 0x80) {
+						# negativer Wert, Umrechnung 2er Komplement	
+						$temp -= pow(2,8); # 256
+						$this->debug('signed Integer: ('.$temp.')');
+						return $temp;
+					}
+					else{
+						$this->debug('Integer: ('.$temp.')');
+						return $temp;
+					}
+				}
+				if ($LEN==3) {
+					# 16 Bit signed Integer
+					$temp = hexdec($this->read($LEN-1));
+					if($temp & 0x8000) {
+						# negativer Wert, Umrechnung 2er Komplement	
+						$temp -= pow(2,16); # 65536
+						$this->debug('signed Integer: ('.$temp.')');
+						return $temp;
+					}
+					else{
+						$this->debug('Integer: ('.$temp.')');
+						return $temp;
+					}
+				}
+				if ($LEN==5) {
+					# 32 Bit signed Integer
+					$temp = hexdec($this->read($LEN-1));
+					if($temp & 0x80000000) {
+						# negativer Wert, Umrechnung 2er Komplement	
+						$temp -= pow(2,32); # 4294967296
+						$this->debug('signed Integer: ('.$temp.')');
+						return $temp;
+					}
+					else{
+						$this->debug('Integer: ('.$temp.')');
+						return $temp;
+					}
+				}
+				if ($LEN==6) {
+					# Eigenheit von EMH ED300L Zähler
+					# Überträgt positive Zahlen sporadisch mit Längenangabe 6 im Telegramm
+					$temp = hexdec($this->read($LEN-1));
+					$this->debug('Integer: ('.$temp.')');
+					return $temp;
+				}
+				if ($LEN==9) {
+					# 64 Bit signed Integer
+					$temp = hexdec($this->read($LEN-1));
+					if($temp & 0x8000000000000000) {
+						# negativer Wert, Umrechnung 2er Komplement	
+						$temp -= pow(2,64); # 18446744073709551616
+						$this->debug('signed Integer: ('.$temp.')');
+						return $temp;
+					}
+					else{
+						$this->debug('Integer: ('.$temp.')');
+						return $temp;
+					}
+				}
+				break;
             case '6x': # UnsignedInt
                 return hexdec($this->read($LEN-1));
                 break;
@@ -195,6 +259,27 @@ class SML_PARSER {
         if($val & 0x80) $val = 0xfe - $val;
         return $val;
     }
+	private function readSmlTime() {
+        $TYPE_LEN = $this->read(1);
+	    if($TYPE_LEN=='01') return; # SML Time optional
+	
+		if($TYPE_LEN=='72') {
+			$result['choice']  = $this->readUnsigned($this->data);
+			switch($result['choice']) {
+				case '01': # secIndex
+					$sml_time = $this->readUnsigned($this->data);
+					break;
+				case '02': # timestamp
+					$sml_time = $this->readUnsigned($this->data);
+					break;
+				default:
+					$this->debug('SML_Time UnknownRequest ('.$result['choice'].')');
+			} 	
+        }else{
+            return "[Error, cant read SML_Time]";
+        }
+		return $sml_time;
+    }
     # =============================================================================================
     # High-Level SML-Funktionen
     # =============================================================================================
@@ -204,8 +289,8 @@ class SML_PARSER {
         $result['clientId']    = $this->readOctet($this->data);
         $result['reqFileId']   = $this->readOctet($this->data);
         $result['serverId']    = $this->readOctet($this->data);
-        $result['refTime']     = $this->readOctet($this->data);
-        $result['sml-Version'] = $this->readOctet($this->data);
+        $result['refTime']     = $this->readSmlTime();
+        $result['sml-Version'] = $this->readUnsigned($this->data);
         return $result;
     }
     private function readCloseResponse() {

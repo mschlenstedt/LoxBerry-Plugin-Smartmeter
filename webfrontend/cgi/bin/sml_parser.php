@@ -49,7 +49,9 @@ foreach ($record['body']['vallist'] as $values)
 		{
 			if ( $values['unit'] == "Wh" ) {
 				echo $values['OBIS'] . "(" . ($values['value'] * $values['scaler'] / 1000) . "*" . "kWh)\n";
-			} elseif ( $values['unit'] == "W" ) {
+			} elseif (($values['unit'] == "W") && ($values['scaler'] <> 0)) {
+				echo $values['OBIS'] . "(" . ($values['value'] * $values['scaler'] / 1000) . "*" . "kW)\n";
+			} elseif (($values['unit'] == "W") && ($values['scaler'] == 0)) {
 				echo $values['OBIS'] . "(" . ($values['value'] / 1000) . "*" . "kW)\n";
 			} else {
 				echo $values['OBIS'] . "(" . $values['value'] . "*" . $values['unit'] .")\n";

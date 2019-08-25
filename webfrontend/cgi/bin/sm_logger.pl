@@ -296,6 +296,24 @@ elsif ( $protocol eq "iskra175sml" ) {
 	&PROTO_GENERICSML;
 }
 
+elsif ( $protocol eq "iskra382d0" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 7 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "even" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "10" if !$timeout;
+	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICD0;
+}
+
 elsif ( $protocol eq "iskra681sml" ) {
 
 	### Defaults
@@ -307,6 +325,24 @@ elsif ( $protocol eq "iskra681sml" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "60" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "iskra691sml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "5" if !$timeout;
+	our $delay = "1" if !$delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -890,10 +926,10 @@ sub PARSE_DUMP
 		($readingdelT9) = $dumpbuffer =~ /[\n|\r|:]2\.8\.9[\*255|\*00]*\(([\d\.]+)/;
 
 		### Energy consumption: Power  (OBIS mixture - no standard?)
-		($power1) = $dumpbuffer =~ /[\n|\r|:]1\.7\.0[\*255|\*00]*\(([\d\.]+)/;
-		($power2) = $dumpbuffer =~ /[\n|\r|:]2\.7\.0[\*255|\*00]*\(([\d\.]+)/;
-		($power3) = $dumpbuffer =~ /[\n|\r|:]15\.7\.0[\*255|\*00]*\(([\d\.]+)/;
-		($power4) = $dumpbuffer =~ /[\n|\r|:]16\.7\.0[\*255|\*00]*\(([\d\.]+)/;
+		($power1) = $dumpbuffer =~ /[\n|\r|:]1\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($power2) = $dumpbuffer =~ /[\n|\r|:]2\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($power3) = $dumpbuffer =~ /[\n|\r|:]15\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($power4) = $dumpbuffer =~ /[\n|\r|:]16\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
 
 	}
 
