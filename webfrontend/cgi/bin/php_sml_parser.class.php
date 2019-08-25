@@ -289,7 +289,7 @@ class SML_PARSER {
         $result['clientId']    = $this->readOctet($this->data);
         $result['reqFileId']   = $this->readOctet($this->data);
         $result['serverId']    = $this->readOctet($this->data);
-        $result['refTime']     = $this->readSmlTime();
+        $result['refTime']     = $this->readSmlTime($this->data);
         $result['sml-Version'] = $this->readUnsigned($this->data);
         return $result;
     }
