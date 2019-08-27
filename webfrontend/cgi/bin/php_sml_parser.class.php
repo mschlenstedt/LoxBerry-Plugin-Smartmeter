@@ -14,6 +14,7 @@ class SML_PARSER {
         '0100010803FF' => array('1-0:1.8.3*255','Wirk-Energie Tarif 3 Bezug'),
         '0100020803FF' => array('1-0:2.8.3*255','Wirk-Energie Tarif 3 Lieferung'),
         '8181C78203FF' => array('129-129:199.130.3*255','Hersteller-ID '),
+	'010060320101' => array('1-0:96.50.1*255','Hersteller-ID '),
         '8181C78205FF' => array('129-129:199.130.5*255','Public-Key'),
 	'0100000009FF' => array('1-0:0.0.9*255',' Geraeteeinzelidentifikation'),
         '00006001FFFF' => array('0-0:60.1.255*255','Fabriknummer'),
@@ -325,7 +326,7 @@ class SML_PARSER {
             $result['OBIS']=$this->obis_arr[$result['objName']][0];
             $result['OBIS-Text']=$this->obis_arr[$result['objName']][1];
         }
-        if(in_array($result['objName'],array('8181C78203FF','0100000000FF','00006001FFFF'))) {
+        if(in_array($result['objName'],array('8181C78203FF','0100000000FF','00006001FFFF','010060320101'))) {
             # ggfs. weitere objNames in die Liste aufnehmen
             $result['value'] = $this->hex2bin($result['value']);
         }
