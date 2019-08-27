@@ -930,6 +930,9 @@ sub PARSE_DUMP
 		($power2) = $dumpbuffer =~ /[\n|\r|:]2\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
 		($power3) = $dumpbuffer =~ /[\n|\r|:]15\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
 		($power4) = $dumpbuffer =~ /[\n|\r|:]16\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($power5) = $dumpbuffer =~ /[\n|\r|:]21\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($power6) = $dumpbuffer =~ /[\n|\r|:]41\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($power7) = $dumpbuffer =~ /[\n|\r|:]61\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
 
 	}
 
@@ -1012,6 +1015,9 @@ sub PARSE_DUMP
 		print F "$serial:Consumption_Tarif9_OBIS_1.8.9:$readingconsT9\n";
 		print F "$serial:Consumption_CalculatedPower_OBIS_1.99.0:$powercalccons\n";
 		print F "$serial:Consumption_Power_OBIS_1.7.0:$power1\n";
+		print F "$serial:Consumption_Power_L1_OBIS_21.7.0:$power5\n";
+		print F "$serial:Consumption_Power_L2_OBIS_41.7.0:$power6\n";
+		print F "$serial:Consumption_Power_L3_OBIS_61.7.0:$power7\n";
 		print F "$serial:Delivery_Total_OBIS_2.8.0:$readingdelT0\n";
 		print F "$serial:Delivery_Tarif1_OBIS_2.8.1:$readingdelT1\n";
 		print F "$serial:Delivery_Tarif2_OBIS_2.8.2:$readingdelT2\n";
