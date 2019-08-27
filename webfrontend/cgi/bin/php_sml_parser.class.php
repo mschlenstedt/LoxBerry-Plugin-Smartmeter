@@ -271,7 +271,10 @@ class SML_PARSER {
     }
     private function readInteger8() {
         $val = hexdec($this->readInteger($this->data));
-        if($val & 0x80) $val = 0xfe - $val;
+        # Diese Umrechnung ist falsch
+	# Umrechnung erfolgt über 2er Komplement
+	# if($val & 0x80) $val = 0xfe - $val;
+	if($val & 0x80) $val -= pow(2,8); # 256
         return $val;
     }
 	private function readSmlTime() {
