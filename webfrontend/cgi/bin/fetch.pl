@@ -75,6 +75,9 @@ $version = "0.1";
 $psubfolder = abs_path($0);
 $psubfolder =~ s/(.*)\/(.*)\/bin\/(.*)$/$2/g;
 
+# If Cron is minimum, here is the rerun mark
+RERUN:
+
 # Read general config
 $cfg	 	= new Config::Simple("$home/config/system/general.cfg") or die $cfg->error();
 $installfolder	= $cfg->param("BASE.INSTALLFOLDER");
@@ -86,6 +89,7 @@ $plugin_cfg 	= new Config::Simple("$installfolder/config/plugins/$psubfolder/sma
 $pname          = $plugin_cfg->param("MAIN.SCRIPTNAME");
 $udpport        = $plugin_cfg->param("MAIN.UDPPORT");
 $sendudp        = $plugin_cfg->param("MAIN.SENDUDP");
+$cron			= $plugin_cfg->param("MAIN.CRON");
 
 # Commandline options
 GetOptions (    "verbose"          => \$verbose,
@@ -156,6 +160,8 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 			# If set to  a meter, use standard settings for this meter
 			&LOG ("$serial: Presetting: $meter.", "INFO");
 			system("$installfolder/webfrontend/cgi/plugins/$psubfolder/bin/sm_logger.pl --device $device --protocol $meter $verbose");
+			#system("$installfolder/webfrontend/cgi/plugins/$psubfolder/bin/sm_logger.pl --device $device --parse 01304FC7 --protocol $meter $verbose");
+		
 		}
 
 		# Send data by UDP to all configured miniservers
@@ -226,7 +232,10 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 	}
 
 }
-
+if ($plugin_cfg->param("MAIN.CRON") eq "M" && !$force) {
+	&LOG("$serial: Cronjob is MINIMUM - RERUN", "OK");	
+	goto RERUN;
+	}
 exit;
 
 ################################
