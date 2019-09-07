@@ -407,13 +407,13 @@ elsif ( $protocol eq "landisgyre350d0" ) {
 elsif ( $protocol eq "pafal20ec3grd0" ) {
 
 	### Defaults
-	our $baudrate = 300 if !$baudrate;
+	our $baudrate = 9600 if !$baudrate;
 	our $startbaudrate = 300 if !$startbaudrate;
 	our $databits = 7 if !$databits;
 	our $stopbits = 1 if !$stopbits;
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
-	our $timeout = "120" if !$timeout;
+	our $timeout = "5" if !$timeout;
 	our $delay = "2" if !$delay;
 	our $preinitcommand = "";
 	our $precommand = "";
