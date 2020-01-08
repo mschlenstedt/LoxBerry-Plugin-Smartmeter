@@ -344,8 +344,8 @@ class SML_PARSER {
             $result['value'] = $this->hex2bin($result['value']);
         }
         
-        if ($result['unit'] == "1B") $result['unit']='W';
-        if ($result['unit'] == "1E") $result['unit']='Wh';
+		if ($result['unit'] == "1B") $result['unit']='W';
+		if ($result['unit'] == "1E") $result['unit']='Wh';
 		if ($result['unit'] == "23") $result['unit']='V';
 		if ($result['unit'] == "21") $result['unit']='A';
 		if ($result['unit'] == "2C") $result['unit']='Hz';
