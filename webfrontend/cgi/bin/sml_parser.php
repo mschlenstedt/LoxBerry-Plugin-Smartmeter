@@ -53,6 +53,14 @@ foreach ($record['body']['vallist'] as $values)
 				echo $values['OBIS'] . "(" . ($values['value'] * $values['scaler'] / 1000) . "*" . "kW)\n";
 			} elseif (($values['unit'] == "W") && ($values['scaler'] == 0)) {
 				echo $values['OBIS'] . "(" . ($values['value'] / 1000) . "*" . "kW)\n";
+			} elseif (($values['unit'] == "V") && ($values['scaler'] <> 0)) {
+				echo $values['OBIS'] . "(" . ($values['value'] * $values['scaler'] ) . "*" . "V)\n";
+			} elseif (($values['unit'] == "A") && ($values['scaler'] <> 0)) {
+				echo $values['OBIS'] . "(" . ($values['value'] * $values['scaler'] ) . "*" . "A)\n";
+			} elseif (($values['unit'] == "Hz") && ($values['scaler'] <> 0)) {
+				echo $values['OBIS'] . "(" . ($values['value'] * $values['scaler'] ) . "*" . "Hz)\n";
+			} elseif (($values['unit'] == "Grad") && ($values['scaler'] <> 0)) {
+				echo $values['OBIS'] . "(" . ($values['value'] * $values['scaler'] ) . "*" . "Grad)\n";
 			} else {
 				echo $values['OBIS'] . "(" . $values['value'] . "*" . $values['unit'] .")\n";
 			}

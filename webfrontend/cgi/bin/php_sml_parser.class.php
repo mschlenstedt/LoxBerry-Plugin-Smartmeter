@@ -2,38 +2,50 @@
 class SML_PARSER {
     public $files;
 	private $obis_arr = array(
-        '0100000000FF' => array('1-0:0.0.0*255','Seriennummer'),
-        '0100010700FF' => array('1-0:1.7.0*255','Momentane Wirkleistung Bezug'),
-        '0100020700FF' => array('1-0:2.7.0*255','Momentane Wirkleistung Lieferung'),
-	'0100010800FF' => array('1-0:1.8.0*255','Wirkarbeit Bezug Total: Zaehlerstand'),
-	'0100020800FF' => array('1-0:2.8.0*255','Wirkarbeit Lieferung Total: Zaehlerstand'),
-        '0100010801FF' => array('1-0:1.8.1*255','Wirk-Energie Tarif 1 Bezug'),
-        '0100020801FF' => array('1-0:2.8.1*255','Wirk-Energie Tarif 1 Lieferung'),
-        '0100010802FF' => array('1-0:1.8.2*255','Wirk-Energie Tarif 2 Bezug'),
-        '0100020802FF' => array('1-0:2.8.2*255','Wirk-Energie Tarif 2 Lieferung'),
-        '0100010803FF' => array('1-0:1.8.3*255','Wirk-Energie Tarif 3 Bezug'),
-        '0100020803FF' => array('1-0:2.8.3*255','Wirk-Energie Tarif 3 Lieferung'),
-        '8181C78203FF' => array('129-129:199.130.3*255','Hersteller-ID '),
-	'010060320101' => array('1-0:96.50.1*255','Hersteller-ID '),
-        '8181C78205FF' => array('129-129:199.130.5*255','Public-Key'),
-	'0100000009FF' => array('1-0:0.0.9*255',' Geraeteeinzelidentifikation'),
-        '00006001FFFF' => array('0-0:60.1.255*255','Fabriknummer'),
-        '01000F0700FF' => array('1-0:15.7.0*255','Active Power'),
-        '0100100700FF' => array('1-0:16.7.0*255','aktuelle Gesamtwirkleistung'),
-	'0100150700FF' => array('1-0:21.7.0*255','Momentante Wirkleistung Bezug L1'),
-	'0100290700FF' => array('1-0:41.7.0*255','Momentante Wirkleistung Bezug L2'),
-	'01003D0700FF' => array('1-0:61.7.0*255','Momentante Wirkleistung Bezug L3'),
-	# Easymeter Q3C
-	'0101010800FF' => array('1-1:1.8.0*255','Wirkarbeit Bezug Total: Zaehlerstand'),
-	'0101010801FF' => array('1-1:1.8.1*255','Wirkarbeit Tarif 1 Bezug'),
-	'0101010802FF' => array('1-1:1.8.2*255','Wirkarbeit Tarif 2 Bezug'),
-	'0101010803FF' => array('1-1:1.8.3*255','Wirkarbeit Tarif 3 Bezug'),
-	'0101010804FF' => array('1-1:1.8.4*255','Wirkarbeit Tarif 4 Bezug'),
-	'0101010805FF' => array('1-1:1.8.5*255','Wirkarbeit Tarif 5 Bezug'),
-	'0101010806FF' => array('1-1:1.8.6*255','Wirkarbeit Tarif 6 Bezug'),
-	'0101010807FF' => array('1-1:1.8.7*255','Wirkarbeit Tarif 7 Bezug'),
-	'0101010808FF' => array('1-1:1.8.8*255','Wirkarbeit Tarif 8 Bezug'),
-	'0100600505FF' => array('1-0:96.5.5*255','Status')
+		'0100000000FF' => array('1-0:0.0.0*255','Seriennummer'),
+		'0100200700FF' => array('1-0:32.7.0*255','Spannung Phase 1'),
+		'0100340700FF' => array('1-0:52.7.0*255','Spannung Phase 2'),
+		'0100480700FF' => array('1-0:32.7.0*255','Spannung Phase 3'),
+		'01001F0700FF' => array('1-0:31.7.0*255','Strom Phase 1'),
+		'0100330700FF' => array('1-0:51.7.0*255','Strom Phase 2'),
+		'0100470700FF' => array('1-0:71.7.0*255','Strom Phase 3'),
+		'0100510701FF' => array('1-0:81.7.1*255','Phasenwinkel U-L2 bis U-L1'),
+		'0100510702FF' => array('1-0:81.7.2*255','Phasenwinkel U-L3 bis U-L1'),
+		'0100510704FF' => array('1-0:81.7.0*255','Phasenwinkel I-L1 bis U-L1'),
+		'010051070FFF' => array('1-0:81.7.15*255','Phasenwinkel I-L2 bis U-L2'),
+		'010051071AFF' => array('1-0:81.7.26*255','Phasenwinkel I-L3 bis U-L3'),
+		'01000E0700FF' => array('1-0:14.7.0*255','Frequenz'),
+		'0100010700FF' => array('1-0:1.7.0*255','Momentane Wirkleistung Bezug'),
+		'0100020700FF' => array('1-0:2.7.0*255','Momentane Wirkleistung Lieferung'),
+		'0100010800FF' => array('1-0:1.8.0*255','Wirkarbeit Bezug Total: Zaehlerstand'),
+		'0100010801FF' => array('1-0:1.8.1*255','Wirk-Energie Tarif 1 Bezug'),
+		'0100020801FF' => array('1-0:2.8.1*255','Wirk-Energie Tarif 1 Lieferung'),
+		'0100010802FF' => array('1-0:1.8.2*255','Wirk-Energie Tarif 2 Bezug'),
+		'0100020802FF' => array('1-0:2.8.2*255','Wirk-Energie Tarif 2 Lieferung'),
+		'0100010803FF' => array('1-0:1.8.3*255','Wirk-Energie Tarif 3 Bezug'),
+		'0100020803FF' => array('1-0:2.8.3*255','Wirk-Energie Tarif 3 Lieferung'),
+		'8181C78203FF' => array('129-129:199.130.3*255','Hersteller-ID '),
+		'8181C78205FF' => array('129-129:199.130.5*255','Public-Key'),
+		'01000F0700FF' => array('1-0:15.7.0*255','Active Power'),
+		'0100020800FF' => array('1-0:2.8.0*255','Wirkarbeit Lieferung Total: Zaehlerstand'),
+		'010060320101' => array('1-0:96.50.1*255','Hersteller-ID '),
+		'0100000009FF' => array('1-0:0.0.9*255',' Geraeteeinzelidentifikation'),
+		'00006001FFFF' => array('0-0:60.1.255*255','Fabriknummer'),
+		'0100100700FF' => array('1-0:16.7.0*255','aktuelle Gesamtwirkleistung'),
+		'0100150700FF' => array('1-0:21.7.0*255','Momentante Wirkleistung Bezug L1'),
+		'0100290700FF' => array('1-0:41.7.0*255','Momentante Wirkleistung Bezug L2'),
+		'01003D0700FF' => array('1-0:61.7.0*255','Momentante Wirkleistung Bezug L3'),
+		# Easymeter Q3C
+		'0101010800FF' => array('1-1:1.8.0*255','Wirkarbeit Bezug Total: Zaehlerstand'),
+		'0101010801FF' => array('1-1:1.8.1*255','Wirkarbeit Tarif 1 Bezug'),
+		'0101010802FF' => array('1-1:1.8.2*255','Wirkarbeit Tarif 2 Bezug'),
+		'0101010803FF' => array('1-1:1.8.3*255','Wirkarbeit Tarif 3 Bezug'),
+		'0101010804FF' => array('1-1:1.8.4*255','Wirkarbeit Tarif 4 Bezug'),
+		'0101010805FF' => array('1-1:1.8.5*255','Wirkarbeit Tarif 5 Bezug'),
+		'0101010806FF' => array('1-1:1.8.6*255','Wirkarbeit Tarif 6 Bezug'),
+		'0101010807FF' => array('1-1:1.8.7*255','Wirkarbeit Tarif 7 Bezug'),
+		'0101010808FF' => array('1-1:1.8.8*255','Wirkarbeit Tarif 8 Bezug'),
+		'0100600505FF' => array('1-0:96.5.5*255','Status')
     );
 	
     private $data;
@@ -82,7 +94,7 @@ class SML_PARSER {
         echo "\n";
     }
     function error($message) {
-#        return; # ggfs. auskommentieren.
+#       return; # ggfs. auskommentieren.
         $e = new Exception();
         $m = $e->getTraceAsString();
         $m = explode("\n",$m);
@@ -270,12 +282,10 @@ class SML_PARSER {
         }
     }
     private function readInteger8() {
-        $val = hexdec($this->readInteger($this->data));
-        # Diese Umrechnung ist falsch
+	$val = hexdec($this->readInteger($this->data));
 	# Umrechnung erfolgt über 2er Komplement
-	# if($val & 0x80) $val = 0xfe - $val;
 	if($val & 0x80) $val -= pow(2,8); # 256
-        return $val;
+		return $val;
     }
 	private function readSmlTime() {
         $TYPE_LEN = $this->read(1);
@@ -308,7 +318,7 @@ class SML_PARSER {
         $result['reqFileId']   = $this->readOctet($this->data);
         $result['serverId']    = $this->readOctet($this->data);
         $result['refTime']     = $this->readSmlTime($this->data);
-        $result['sml-Version'] = $this->readUnsigned($this->data);
+		$result['sml-Version'] = $this->readUnsigned($this->data);
         return $result;
     }
     private function readCloseResponse() {
@@ -336,14 +346,40 @@ class SML_PARSER {
         
         if ($result['unit'] == "1B") $result['unit']='W';
         if ($result['unit'] == "1E") $result['unit']='Wh';
+		if ($result['unit'] == "23") $result['unit']='V';
+		if ($result['unit'] == "21") $result['unit']='A';
+		if ($result['unit'] == "2C") $result['unit']='Hz';
+		if ($result['unit'] == "08") $result['unit']='Grad';
         
         if($result['scaler']) $result['scaler'] = pow(10,$result['scaler']);
         return $result;
     }
     private function readValList() {
         $this->debug('ENTER readValList');
-        $TYPE_LEN = $this->read( 1);
-        if($TYPE_LEN{0}=='7') {
+        $TYPE_LEN = $this->read(1);
+
+# Type-Lenght-Field:
+# 	7	6	5	4	3	2	1	0
+# 	1	x	x 	x 	x 	x 	x 	x 	weiteres TL-Field folgt, Vergleich auf 0x8
+#	0	x 	x 	x 	x 	x 	x 	x	kein weiteres TL-Field	
+
+# manche DTZ41 vom Bayernwerk schicken 20 OBIS-Kennzahlen 
+			
+		if(hexdec($TYPE_LEN{0}) & 0x8) {
+			$TYPE_LEN2 = $this->read(1);
+			$TYPE_LEN = hexdec($TYPE_LEN) << 4;
+			$TYPE_LEN=$TYPE_LEN & 0xFF;
+			$TYPE_LEN=$TYPE_LEN | $TYPE_LEN2;
+
+			$LEN = $TYPE_LEN;
+			for($i=0;$i<$LEN;$i++) {
+                $this->debug("ENTER readListEntry [$i]");
+                $result[]=$this->readListEntry($this->data);
+            }
+            $this->debug('EXIT readValList : '.print_r($result,true),false);
+            return $result;
+			
+		 } elseif (hexdec($TYPE_LEN{0}) == '7') {
             $LEN = hexdec($TYPE_LEN{1});
             for($i=0;$i<$LEN;$i++) {
                 $this->debug("ENTER readListEntry [$i]");
@@ -420,7 +456,7 @@ class SML_PARSER {
         $start = strpos($this->data,$sml_header);
         if($start===false) return;
         if($start) {
-            #echo "$start bytes skipped at begining!\n";
+            echo "$start bytes skipped at begining!\n";
             $this->data=substr($this->data,$start);
         }
         while($this->data) {
