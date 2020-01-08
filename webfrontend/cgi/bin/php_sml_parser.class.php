@@ -358,12 +358,12 @@ class SML_PARSER {
         $this->debug('ENTER readValList');
         $TYPE_LEN = $this->read(1);
 
-# Type-Lenght-Field:
-# 	7	6	5	4	3	2	1	0
-# 	1	x	x 	x 	x 	x 	x 	x 	weiteres TL-Field folgt, Vergleich auf 0x8
-#	0	x 	x 	x 	x 	x 	x 	x	kein weiteres TL-Field	
+		# Type-Lenght-Field:
+		# 	7	6	5	4	3	2	1	0
+		# 	1	x	x 	x 	x 	x 	x 	x 	weiteres TL-Field folgt, Vergleich auf 0x8
+		#	0	x 	x 	x 	x 	x 	x 	x	kein weiteres TL-Field	
 
-# manche DTZ41 vom Bayernwerk schicken 20 OBIS-Kennzahlen 
+		# manche DTZ41 vom Bayernwerk schicken 20 OBIS-Kennzahlen 
 			
 		if(hexdec($TYPE_LEN{0}) & 0x8) {
 			$TYPE_LEN2 = $this->read(1);
@@ -373,11 +373,11 @@ class SML_PARSER {
 
 			$LEN = $TYPE_LEN;
 			for($i=0;$i<$LEN;$i++) {
-                $this->debug("ENTER readListEntry [$i]");
-                $result[]=$this->readListEntry($this->data);
-            }
-            $this->debug('EXIT readValList : '.print_r($result,true),false);
-            return $result;
+				$this->debug("ENTER readListEntry [$i]");
+				$result[]=$this->readListEntry($this->data);
+			}
+			$this->debug('EXIT readValList : '.print_r($result,true),false);
+			return $result;
 			
 		 } elseif (hexdec($TYPE_LEN{0}) == '7') {
             $LEN = hexdec($TYPE_LEN{1});
@@ -468,11 +468,11 @@ class SML_PARSER {
                 $message = $this->parse_sml_message();
  
                 if($message['crcMsgCheck']) {
-										 $messages[] = $message;
-										 if ( $message['messageBody']['choice'] == "GetListResponse" ) 
-										 {
-										 	return($message['messageBody']);
-										 }
+					 $messages[] = $message;
+					 if ( $message['messageBody']['choice'] == "GetListResponse" ) 
+					 {
+						return($message['messageBody']);
+					 }
                 }else{ # if no success, skip to next file
                     $start = strpos($this->data,$sml_header);
                     //if($start===false) return;
