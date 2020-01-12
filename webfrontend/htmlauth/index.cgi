@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
-# Copyright 2017 Michael Schlenstedt, michael@loxberry.de
+# Copyright 2019 Michael Schlenstedt, michael@loxberry.de
+#                Christian Fenzl, christian@loxberry.de
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,546 +20,702 @@
 # Modules
 ##########################################################################
 
-use CGI::Carp qw(fatalsToBrowser);
-use CGI qw/:standard/;
-use Config::Simple;
-use Config::Crontab;
+# use Config::Simple '-strict';
+# use CGI::Carp qw(fatalsToBrowser);
+use CGI;
+use LoxBerry::System;
+#use LoxBerry::Web;
+use LoxBerry::JSON; # Available with LoxBerry 2.0
+#require "$lbpbindir/libs/LoxBerry/JSON.pm";
 use LoxBerry::Log;
-use File::HomeDir;
-#use HTML::Entities;
-use String::Escape qw( unquotemeta );
-use Cwd 'abs_path';
-use HTML::Template;
-#use warnings;
-#use strict;
-#no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
+use Time::HiRes qw ( sleep );
+use warnings;
+use strict;
+use Data::Dumper;
 
 ##########################################################################
 # Variables
 ##########################################################################
-my  $cgi = new CGI;
-my  $cfg;
-my  $plugin_cfg;
-my  $lang;
-my  $installfolder;
-my  $languagefile;
-my  $version;
-my  $home = File::HomeDir->my_home;
-my  $psubfolder;
-my  $pname;
-my  $languagefileplugin;
-my  %TPhrases;
-my  @heads;
-my  %head;
-my  @rows;
-my  %hash;
-my  $maintemplate;
-my  $template_title;
-my  $phrase;
-my  $helplink;
-my  @help;
-my  $helptext;
-my  $saveformdata;
-my  $clearcache;
-my  %plugin_config;
-my  $name;
-my  $device;
-my  $serial;
-my  $crontabtmp = "$lbplogdir/crontab.temp";
+
+my $log;
+
+# Read Form
+my $cgi = CGI->new;
+my $q = $cgi->Vars;
+
+my $version = LoxBerry::System::pluginversion();
+my $template;
+
+# Language Phrases
+my %L;
+
+# Globals 
+my %pids;
+my $CFGFILEDEVICES = $lbpconfigdir . "/devices.json";
+my $CFGFILEMQTT = $lbpconfigdir . "/mqtt.json";
+my $CFGFILEOWFS = $lbpconfigdir . "/owfs.json";
 
 ##########################################################################
-# Read crontab
+# AJAX
 ##########################################################################
 
-my $crontab = new Config::Crontab;
-$crontab->system(1); ## Wichtig, damit der User im File berücksichtigt wird
-$crontab->read( -file => "$lbhomedir/system/cron/cron.d/$lbpplugindir" );
+if( $q->{ajax} ) {
+	
+	## Handle all ajax requests 
+	require JSON;
+	# require Time::HiRes;
+	my %response;
+	ajax_header();
 
-
-##########################################################################
-# Read Settings
-##########################################################################
-
-# Version of this script
-$version = "0.1";
-
-# Figure out in which subfolder we are installed
-$psubfolder = abs_path($0);
-$psubfolder =~ s/(.*)\/(.*)\/(.*)$/$2/g;
-
-# Start with HTML header
-#print $cgi->header(
-#	type	=>	'text/html',
-#	charset	=>	'utf-8',
-#); 
-print "Content-type: text/html\n\n";
-
-# Read general config
-$cfg	 	= new Config::Simple("$home/config/system/general.cfg") or die $cfg->error();
-$installfolder	= $cfg->param("BASE.INSTALLFOLDER");
-$lang		= $cfg->param("BASE.LANG");
-
-# Read plugin config
-$plugin_cfg 	= new Config::Simple("$installfolder/config/plugins/$psubfolder/smartmeter.cfg") or die $plugin_cfg->error();
-$pname          = $plugin_cfg->param("MAIN.SCRIPTNAME");
-
-# Create temp folder if not already exist
-if (!-d "/var/run/shm/$psubfolder") {
-	system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
-}
-# Check for temporary log folder
-if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
-	system("ln -s /var/run/shm/$psubfolder $installfolder/log/plugins/$psubfolder/shm > /dev/null 2>&1");
-}
-
-# Detect which IR Heads are connected
-my @heads = split(/\n/,`ls /dev/serial/smartmeter/*`);
-
-# Save a config set if it not already exists
-foreach (@heads) {
-	$serial = $_;
-	$serial =~ s%/dev/serial/smartmeter/%%g;
-	if ( !$plugin_cfg->param("$serial.DEVICE") ) {
-		$plugin_cfg->param("$serial.NAME", "$serial");
-		$plugin_cfg->param("$serial.SERIAL", "$serial");
-		$plugin_cfg->param("$serial.DEVICE", "$_");
-		$plugin_cfg->param("$serial.METER", "0");
-		$plugin_cfg->param("$serial.PROTOCOL", "");
-		$plugin_cfg->param("$serial.STARTBAUDRATE", "");
-		$plugin_cfg->param("$serial.BAUDRATE", "");
-		$plugin_cfg->param("$serial.TIMEOUT", "");
-		$plugin_cfg->param("$serial.DELAY", "");
-		$plugin_cfg->param("$serial.HANDSHAKE", "");
-		$plugin_cfg->param("$serial.DATABITS", "");
-		$plugin_cfg->param("$serial.STOPBITS", "");
-		$plugin_cfg->param("$serial.PARITY", "");
+	# Save MQTT Settings
+	if( $q->{ajax} eq "savemqtt" ) {
+		$response{error} = &savemqtt();
+		print JSON->new->canonical(1)->encode(\%response);
 	}
-}
-$plugin_cfg->save;
+	
+	# Save OWFS Settings
+	if( $q->{ajax} eq "saveowfs" ) {
+		$response{error} = &saveowfs();
+		print JSON->new->canonical(1)->encode(\%response);
+	}
+	
+	# Save Device Settings
+	if( $q->{ajax} eq "savedevice" ) {
+		$response{error} = &savedevice();
+		print JSON->new->canonical(1)->encode(\%response);
+	}
 
-# Set parameters coming in - get over post
-if ( $cgi->url_param('lang') ) {
-	$lang = quotemeta( $cgi->url_param('lang') );
-}
-elsif ( $cgi->param('lang') ) {
-	$lang = quotemeta( $cgi->param('lang') );
-}
-if ( $cgi->url_param('saveformdata') ) {
-	$saveformdata = quotemeta( $cgi->url_param('saveformdata') );
-}
-elsif ( $cgi->param('saveformdata') ) {
-	$saveformdata = quotemeta( $cgi->param('saveformdata') );
-}
-if ( $cgi->url_param('clearcache') ) {
-	$clearcache = quotemeta( $cgi->url_param('clearcache') );
-}
-elsif ( $cgi->param('clearcache') ) {
-	$clearcache = quotemeta( $cgi->param('clearcache') );
-}
 
-##########################################################################
-# Initialize html templates
-##########################################################################
-
-# Header # At the moment not in HTML::Template format
-#$headertemplate = HTML::Template->new(filename => "$installfolder/templates/system/$lang/header.html");
-
-# Main
-$maintemplate = HTML::Template->new(
-	filename => "$installfolder/templates/plugins/$psubfolder/multi/main.html",
-	global_vars => 1,
-	loop_context_vars => 1,
-	die_on_bad_params => 0,
-	associate => $cgi,
-);
-
-# Footer # At the moment not in HTML::Template format
-#$footertemplate = HTML::Template->new(filename => "$installfolder/templates/system/$lang/footer.html");
-
-##########################################################################
-# Translations
-##########################################################################
-
-# Init Language
-# Clean up lang variable
-$lang         =~ tr/a-z//cd;
-$lang         = substr($lang,0,2);
-
-# Read Plugin transations
-# Read English language as default
-# Missing phrases in foreign language will fall back to English
-$languagefileplugin 	= "$installfolder/templates/plugins/$psubfolder/en/language.txt";
-Config::Simple->import_from($languagefileplugin, \%TPhrases);
-
-# If there's no language phrases file for choosed language, use english as default
-if (!-e "$installfolder/templates/system/$lang/language.dat")
-{
-  $lang = "en";
-}
-
-# Read foreign language if exists and not English
-$languagefileplugin = "$installfolder/templates/plugins/$psubfolder/$lang/language.txt";
-if ((-e $languagefileplugin) and ($lang ne 'en')) {
-	# Now overwrite phrase variables with user language
-	Config::Simple->import_from($languagefileplugin, \%TPhrases);
-}
-
-# Parse Language phrases to html templates
-while (my ($name, $value) = each %TPhrases){
-	$maintemplate->param("T::$name" => $value);
-	#$headertemplate->param("T::$name" => $value);
-	#$footertemplate->param("T::$name" => $value);
-}
+	# Get pids
+	if( $q->{ajax} eq "getpids" ) {
+		pids();
+		$response{pids} = \%pids;
+		print JSON->new->canonical(1)->encode(\%response);
+	}
+	
+	# Get config
+	if( $q->{ajax} eq "getconfig" ) {
+		my $content;
+		if ( !$q->{config} ) {
+			$response{error} = "1";
+			$response{message} = "No config given";
+		}
+		elsif ( !-e $lbpconfigdir . "/" . $q->{config} . ".json" ) {
+			$response{error} = "1";
+			$response{message} = "Config file does not exist";
+		}
+		else {
+			# Config
+			my $cfgfile = $lbpconfigdir . "/" . $q->{config} . ".json";
+			$content = LoxBerry::System::read_file("$cfgfile");
+			print $content;
+		}
+		print JSON->new->canonical(1)->encode(\%response) if !$content;
+	}
+	
+	# Scan Devices
+	if( $q->{ajax} eq "searchdevices" ) {
+		$response{error} = &searchdevices();
+		print JSON->new->canonical(1)->encode(\%response);
+	}
+	
+	# Delete Devices
+	if( $q->{ajax} eq "deletedevice" ) {
+		if ( !$q->{device} ) {
+			$response{error} = "1";
+			$response{message} = "No device given";
+		}
+		$response{error} = &deletedevice($q->{device});
+		print JSON->new->canonical(1)->encode(\%response);
+	}
+	
+	# Get single device config
+	if( $q->{ajax} eq "getdeviceconfig" ) {
+		if ( !$q->{device} ) {
+			$response{error} = "1";
+			$response{message} = "No device given";
+		}
+		else {
+			# Get config
+			%response = &getdeviceconfig ( $q->{device} );
+		}
+		print JSON->new->canonical(1)->encode(\%response);
+	}
+	
+	exit;
 
 ##########################################################################
-# Main program
+# Normal request (not AJAX)
 ##########################################################################
 
-&form;
+} else {
+	
+	require LoxBerry::Web;
+	
+	# Init Template
+	$template = HTML::Template->new(
+	    filename => "$lbptemplatedir/settings.html",
+	    global_vars => 1,
+	    loop_context_vars => 1,
+	    die_on_bad_params => 0,
+	);
+	%L = LoxBerry::System::readlanguage($template, "language.ini");
+	
+	# Default is owfs form
+	$q->{form} = "owfs" if !$q->{form};
+
+	if ($q->{form} eq "owfs") { &form_owfs() }
+	elsif ($q->{form} eq "devices") { &form_devices() }
+	elsif ($q->{form} eq "mqtt") { &form_mqtt() }
+	elsif ($q->{form} eq "log") { &form_log() }
+
+	# Print the form
+	&form_print();
+}
 
 exit;
 
-#####################################################
-# 
-# Subroutines
-#
-#####################################################
 
-#####################################################
-# Form-Sub
-#####################################################
+##########################################################################
+# Form: OWFS
+##########################################################################
 
-sub form 
+sub form_owfs
 {
+	$template->param("FORM_OWFS", 1);
+	return();
+}
 
-	# Clear Cache
-	if ( $clearcache ) {
-		system("rm /var/run/shm/$psubfolder/* > /dev/null 2>&1");
-	}
 
-	# If the form was saved, update config file
-	if ( $saveformdata ) {
-		$plugin_cfg->param( "MAIN.READ", $cgi->param('read') );
-		$plugin_cfg->param( "MAIN.CRON", $cgi->param('cron') );
-		$plugin_cfg->param( "MAIN.SENDUDP", $cgi->param('sendudp') );
-		$plugin_cfg->param( "MAIN.UDPPORT", $cgi->param('udpport') );
-		foreach (@heads) {
-			$serial = $_;
-			$serial =~ s%/dev/serial/smartmeter/%%g;
-			$plugin_cfg->param("$serial.NAME", $cgi->param("$serial\_name") );
-			$plugin_cfg->param("$serial.METER", $cgi->param("$serial\_meter") );
-			if ( $cgi->param("$serial\_meter") eq "manual" ) {
-				$plugin_cfg->param("$serial.PROTOCOL", $cgi->param("$serial\_protocol") );
-				$plugin_cfg->param("$serial.STARTBAUDRATE", $cgi->param("$serial\_startbaudrate") );
-				$plugin_cfg->param("$serial.BAUDRATE", $cgi->param("$serial\_baudrate") );
-				$plugin_cfg->param("$serial.TIMEOUT", $cgi->param("$serial\_timeout") );
-				$plugin_cfg->param("$serial.DELAY", $cgi->param("$serial\_delay") );
-				$plugin_cfg->param("$serial.HANDSHAKE", $cgi->param("$serial\_handshake") );
-				$plugin_cfg->param("$serial.DATABITS", $cgi->param("$serial\_databits") );
-				$plugin_cfg->param("$serial.STOPBITS", $cgi->param("$serial\_stopbits") );
-				$plugin_cfg->param("$serial.PARITY", $cgi->param("$serial\_parity") );
-			} else {
-				$plugin_cfg->param("$serial.PROTOCOL", "");
-				$plugin_cfg->param("$serial.STARTBAUDRATE", "");
-				$plugin_cfg->param("$serial.BAUDRATE", "");
-				$plugin_cfg->param("$serial.TIMEOUT", "");
-				$plugin_cfg->param("$serial.DELAY", "");
-				$plugin_cfg->param("$serial.HANDSHAKE", "");
-				$plugin_cfg->param("$serial.DATABITS", "");
-				$plugin_cfg->param("$serial.STOPBITS", "");
-				$plugin_cfg->param("$serial.PARITY", "");
-			}
-		}
-		$plugin_cfg->save;
+##########################################################################
+# Form: DEVICES
+##########################################################################
 
-		# Create Cronjob
-		if ( $cgi->param('read') eq "1" ) 
-		{
-			if ($cgi->param('cron') eq "M") 
-			{
-				Cronjob("Install");
-				
-				# Check if Script already running?
-				if (!scalar(grep{/sm_logger.pl/} `ps aux`))
-				{	
-					system ("perl $installfolder/bin/plugins/$psubfolder/fetch.pl >/dev/null 2>&1 &");
-				}
-								
-				unlink ("$installfolder/system/cron/cron.01min/$pname");
-				unlink ("$installfolder/system/cron/cron.03min/$pname");
-				unlink ("$installfolder/system/cron/cron.05min/$pname");
-				unlink ("$installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.30min/$pname");
-				unlink ("$installfolder/system/cron/cron.hourly/$pname");
-			}
-			if ($cgi->param('cron') eq "1") 
-			{
-				Cronjob("Uninstall");
-				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.01min/$pname");
-				unlink ("$installfolder/system/cron/cron.03min/$pname");
-				unlink ("$installfolder/system/cron/cron.05min/$pname");
-				unlink ("$installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.30min/$pname");
-				unlink ("$installfolder/system/cron/cron.hourly/$pname");
-			}
-			if ($cgi->param('cron') eq "3") 
-			{
-				Cronjob("Uninstall");
-				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.03min/$pname");
-				unlink ("$installfolder/system/cron/cron.01min/$pname");
-				unlink ("$installfolder/system/cron/cron.05min/$pname");
-				unlink ("$installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.30min/$pname");
-				unlink ("$installfolder/system/cron/cron.hourly/$pname");
-			}
-			if ($cgi->param('cron') eq "5") 
-			{
-				Cronjob("Uninstall");
-				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.05min/$pname");
-				unlink ("$installfolder/system/cron/cron.01min/$pname");
-				unlink ("$installfolder/system/cron/cron.03min/$pname");
-				unlink ("$installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.30min/$pname");
-				unlink ("$installfolder/system/cron/cron.hourly/$pname");
-			}
-			if ($cgi->param('cron') eq "10") 
-			{
-				Cronjob("Uninstall");
-				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.1min/$pname");
-				unlink ("$installfolder/system/cron/cron.3min/$pname");
-				unlink ("$installfolder/system/cron/cron.5min/$pname");
-				unlink ("$installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.30min/$pname");
-				unlink ("$installfolder/system/cron/cron.hourly/$pname");
-			}
-			if ($cgi->param('cron') eq "15") 
-			{
-				Cronjob("Uninstall");
-				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.01min/$pname");
-				unlink ("$installfolder/system/cron/cron.03min/$pname");
-				unlink ("$installfolder/system/cron/cron.05min/$pname");
-				unlink ("$installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.30min/$pname");
-				unlink ("$installfolder/system/cron/cron.hourly/$pname");
-			}
-			if ($cgi->param('cron') eq "30") 
-			{
-				Cronjob("Uninstall");
-				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.30min/$pname");
-				unlink ("$installfolder/system/cron/cron.01min/$pname");
-				unlink ("$installfolder/system/cron/cron.03min/$pname");
-				unlink ("$installfolder/system/cron/cron.05min/$pname");
-				unlink ("$installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.hourly/$pname");
-			}
-			if ($cgi->param('cron') eq "60") 
-			{
-				Cronjob("Uninstall");
-				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.hourly/$pname");
-				unlink ("$installfolder/system/cron/cron.01min/$pname");
-				unlink ("$installfolder/system/cron/cron.03min/$pname");
-				unlink ("$installfolder/system/cron/cron.05min/$pname");
-				unlink ("$installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.30min/$pname");
-			}
-			  
-		} else {
-			Cronjob("Uninstall");
-			unlink ("$installfolder/system/cron/cron.01min/$pname");
-			unlink ("$installfolder/system/cron/cron.03min/$pname");
-			unlink ("$installfolder/system/cron/cron.05min/$pname");
-			unlink ("$installfolder/system/cron/cron.10min/$pname");
-			unlink ("$installfolder/system/cron/cron.15min/$pname");
-			unlink ("$installfolder/system/cron/cron.30min/$pname");
-			unlink ("$installfolder/system/cron/cron.hourly/$pname");
-		}
+sub form_devices
+{
+	$template->param("FORM_DEVICES", 1);
+	return();
+}
 
-	}
+##########################################################################
+# Form: MQTT
+##########################################################################
+
+sub form_mqtt
+{
+	$template->param("FORM_MQTT", 1);
+	my $mqttplugindata = LoxBerry::System::plugindata("mqttgateway");
+	$template->param("MQTTGATEWAY_INSTALLED", 1) if($mqttplugindata);
+	$template->param("MQTTGATEWAY_PLUGINDBFOLDER", $mqttplugindata->{PLUGINDB_FOLDER}) if($mqttplugindata);
+	return();
+}
+
+
+##########################################################################
+# Form: Log
+##########################################################################
+
+sub form_log
+{
+	$template->param("FORM_LOG", 1);
+	$template->param("LOGLIST", LoxBerry::Web::loglist_html());
+	return();
+}
+
+##########################################################################
+# Print Form
+##########################################################################
+
+sub form_print
+{
 	
-	# The page title read from language file + our name
-	#$template_title = $phrase->param("TXT0000") . ": " . $pname;
+	# Navbar
+	our %navbar;
 
-	# Print Template header
-	&lbheader;
+	$navbar{10}{Name} = "$L{'COMMON.LABEL_OWFS'}";
+	$navbar{10}{URL} = 'index.cgi?form=owfs';
+	$navbar{10}{active} = 1 if $q->{form} eq "owfs";
+	
+	$navbar{20}{Name} = "$L{'COMMON.LABEL_DEVICES'}";
+	$navbar{20}{URL} = 'index.cgi?form=devices';
+	$navbar{20}{active} = 1 if $q->{form} eq "devices";
+	
+	$navbar{30}{Name} = "$L{'COMMON.LABEL_MQTT'}";
+	$navbar{30}{URL} = 'index.cgi?form=mqtt';
+	$navbar{30}{active} = 1 if $q->{form} eq "mqtt";
+	
+	$navbar{98}{Name} = "$L{'COMMON.LABEL_LOG'}";
+	$navbar{98}{URL} = 'index.cgi?form=log';
+	$navbar{98}{active} = 1 if $q->{form} eq "log";
 
-	# Read options and set them for template
-	$maintemplate->param( PSUBFOLDER	=> $psubfolder );
-	$maintemplate->param( HOST 		=> $ENV{HTTP_HOST} );
-	$maintemplate->param( LOGINNAME		=> $ENV{REMOTE_USER} );
-	$maintemplate->param( READ 		=> $plugin_cfg->param("MAIN.READ") );
-	$maintemplate->param( CRON 		=> $plugin_cfg->param("MAIN.CRON") );
-	$maintemplate->param( SENDUDP 		=> $plugin_cfg->param("MAIN.SENDUDP") );
-	$maintemplate->param( UDPPORT 		=> $plugin_cfg->param("MAIN.UDPPORT") );
-
-  	# Read the config for all found heads
-	my $i = 0;
-	foreach (@heads) {
-		$serial = $_;
-		$serial =~ s%/dev/serial/smartmeter/%%g;
-		if ( $plugin_cfg->param("$serial.DEVICE") ) {
-			%{"hash".$i} = (
-			NAME 		=>	$plugin_cfg->param("$serial.NAME"),
-			SERIAL		=>	$plugin_cfg->param("$serial.SERIAL"),
-			DEVICE		=>	$plugin_cfg->param("$serial.DEVICE"),
-			METER		=>	$plugin_cfg->param("$serial.METER"),
-			PROTOCOL	=>	$plugin_cfg->param("$serial.PROTOCOL"),
-			STARTBAUDRATE	=>	$plugin_cfg->param("$serial.STARTBAUDRATE"),
-			BAUDRATE	=>	$plugin_cfg->param("$serial.BAUDRATE"),
-			TIMEOUT		=>	$plugin_cfg->param("$serial.TIMEOUT"),
-			DELAY		=>	$plugin_cfg->param("$serial.DELAY"),
-			HANDSHAKE	=>	$plugin_cfg->param("$serial.HANDSHAKE"),
-			DATABITS	=>	$plugin_cfg->param("$serial.DATABITS"),
-			STOPBITS	=>	$plugin_cfg->param("$serial.STOPBITS"),
-			PARITY		=>	$plugin_cfg->param("$serial.PARITY"),
-			);
-			push (@rows, \%{"hash".$i});
-			$i++;
-		} 
-	}
-	$maintemplate->param( ROWS => \@rows );
-
-	# Print Template
-	print $maintemplate->output;
-
-	# Parse page footer		
-	&lbfooter;
-
+	$navbar{99}{Name} = "$L{'COMMON.LABEL_CREDITS'}";
+	$navbar{99}{URL} = 'index.cgi?form=credits';
+	$navbar{99}{active} = 1 if $q->{form} eq "credits";
+	
+	# Template
+	LoxBerry::Web::lbheader($L{'COMMON.LABEL_PLUGINTITLE'} . " V$version", "https://www.loxwiki.eu/x/3gmcAw", "");
+	print $template->output();
+	LoxBerry::Web::lbfooter();
+	
 	exit;
 
 }
 
-#####################################################
-# Page-Header-Sub
-#####################################################
 
-sub lbheader 
+######################################################################
+# AJAX functions
+######################################################################
+
+sub ajax_header
 {
-	 # Create Help page
-  $helplink = "https://www.loxwiki.eu/x/mA-L";
-  open(F,"$installfolder/templates/plugins/$psubfolder/multi/help.html") || die "Missing template plugins/$psubfolder/$lang/help.html";
-    @help = <F>;
-    foreach (@help)
-    {
-      $_ =~ s/<!--\$psubfolder-->/$psubfolder/g;
-      s/[\n\r]/ /g;
-      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-      $helptext = $helptext . $_;
-    }
-  close(F);
-  open(F,"$installfolder/templates/system/$lang/header.html") || die "Missing template system/$lang/header.html";
-    while (<F>) 
-    {
-      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-      print $_;
-    }
-  close(F);
+	print $cgi->header(
+			-type => 'application/json',
+			-charset => 'utf-8',
+			-status => '200 OK',
+	);	
+}	
+
+sub pids
+{
+	$pids{'owserver'} = trim(`pgrep -f owserver`) ;
+	$pids{'owhttpd'} = trim(`pgrep -f owhttpd`) ;
+	$pids{'owfs2mqtt'} = trim(`pgrep -d , -f owfs2mqtt`) ;
+	return();
 }
 
-sub Cronjob 
+sub deletedevice
 {
-	my $Job = shift;
-		
-	# Remove Cronjob
-	if ($Job eq "Uninstall")
-	{
-		if (-e $crontabtmp) {
-			unlink $crontabtmp;
-		}
-	
-		my ($comment) = $crontab->select( -type => 'comment', -data => '## Startup Smartmeter');
-					
-		#Schedule does not exist and should be removed --> nothing to do
-		if (! $comment ) {
-			return;
-		}
-		
-		#We fully remove the old block
-		if ($comment) {
-			my ($block) = $crontab->block($comment);
-			$crontab->remove($block);
-		}
-		
-		#We are finished, write the crontab
-		$crontab->write($crontabtmp);
-	
-		if (installcrontab()) {
-			return;
+ 	my $device = $_[0];
+ 	my $errors;
+ 	if (!$device) {
+ 		$errors++;
+ 	} else {
+ 		# Devices config
+ 		my $jsonobjdevices = LoxBerry::JSON->new();
+ 		my $cfgdevices = $jsonobjdevices->open(filename => $CFGFILEDEVICES);
+ 		delete $cfgdevices->{$device};
+ 		$jsonobjdevices->write();
+ 	}
+ 	return ($errors);
+}
+
+sub getdeviceconfig
+{
+	my $device = $_[0];
+	my %response;
+	if (!$device) {
+		$response{error} = 1;
+		$response{message} = "No device given.";
+	} else {
+		my $jsonobjdevices = LoxBerry::JSON->new();
+		my $cfgdevices = $jsonobjdevices->open(filename => $CFGFILEDEVICES);
+		if ($cfgdevices->{$device}) {
+			$response{address} = $cfgdevices->{$device}->{address};
+			$response{name} = $cfgdevices->{$device}->{name};
+			$response{configured} = $cfgdevices->{$device}->{configured};
+			$response{refresh} = $cfgdevices->{$device}->{refresh};
+			$response{uncached} = $cfgdevices->{$device}->{uncached};
+			$response{values} = $cfgdevices->{$device}->{values};
+			$response{checkpresent} = $cfgdevices->{$device}->{checkpresent};
+			$response{error} = 0;
+			$response{message} = "Device data read successfully.";
 		} else {
-			print $cgi->header(-status => "204 Cannot remove cronjob");
-			exit(0);
+			$response{error} = 1;
+			$response{message} = "Device does not exist.";
 		}
 	}
+	return (%response);
+}
+
+sub savedevice
+{
+	my $errors;
 	
-	# Install Cronjob
-	if ($Job eq "Install")
-	{
-		#Check if Cronjob exist already
-		my ($comment) = $crontab->select( -type => 'comment', -data => '## Startup Smartmeter');
-		
-		if ($comment) {
-			return;
+	# Devices Config
+	my $jsonobjdevices = LoxBerry::JSON->new();
+	my $cfgdevices = $jsonobjdevices->open(filename => $CFGFILEDEVICES);
+	my $address = $q->{address};
+	
+	# OWFS Config
+	my $jsonobjow = LoxBerry::JSON->new();
+	my $cfgow = $jsonobjow->open(filename => $CFGFILEOWFS);
+ 	
+	# Delete old entries - in case of a Address change delete device and (new) address
+	delete $cfgdevices->{$q->{device}};
+	delete $cfgdevices->{$q->{address}};
+	
+	# Connect to owserver
+	my $owserver;
+	eval {
+		$owserver = OWNet->new('localhost:' . $cfgow->{"serverport"} . " -v -" .$cfgow->{"tempscale"} );
+	};
+	if ($@ || !$owserver) {
+		$errors++;
+	};
+
+	# Check Type
+	my $type;
+	eval {
+		$type = $owserver->read("/$address/type");
+	};
+	if ($@ || !$type) {
+		$errors++;
+		$type = "Unknown";
+	};
+	
+	# Save
+	$cfgdevices->{$address}->{name} = $q->{name};
+	$cfgdevices->{$address}->{address} = $q->{address};
+	my $configured =  is_enabled ($q->{configured}) ? 1 : 0;
+	$cfgdevices->{$address}->{configured} = $configured;
+	$cfgdevices->{$address}->{refresh} = $q->{refresh};
+	my $uncached =  is_enabled ($q->{uncached}) ? 1 : 0;
+	$cfgdevices->{$address}->{uncached} = $uncached;
+	my $checkpresent =  is_enabled ($q->{checkpresent}) ? 1 : 0;
+	$cfgdevices->{$address}->{checkpresent} = $checkpresent;
+	$cfgdevices->{$address}->{values} = $q->{values};
+	$cfgdevices->{$address}->{type} = $type;
+	$jsonobjdevices->write();
+
+	return ($errors);
+}
+
+sub searchdevices
+{
+ 	my $errors;
+	use OWNet;
+	
+ 	# Devices config
+ 	my $jsonobjdevices = LoxBerry::JSON->new();
+ 	my $cfgdevices = $jsonobjdevices->open(filename => $CFGFILEDEVICES);
+	
+ 	# Clear content
+	#foreach ( keys %$cfgdev ) { delete $cfgdev->{$_}; }
+
+	# OWFS Config
+	my $jsonobjow = LoxBerry::JSON->new();
+	my $cfgow = $jsonobjow->open(filename => $CFGFILEOWFS);
+ 	
+	# Connect to owserver
+	my $owserver;
+	eval {
+		$owserver = OWNet->new('localhost:' . $cfgow->{"serverport"} . " -v -" .$cfgow->{"tempscale"} );
+	};
+	if ($@ || !$owserver) {
+		$errors++;
+		return($errors);
+	};
+	
+	# Scan Bus
+	my $devices;
+	eval {
+		$devices = $owserver->dir("/");
+	};
+	if ($@ || !$devices) {
+		$errors++;
+		return($errors);
+	};
+	
+	my @devices = split(/,/,$devices);
+	for ( @devices ) {
+		if ( $_ =~ /^\/(\d){2}.*$/ ) {
+			my $name = $_;
+			$name =~ s/^\///g;
+			# Check if config already exists
+			if ( $cfgdevices->{$name} ) {
+				next;
+			} else {
+				# Add device to config
+				my $type;
+				eval {
+					$type = $owserver->read("/$name/type");
+				};
+				if ($@ || !$type) {
+					$errors++;
+					$type = "Unknown";
+				};
+				$cfgdevices->{$name}->{name} = "$name";
+				$cfgdevices->{$name}->{address} = "$name";
+				$cfgdevices->{$name}->{type} = "$type";
+				$cfgdevices->{$name}->{configured} = "0";
+				$cfgdevices->{$name}->{refresh} = "60";
+				$cfgdevices->{$name}->{uncached} = "0";
+				$cfgdevices->{$name}->{checkpresent} = "0";
+				$cfgdevices->{$name}->{values} = "";
+			}
 		}
+	}
+
+	$jsonobjdevices->write();
+
+ 	return ($errors);
+}
+
+sub savemqtt
+{
+	# Save mqtt.json
+	my $errors;
+	my $jsonobj = LoxBerry::JSON->new();
+	my $cfg = $jsonobj->open(filename => $CFGFILEMQTT);
+	$cfg->{topic} = $q->{topic};
+	$cfg->{usemqttgateway} = $q->{usemqttgateway};
+	$cfg->{server} = $q->{server};
+	$cfg->{port} = $q->{port};
+	$cfg->{username} = $q->{username};
+	$cfg->{password} = $q->{password};
+	$jsonobj->write();
+	
+	# Save mqtt_subscriptions.cfg for MQTT Gateway
+	my $subscr_file = $lbpconfigdir."/mqtt_subscriptions.cfg";
+	eval {
+		open(my $fh, '>', $subscr_file);
+		print $fh $q->{topic} . "/#\n";
+		close $fh;
+	};
+	if ($@) {
+		$errors++;
+	}
+	
+	return ($errors);
+}
+
+sub saveowfs
+{
+	# Save owfs.json
+	
+	my $errors;
+	my $jsonobj = LoxBerry::JSON->new();
+	my $cfg = $jsonobj->open(filename => $CFGFILEOWFS);
+	$cfg->{fake} = $q->{fake};
+	$cfg->{httpdport} = $q->{httpdport};
+	$cfg->{serverport} = $q->{serverport};
+	$cfg->{usb} = $q->{usb};
+	$cfg->{serial2usb} = $q->{serial2usb};
+	$cfg->{i2c} = $q->{i2c};
+	$cfg->{gpio} = $q->{gpio};
+	$cfg->{tempscale} = $q->{tempscale};
+	$cfg->{uncached} = $q->{uncached};
+	$cfg->{refreshdev} = $q->{refreshdev};
+	$cfg->{refreshval} = $q->{refreshval};
+	$jsonobj->write();
+
+	my $subscr_file = $lbpconfigdir."/owfs.conf";
+	eval {
+		open(my $fh, '>', $subscr_file);
+		print $fh "!server: server = 127.0.0.1:" . $q->{serverport} . "\n";
+		print $fh "server: port = " . $q->{serverport} . "\n";
+		print $fh "http: port = " . $q->{httpdport} . "\n";
+		print $fh "server: FAKE = " . $q->{fake} . "\n" if $q->{fake};
+		print $fh "server: usb = all\n" if is_enabled($q->{usb});
+		print $fh "server: i2c = ALL:ALL\n" if is_enabled($q->{i2c});
+		print $fh "server: w1\n" if is_enabled($q->{gpio});
+		if ( is_enabled($q->{serial2usb}) && -e "$lbpdatadir/ftdidevices.dat" ) {
+			open(my $fh1, '<', "$lbpdatadir/ftdidevices.dat");
+			while (my $row = <$fh1>) {
+				chomp $row;
+				print $fh "$row\n";
+			}
+			close $fh1;
+		}
+		close $fh;
+	};
+	if ($@) {
+		$errors++;
+	}
+
+	my $loglevel = LoxBerry::System::pluginloglevel();
+	my $verbose = "0";
+	if ($loglevel eq "7") {
+		$verbose = 1;
+	}
+
+	# Restart OWFS
+	system("sudo systemctl enable owserver >/dev/null 2>&1");
+	system("sudo systemctl enable owhttpd >/dev/null 2>&1");
+	system("sudo $lbpbindir/watchdog.pl action=restart verbose=$verbose >/dev/null 2>&1");
+	
+	# Create Cronjob
+	my $cron_file = $lbhomedir . "/system/cron/cron.01min/" . $lbpplugindir;
+	eval {
+		open(my $fh, '>', $cron_file);
+		print $fh "#!/bin/bash\n";
+		print $fh "sudo $lbpbindir/watchdog.pl action=check verbose=0\n";
+		close $fh;
+		system("chmod 755 $cron_file >/dev/null 2>&1");
+	};
+	if ($@) {
+		$errors++;
+	}
+
+	return ($errors);
+
+}
+
+# Get VIs/VOs and data for nukiId
+sub getdevicedownloads
+{
+	my ($intBridgeId, $nukiId) = @_;
+	
+	my $jsonobjbridges = LoxBerry::JSON->new();
+	#my $bridges = $jsonobjbridges->open(filename => $CFGFILEBRIDGES, readonly => 1);
+	my $jsonobjdevices = LoxBerry::JSON->new();
+	my $devices = $jsonobjdevices->open(filename => $CFGFILEDEVICES, readonly => 1);
+	my $jsonobjmqtt = LoxBerry::JSON->new();
+	my $mqttconfig = $jsonobjmqtt->open(filename => $CFGFILEMQTT, readonly => 1);
+	
+	my %payload;
+	my $error = 0;
+	my $message = "";
+	my $xml;
+	
+	#if(! defined $bridges->{$intBridgeId} ) {
+	#	return (1, "BridgeId does not exist", undef);
+	#} elsif (! defined $devices->{$nukiId} ) {
+	#	return (1, "NukiId does not exist", undef);
+	#}
+	
+	require "$lbpbindir/libs/LoxBerry/LoxoneTemplateBuilder.pm";
+	require HTML::Entities;
+
+ 
+	# Get current date
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+	$year+=1900;
+	
+	my $currdev = $devices->{$nukiId};
+	my $devtype = $currdev->{deviceType};
+	
+	#LOGDEB "P$$ Device type is $devtype ($deviceType{$devtype})";
+	
+	## Create VO template
+	#####################
+	my $VO = LoxBerry::LoxoneTemplateBuilder->VirtualOut(
+		Title => "NUKI " . $currdev->{name},
+		Comment => "Created by LoxBerry Nuki Plugin ($mday.$mon.$year)",
+		#Address => "http://".$bridges->{$intBridgeId}->{ip}.":".$bridges->{$intBridgeId}->{port},
+ 	);
+	
+	# Lock Actions
+
+	# Analog action
+	$VO->VirtualOutCmd(
+		Title => "Analogue Lock Action",
+		#CmdOn => "/lockAction?nukiId=$nukiId&deviceType=$devtype&action=<v>&nowait=1&token=$bridges->{$intBridgeId}->{token}",
+		Analog => 1
+	);
+
+	# Digital actions
+	#my $devlockActions = $lockAction{$devtype};
+	#foreach my $actionkey ( sort keys %$devlockActions ) {
+	#	my $actionname = $devlockActions->{$actionkey};
+	#	$actionname  =~ s/\b(\w)(\w*)/\U$1\L$2/g;
+	#	LOGDEB "P$$ actionkey $actionkey actionname $actionname";
+	#	$VO->VirtualOutCmd(
+	#		Title => $actionname,
+	#		CmdOn => "/lockAction?nukiId=$nukiId&deviceType=$devtype&action=$actionkey&nowait=1&token=$bridges->{$intBridgeId}->{token}"
+	#	);
+	#}
+
+	
+	$xml = $VO->output;
+	$payload{vo} = $xml;
+	$payload{voFilename} = "VO_NUKI_$currdev->{name}.xml";
+	
+	## Create VI template (via Virtual HTTP Input)
+	##############################################
+	my $topic_from_cfg = $mqttconfig->{topic};
+	my $topic = $topic_from_cfg;
+	$topic =~ tr/\//_/;
 		
-		# Create the event
-		my $event = new Config::Crontab::Event (
-		-command => "$installfolder/bin/plugins/$psubfolder/fetch.pl > /dev/null 2>&1",
-		-user => 'loxberry',
-		-system => 1,
-		);
+	my $VI = LoxBerry::LoxoneTemplateBuilder->VirtualInHttp(
+		Title => "NUKI Status " . $currdev->{name},
+		Comment => "Created by LoxBerry Nuki Plugin ($mday.$mon.$year)",
+ 	);
+	
+	$VI->VirtualInHttpCmd( Title => "${topic}_${nukiId}_batteryCritical", Comment => "$currdev->{name} Battery Critical");
+	$VI->VirtualInHttpCmd( Title => "${topic}_${nukiId}_mode", Comment => "$currdev->{name} Mode");
+	$VI->VirtualInHttpCmd( Title => "${topic}_${nukiId}_nukiId", Comment => "$currdev->{name} Nuki ID");
+	$VI->VirtualInHttpCmd( Title => "${topic}_${nukiId}_state", Comment => "$currdev->{name} State");
+	$VI->VirtualInHttpCmd( Title => "${topic}_${nukiId}_sentBy", Comment => "$currdev->{name} Sent By");
+	$VI->VirtualInHttpCmd( Title => "${topic}_${nukiId}_sentAtTimeLox", Comment => "$currdev->{name} Last Updated");
+	
+	$xml = $VI->output;
+	$payload{vi} = $xml;
+	$payload{viFilename} = "VI_NUKI_$currdev->{name}.xml";
+	
+	## Create MQTT representation of inputs
+	#######################################
+	
+	
+	my $m = "";
+	if($topic) {
+		$m .= '<table class="mqtttable">'."\n";
+		$m .= "<tr>\n";
+		$m .= '<th class="mqtttable_headrow mqtttable_vicol ui-bar-a">Loxone VI (via MQTT)</td>'."\n";
+		$m .= '<th class="mqtttable_headrow mqtttable_desccol ui-bar-a">Description</td>'."\n";
+		$m .= '</tr>'."\n";
 		
-		$event->datetime('@reboot');
+		$m .= '<tr>'."\n";
+		$m .= '<td class="mqtttable_vicol">'."${topic}_${nukiId}_batteryCritical</td>\n";
+		$m .= '<td class="mqtttable_desccol">0...Battery ok 1 ... Battery low</td>'."\n";
+		$m .= "</tr>\n";
 		
-		# Insert block and event to crontab
-		my $block = new Config::Crontab::Block;
-		$block->last( new Config::Crontab::Comment( -data => '## Startup Smartmeter') );
-		$block->last($event);
-		$crontab->last($block); 
+		$m .= "<tr>\n";
+		$m .= '<td class="mqtttable_vicol">'."${topic}_${nukiId}_deviceType</td>\n";
+		$m .= '<td class="mqtttable_desccol">';
+		#foreach( sort keys %deviceType ) {
+		#	$m .= "$_...$deviceType{$_} ";
+		#}
+		$m .= "</td>\n";
+		$m .= "</tr>\n";
 		
-		$crontab->write($crontabtmp);
-		
-		if (installcrontab()) {
-			return;
+		$m .= "<tr>\n";
+		$m .= '<td class="mqtttable_vicol">'."${topic}_${nukiId}_mode</td>\n";
+		if( $devtype eq "0") {
+			$m .= '<td class="mqtttable_desccol">'."Always '2' after complete setup</td>\n";
+		} elsif ($devtype eq "2") {
+			$m .= '<td class="mqtttable_desccol">'."2...Door mode 3...Continuous mode</td>\n";
 		} else {
-			print $cgi->header(-status => "204 Cannot remove cronjob");
-			exit(0);
+			$m .= "<td>(unknown device type)</td>\n";
 		}
-	}	
-	return;
-}
+		$m .= "</tr>\n";
+		
+		$m .= "<tr>\n";
+		$m .= '<td class="mqtttable_vicol">'."${topic}_${nukiId}_nukiId</td>\n";
+		$m .= '<td class="mqtttable_desccol">ID of your Nuki device</td>'."\n";
+		$m .= "</tr>\n";
+		
+		$m .= "<tr>\n";
+		$m .= '<td class="mqtttable_vicol">'."${topic}_${nukiId}_state</td>\n";
+		$m .= '<td class="mqtttable_desccol">';
+		#foreach( sort {$a<=>$b} keys %{$lockState{$devtype}} ) {
+		#	$m .= "$_...$lockState{$devtype}{$_} ";
+		#}
+		$m .= "</td>\n";
+		$m .= "</tr>\n";
+
+		$m .= "<tr>\n";
+		$m .= '<td class="mqtttable_vicol">'."${topic}_${nukiId}_sentBy</td>\n";
+		$m .= '<td class="mqtttable_desccol">'."1...callback 2...cron 3...manual</td>\n";
+		$m .= "</tr>\n";
+
+		$m .= "<tr>\n";
+		$m .= '<td class="mqtttable_vicol">'."${topic}_${nukiId}_sentAtTimeLox</td>\n";
+		$m .= '<td class="mqtttable_desccol">'."Loxone Time representation of the update time &lt;v.u&gt;</td>\n";
+		$m .= "</tr>\n";
 	
+		$m .= "</table>\n";
 	
-sub installcrontab
-{
-	if (! -e $crontabtmp) {
-		return (0);
 	}
-	qx ( $lbhomedir/sbin/installcrontab.sh $lbpplugindir $crontabtmp );
-	if ($!) {
-		print $cgi->header(-status => "500 Error activating new crontab");
-		return(0);
-	}
-	return(1);
+	$payload{mqttTable} = $m;
+		
+	$error = 0;
+	$message = "Generated successfully";
+	return ($error, $message, \%payload);
+
+
+
 }
 
-#####################################################
-# Footer
-#####################################################
-
-sub lbfooter 
-{
-  open(F,"$installfolder/templates/system/$lang/footer.html") || die "Missing template system/$lang/footer.html";
-    while (<F>) 
-    {
-      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-      print $_;
-    }
-  close(F);
+END {
 }
