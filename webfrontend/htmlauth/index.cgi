@@ -281,7 +281,7 @@ sub form
 				# Check if Script already running?
 				if (!scalar(grep{/sm_logger.pl/} `ps aux`))
 				{	
-					system ("perl $installfolder/webfrontend/cgi/plugins/$psubfolder/bin/fetch.pl >/dev/null 2>&1 &");
+					system ("perl $installfolder/bin/plugins/$psubfolder/fetch.pl >/dev/null 2>&1 &");
 				}
 								
 				unlink ("$installfolder/system/cron/cron.01min/$pname");
@@ -295,7 +295,7 @@ sub form
 			if ($cgi->param('cron') eq "1") 
 			{
 				Cronjob("Uninstall");
-				system ("ln -s $installfolder/webfrontend/cgi/plugins/$psubfolder/bin/fetch.pl $installfolder/system/cron/cron.01min/$pname");
+				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.01min/$pname");
 				unlink ("$installfolder/system/cron/cron.03min/$pname");
 				unlink ("$installfolder/system/cron/cron.05min/$pname");
 				unlink ("$installfolder/system/cron/cron.10min/$pname");
@@ -306,7 +306,7 @@ sub form
 			if ($cgi->param('cron') eq "3") 
 			{
 				Cronjob("Uninstall");
-				system ("ln -s $installfolder/webfrontend/cgi/plugins/$psubfolder/bin/fetch.pl $installfolder/system/cron/cron.03min/$pname");
+				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.03min/$pname");
 				unlink ("$installfolder/system/cron/cron.01min/$pname");
 				unlink ("$installfolder/system/cron/cron.05min/$pname");
 				unlink ("$installfolder/system/cron/cron.10min/$pname");
@@ -317,7 +317,7 @@ sub form
 			if ($cgi->param('cron') eq "5") 
 			{
 				Cronjob("Uninstall");
-				system ("ln -s $installfolder/webfrontend/cgi/plugins/$psubfolder/bin/fetch.pl $installfolder/system/cron/cron.05min/$pname");
+				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.05min/$pname");
 				unlink ("$installfolder/system/cron/cron.01min/$pname");
 				unlink ("$installfolder/system/cron/cron.03min/$pname");
 				unlink ("$installfolder/system/cron/cron.10min/$pname");
@@ -328,7 +328,7 @@ sub form
 			if ($cgi->param('cron') eq "10") 
 			{
 				Cronjob("Uninstall");
-				system ("ln -s $installfolder/webfrontend/cgi/plugins/$psubfolder/bin/fetch.pl $installfolder/system/cron/cron.10min/$pname");
+				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.10min/$pname");
 				unlink ("$installfolder/system/cron/cron.1min/$pname");
 				unlink ("$installfolder/system/cron/cron.3min/$pname");
 				unlink ("$installfolder/system/cron/cron.5min/$pname");
@@ -339,7 +339,7 @@ sub form
 			if ($cgi->param('cron') eq "15") 
 			{
 				Cronjob("Uninstall");
-				system ("ln -s $installfolder/webfrontend/cgi/plugins/$psubfolder/bin/fetch.pl $installfolder/system/cron/cron.15min/$pname");
+				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.15min/$pname");
 				unlink ("$installfolder/system/cron/cron.01min/$pname");
 				unlink ("$installfolder/system/cron/cron.03min/$pname");
 				unlink ("$installfolder/system/cron/cron.05min/$pname");
@@ -350,7 +350,7 @@ sub form
 			if ($cgi->param('cron') eq "30") 
 			{
 				Cronjob("Uninstall");
-				system ("ln -s $installfolder/webfrontend/cgi/plugins/$psubfolder/bin/fetch.pl $installfolder/system/cron/cron.30min/$pname");
+				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.30min/$pname");
 				unlink ("$installfolder/system/cron/cron.01min/$pname");
 				unlink ("$installfolder/system/cron/cron.03min/$pname");
 				unlink ("$installfolder/system/cron/cron.05min/$pname");
@@ -361,7 +361,7 @@ sub form
 			if ($cgi->param('cron') eq "60") 
 			{
 				Cronjob("Uninstall");
-				system ("ln -s $installfolder/webfrontend/cgi/plugins/$psubfolder/bin/fetch.pl $installfolder/system/cron/cron.hourly/$pname");
+				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.hourly/$pname");
 				unlink ("$installfolder/system/cron/cron.01min/$pname");
 				unlink ("$installfolder/system/cron/cron.03min/$pname");
 				unlink ("$installfolder/system/cron/cron.05min/$pname");
@@ -442,7 +442,7 @@ sub form
 sub lbheader 
 {
 	 # Create Help page
-  $helplink = "http://www.loxwiki.eu/display/LOXBERRY/SML-eMon";
+  $helplink = "https://www.loxwiki.eu/x/mA-L";
   open(F,"$installfolder/templates/plugins/$psubfolder/multi/help.html") || die "Missing template plugins/$psubfolder/$lang/help.html";
     @help = <F>;
     foreach (@help)
@@ -509,7 +509,7 @@ sub Cronjob
 		
 		# Create the event
 		my $event = new Config::Crontab::Event (
-		-command => "$installfolder/webfrontend/cgi/plugins/$psubfolder/bin/fetch.pl > /dev/null 2>&1",
+		-command => "$installfolder/bin/plugins/$psubfolder/fetch.pl > /dev/null 2>&1",
 		-user => 'loxberry',
 		-system => 1,
 		);
