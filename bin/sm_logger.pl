@@ -982,6 +982,15 @@ sub PARSE_DUMP
 		($current2) = $dumpbuffer =~ /[\n|\r|:]51\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
 		($current3) = $dumpbuffer =~ /[\n|\r|:]71\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
 		
+		### Equipment Data
+		($eid) = $dumpbuffer =~ /[\n|\r|:]96\.1\.1[\*255|\*00]*\(([-\d\.]+)/;
+		$eid =~ s/([[:xdigit:]]{2})/chr(hex($1))/eg;
+		($version) = $dumpbuffer =~ /[\n|\r|:]96\.1\.4[\*255|\*00]*\(([-\d\.]+)/;
+		($currenttarif) = $dumpbuffer =~ /[\n|\r|:]96\.14\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($breakerstate) = $dumpbuffer =~ /[\n|\r|:]96\.3\.10[\*255|\*00]*\(([-\d\.]+)/;
+		($messagecode) = $dumpbuffer =~ /[\n|\r|:]96\.13\.1[\*255|\*00]*\(([-\d\.]+)/;
+		($messagetext) = $dumpbuffer =~ /[\n|\r|:]96\.13\.0[\*255|\*00]*\(([-\d\.]+)/;
+		
 	}	else {
 
 		### Energy consumption: Readings  (OBIS 1.8.x*255)
@@ -1122,6 +1131,13 @@ sub PARSE_DUMP
 		print F "$serial:Instantaneous_Current_L1_31.7.0:$current1\n";
 		print F "$serial:Instantaneous_Current_L2_51.7.0:$current2\n";
 		print F "$serial:Instantaneous_Current_L3_71.7.0:$current3\n";
+		print F "$serial:Instantaneous_Current_L3_71.7.0:$current3\n";
+		print F "$serial:Equipment_Identifier_96.1.1:$eid\n";
+		print F "$serial:Version_Information_96.1.4:$version\n";
+		print F "$serial:Tarif_Indicator_Electricity_96.14.0:$currenttarif\n";
+		print F "$serial:Breaker_State_Electricity_96.1.4:$breakerstate\n";
+		print F "$serial:Text_Message_96.13.0:$messagetext\n";
+		print F "$serial:Message_Code_96.13.1:$messagecode\n";
 		close (F);
 
 	}	else {
