@@ -458,6 +458,42 @@ elsif ( $protocol eq "landisgyret550d0" || $protocol eq "siemensuh50do" ) {
 	&PROTO_GENERICD0("HEAT");
 }
 
+elsif ( $protocol eq "sagemcomt211d0" ) {
+
+	### Defaults
+	our $baudrate = 115200 if !$baudrate;
+	our $startbaudrate = 115200 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "10" if !$timeout;
+	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICD0;
+}
+
+elsif ( $protocol eq "sagemcomt211d0f" ) {
+
+	### Defaults
+	our $baudrate = 115200 if !$baudrate;
+	our $startbaudrate = 115200 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "10" if !$timeout;
+	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICD0("FLANDERS");
+}
+
 else {
 	$verbose =1;
 	&LOG ("No known protocol specified. Try --help to get an overview of possible options.", "FAIL");
@@ -521,10 +557,14 @@ sub PROTO_GENERICD0
     	if ( $type eq "HEAT" ) {
 
     		&PARSE_DUMP("D0", "HEAT");
+		
+    	} elsif ( $type eq "FLANDERS" ) {
 
-	} else {
+    		&PARSE_DUMP("D0", "FLANDERS");
 
-		&PARSE_DUMP("D0");
+		} else {
+
+			&PARSE_DUMP("D0");
 
 	}
 
@@ -899,7 +939,49 @@ sub PARSE_DUMP
 		($flow1) = $dumpbuffer =~ /[\n|\r|:]6\.33[\.0]*[\*255|\*00]*\(([\d\.]+)/;
 		($hour3) = $dumpbuffer =~ /[\n|\r|:]9\.31[\.0]*[\*255|\*00]*\(([\d\.]+)/;
 
-	} else {
+	} 	elsif ( $type eq "FLANDERS" ) {
+		### Energy consumption: Readings  (OBIS 1.8.x*255)
+		($readingconsT0) = $dumpbuffer =~ /[\n|\r|:]1\.8\.0[\*255|\*00]*\(([\d\.]+)/;
+		($readingconsT1) = $dumpbuffer =~ /[\n|\r|:]1\.8\.1[\*255|\*00]*\(([\d\.]+)/;
+		($readingconsT2) = $dumpbuffer =~ /[\n|\r|:]1\.8\.2[\*255|\*00]*\(([\d\.]+)/;
+		($readingconsT3) = $dumpbuffer =~ /[\n|\r|:]1\.8\.3[\*255|\*00]*\(([\d\.]+)/;
+		($readingconsT4) = $dumpbuffer =~ /[\n|\r|:]1\.8\.4[\*255|\*00]*\(([\d\.]+)/;
+		($readingconsT5) = $dumpbuffer =~ /[\n|\r|:]1\.8\.5[\*255|\*00]*\(([\d\.]+)/;
+		($readingconsT6) = $dumpbuffer =~ /[\n|\r|:]1\.8\.6[\*255|\*00]*\(([\d\.]+)/;
+		($readingconsT7) = $dumpbuffer =~ /[\n|\r|:]1\.8\.7[\*255|\*00]*\(([\d\.]+)/;
+		($readingconsT8) = $dumpbuffer =~ /[\n|\r|:]1\.8\.8[\*255|\*00]*\(([\d\.]+)/;
+		($readingconsT9) = $dumpbuffer =~ /[\n|\r|:]1\.8\.9[\*255|\*00]*\(([\d\.]+)/;
+
+		### Energy delivery: Readings  (OBIS 2.8.x*255)
+		($readingdelT0) = $dumpbuffer =~ /[\n|\r|:]2\.8\.0[\*255|\*00]*\(([\d\.]+)/;
+		($readingdelT1) = $dumpbuffer =~ /[\n|\r|:]2\.8\.1[\*255|\*00]*\(([\d\.]+)/;
+		($readingdelT2) = $dumpbuffer =~ /[\n|\r|:]2\.8\.2[\*255|\*00]*\(([\d\.]+)/;
+		($readingdelT3) = $dumpbuffer =~ /[\n|\r|:]2\.8\.3[\*255|\*00]*\(([\d\.]+)/;
+		($readingdelT4) = $dumpbuffer =~ /[\n|\r|:]2\.8\.4[\*255|\*00]*\(([\d\.]+)/;
+		($readingdelT5) = $dumpbuffer =~ /[\n|\r|:]2\.8\.5[\*255|\*00]*\(([\d\.]+)/;
+		($readingdelT6) = $dumpbuffer =~ /[\n|\r|:]2\.8\.6[\*255|\*00]*\(([\d\.]+)/;
+		($readingdelT7) = $dumpbuffer =~ /[\n|\r|:]2\.8\.7[\*255|\*00]*\(([\d\.]+)/;
+		($readingdelT8) = $dumpbuffer =~ /[\n|\r|:]2\.8\.8[\*255|\*00]*\(([\d\.]+)/;
+		($readingdelT9) = $dumpbuffer =~ /[\n|\r|:]2\.8\.9[\*255|\*00]*\(([\d\.]+)/;
+
+		### Energy consumption: Power  (OBIS mixture - no standard?)
+		($power1) = $dumpbuffer =~ /[\n|\r|:]1\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($power2) = $dumpbuffer =~ /[\n|\r|:]2\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($power3) = $dumpbuffer =~ /[\n|\r|:]15\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($power4) = $dumpbuffer =~ /[\n|\r|:]16\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($power5) = $dumpbuffer =~ /[\n|\r|:]21\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($power6) = $dumpbuffer =~ /[\n|\r|:]41\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($power7) = $dumpbuffer =~ /[\n|\r|:]61\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+
+		### Instantaneous voltage
+		($volt1) = $dumpbuffer =~ /[\n|\r|:]32\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($volt2) = $dumpbuffer =~ /[\n|\r|:]52\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($volt3) = $dumpbuffer =~ /[\n|\r|:]72\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($current1) = $dumpbuffer =~ /[\n|\r|:]31\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($current2) = $dumpbuffer =~ /[\n|\r|:]51\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($current3) = $dumpbuffer =~ /[\n|\r|:]71\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		
+	}	else {
 
 		### Energy consumption: Readings  (OBIS 1.8.x*255)
 		($readingconsT0) = $dumpbuffer =~ /[\n|\r|:]1\.8\.0[\*255|\*00]*\(([\d\.]+)/;
@@ -998,7 +1080,49 @@ sub PARSE_DUMP
 		print F "$serial:Flow_OBIS_6.33.0:$flow1\n";
 		close (F);
 
-	} else {
+	}	elsif ( $type eq "FLANDERS" ) {
+	
+		open(F,">/var/run/shm/$psubfolder/$serial\.data");
+		print F "$serial:Last_Update:$datereadable\n";
+		print F "$serial:Last_UpdateLoxEpoche:$epoche_time_lox\n";
+		print F "$serial:Consumption_Total_OBIS_1.8.0:$readingconsT0\n";
+		print F "$serial:Consumption_Tarif1_OBIS_1.8.1:$readingconsT1\n";
+		print F "$serial:Consumption_Tarif2_OBIS_1.8.2:$readingconsT2\n";
+		print F "$serial:Consumption_Tarif3_OBIS_1.8.3:$readingconsT3\n";
+		print F "$serial:Consumption_Tarif4_OBIS_1.8.4:$readingconsT4\n";
+		print F "$serial:Consumption_Tarif5_OBIS_1.8.5:$readingconsT5\n";
+		print F "$serial:Consumption_Tarif6_OBIS_1.8.6:$readingconsT6\n";
+		print F "$serial:Consumption_Tarif7_OBIS_1.8.7:$readingconsT7\n";
+		print F "$serial:Consumption_Tarif8_OBIS_1.8.8:$readingconsT8\n";
+		print F "$serial:Consumption_Tarif9_OBIS_1.8.9:$readingconsT9\n";
+		print F "$serial:Consumption_CalculatedPower_OBIS_1.99.0:$powercalccons\n";
+		print F "$serial:Consumption_Power_OBIS_1.7.0:$power1\n";
+		print F "$serial:Consumption_Power_L1_OBIS_21.7.0:$power5\n";
+		print F "$serial:Consumption_Power_L2_OBIS_41.7.0:$power6\n";
+		print F "$serial:Consumption_Power_L3_OBIS_61.7.0:$power7\n";
+		print F "$serial:Delivery_Total_OBIS_2.8.0:$readingdelT0\n";
+		print F "$serial:Delivery_Tarif1_OBIS_2.8.1:$readingdelT1\n";
+		print F "$serial:Delivery_Tarif2_OBIS_2.8.2:$readingdelT2\n";
+		print F "$serial:Delivery_Tarif3_OBIS_2.8.3:$readingdelT3\n";
+		print F "$serial:Delivery_Tarif4_OBIS_2.8.4:$readingdelT4\n";
+		print F "$serial:Delivery_Tarif5_OBIS_2.8.5:$readingdelT5\n";
+		print F "$serial:Delivery_Tarif6_OBIS_2.8.6:$readingdelT6\n";
+		print F "$serial:Delivery_Tarif7_OBIS_2.8.7:$readingdelT7\n";
+		print F "$serial:Delivery_Tarif8_OBIS_2.8.8:$readingdelT8\n";
+		print F "$serial:Delivery_Tarif9_OBIS_2.8.9:$readingdelT9\n";
+		print F "$serial:Delivery_CalculatedPower_OBIS_2.99.0:$powercalcdel\n";
+		print F "$serial:Delivery_Power_OBIS_2.7.0:$power2\n";
+		print F "$serial:Total_Power_OBIS_15.7.0:$power3\n";
+		print F "$serial:Total_Power_OBIS_16.7.0:$power4\n";
+		print F "$serial:Instantaneous_Voltage_L1_32.7.0:$volt1\n";
+		print F "$serial:Instantaneous_Voltage_L3_52.7.0:$volt2\n";
+		print F "$serial:Instantaneous_Voltage_L3_72.7.0:$volt3\n";
+		print F "$serial:Instantaneous_Current_L1_31.7.0:$current1\n";
+		print F "$serial:Instantaneous_Current_L2_51.7.0:$current2\n";
+		print F "$serial:Instantaneous_Current_L3_71.7.0:$current3\n";
+		close (F);
+
+	}	else {
 
 		open(F,">/var/run/shm/$psubfolder/$serial\.data");
 		print F "$serial:Last_Update:$datereadable\n";
