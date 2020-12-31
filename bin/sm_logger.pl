@@ -939,7 +939,8 @@ sub PARSE_DUMP
 		($flow1) = $dumpbuffer =~ /[\n|\r|:]6\.33[\.0]*[\*255|\*00]*\(([\d\.]+)/;
 		($hour3) = $dumpbuffer =~ /[\n|\r|:]9\.31[\.0]*[\*255|\*00]*\(([\d\.]+)/;
 
-	} 	elsif ( $type eq "FLANDERS" ) {
+	}
+	elsif ( $type eq "FLANDERS" ) {
 		### Energy consumption: Readings  (OBIS 1.8.x*255)
 		($readingconsT0) = $dumpbuffer =~ /[\n|\r|:]1\.8\.0[\*255|\*00]*\(([\d\.]+)/;
 		($readingconsT1) = $dumpbuffer =~ /[\n|\r|:]1\.8\.1[\*255|\*00]*\(([\d\.]+)/;
@@ -1080,7 +1081,8 @@ sub PARSE_DUMP
 		print F "$serial:Flow_OBIS_6.33.0:$flow1\n";
 		close (F);
 
-	}	elsif ( $type eq "FLANDERS" ) {
+	}
+	elsif ( $type eq "FLANDERS" ) {
 	
 		open(F,">/var/run/shm/$psubfolder/$serial\.data");
 		print F "$serial:Last_Update:$datereadable\n";
