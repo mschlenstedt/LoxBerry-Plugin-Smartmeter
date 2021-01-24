@@ -1126,7 +1126,7 @@ sub PARSE_DUMP
 		print F "$serial:Total_Power_OBIS_15.7.0:$power3\n";
 		print F "$serial:Total_Power_OBIS_16.7.0:$power4\n";
 		print F "$serial:Instantaneous_Voltage_L1_32.7.0:$volt1\n";
-		print F "$serial:Instantaneous_Voltage_L3_52.7.0:$volt2\n";
+		print F "$serial:Instantaneous_Voltage_L2_52.7.0:$volt2\n";
 		print F "$serial:Instantaneous_Voltage_L3_72.7.0:$volt3\n";
 		print F "$serial:Instantaneous_Current_L1_31.7.0:$current1\n";
 		print F "$serial:Instantaneous_Current_L2_51.7.0:$current2\n";
