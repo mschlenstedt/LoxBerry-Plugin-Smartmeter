@@ -1131,7 +1131,6 @@ sub PARSE_DUMP
 		print F "$serial:Instantaneous_Current_L1_31.7.0:$current1\n";
 		print F "$serial:Instantaneous_Current_L2_51.7.0:$current2\n";
 		print F "$serial:Instantaneous_Current_L3_71.7.0:$current3\n";
-		print F "$serial:Instantaneous_Current_L3_71.7.0:$current3\n";
 		print F "$serial:Equipment_Identifier_96.1.1:$eid\n";
 		print F "$serial:Version_Information_96.1.4:$version\n";
 		print F "$serial:Tarif_Indicator_Electricity_96.14.0:$currenttarif\n";
