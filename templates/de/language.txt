@@ -1,5 +1,5 @@
 [MENU]
-VZLOGGER="Smartmeter Konfiguration (vzLogger)"
+VZLOGGER="Smartmeter Konfigurstion (vzLogger)"
 LEGACY="Smartmeter Konfiguration (Legacy)"
 LEGACY_HINT="Dieses ist die Legacy Implementierung, um Deine Smartmeter anzubinden. Diese Implementierung basiert auf sehr alten Skripten, die leider sehr unflexibel sind und nur begrenzte Möglichkeiten bieten. Wenn möglich benutze bitte die Standardimplementierung mit vzLogger. Diese Implementierung wird nicht mehr gewartet und wird in einem der zukünftigen Versionen entfernt werden."
 
