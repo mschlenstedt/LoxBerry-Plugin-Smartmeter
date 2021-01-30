@@ -19,8 +19,9 @@
 ################################
 use Device::SerialPort;
 use Getopt::Long;
-use File::HomeDir;
-use Cwd 'abs_path';
+use LoxBerry::System;
+#use File::HomeDir;
+#use Cwd 'abs_path';
 use DateTime;
 #use DateTime::TimeZone;
 #use warnings;
@@ -93,9 +94,8 @@ if ( !$parse ) {
 }
 
 ### Figure out in which subfolder we are installed
-our $home = File::HomeDir->my_home;
-our $psubfolder = abs_path($0);
-$psubfolder =~ s/(.*)\/(.*)\/bin\/(.*)$/$2/g;
+our $home = $lbhomedir;
+our $psubfolder = $lbpplugindir;
 
 # Create temp folder if not already exist
 if (!-d "/var/run/shm/$psubfolder") {
@@ -897,7 +897,7 @@ sub PARSE_DUMP
 	our $type = shift; # http://wiki.selfhtml.org/wiki/Perl/Subroutinen
 	if ($proto eq "SML") {
 		&LOG ("Parse /var/run/shm/$psubfolder/$serial\.dump as SML-Protocol.", "INFO");
-		our $dumpbuffer = `php $home/webfrontend/cgi/plugins/$psubfolder/bin/sml_parser.php /var/run/shm/$psubfolder/$serial\.dump`;
+		our $dumpbuffer = `php $home/bin/plugins/$psubfolder/sml_parser.php /var/run/shm/$psubfolder/$serial\.dump`;
 		print "Buffer: $dumpbuffer\n";
 	} else {
 		&LOG ("Parse /var/run/shm/$psubfolder/$serial\.dump as D0-Protocol.", "INFO");
