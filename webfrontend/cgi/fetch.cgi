@@ -49,7 +49,7 @@ my  $pid;
 ##########################################################################
 
 # Version of this script
-$version = "0.2";
+$version = "0.1";
 
 # Figure out in which subfolder we are installed
 $psubfolder = abs_path($0);
@@ -95,7 +95,7 @@ if ($pid == 0) {
   open STDERR, ">/dev/null";
 
   # Trigger fetch
-  system("$installfolder/bin/plugins/$psubfolder/bin/fetch.pl --verbose --force");
+  system("$installfolder/webfrontend/cgi/plugins/$psubfolder/bin/fetch.pl --verbose --force");
 }
 
 exit;

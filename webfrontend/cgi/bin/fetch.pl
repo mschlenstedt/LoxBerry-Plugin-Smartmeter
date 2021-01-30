@@ -24,7 +24,6 @@ use File::HomeDir;
 use Cwd 'abs_path';
 use IO::Socket; # For sending UDP packages
 use Getopt::Long;
-use LoxBerry::System;
 #use warnings;
 #use strict;
 no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
@@ -38,8 +37,8 @@ my  $plugin_cfg;
 my  %plugin_cfg_hash;
 my  $installfolder;
 my  $version;
-my  $home = $lbhomedir;
-my  $psubfolder = $lbpplugindir;
+my  $home = File::HomeDir->my_home;
+my  $psubfolder;
 my  $pname;
 my  @heads;
 my  $name;
@@ -70,11 +69,11 @@ my  $force;
 ##########################################################################
 
 # Version of this script
-$version = "0.2";
+$version = "0.1";
 
 # Figure out in which subfolder we are installed
-#$psubfolder = abs_path($0);
-#$psubfolder =~ s/(.*)\/(.*)\/bin\/(.*)$/$2/g;
+$psubfolder = abs_path($0);
+$psubfolder =~ s/(.*)\/(.*)\/bin\/(.*)$/$2/g;
 
 # If Cron is minimum, here is the rerun mark
 RERUN:
@@ -90,7 +89,7 @@ $plugin_cfg 	= new Config::Simple("$installfolder/config/plugins/$psubfolder/sma
 $pname          = $plugin_cfg->param("MAIN.SCRIPTNAME");
 $udpport        = $plugin_cfg->param("MAIN.UDPPORT");
 $sendudp        = $plugin_cfg->param("MAIN.SENDUDP");
-$cron		= $plugin_cfg->param("MAIN.CRON");
+$cron			= $plugin_cfg->param("MAIN.CRON");
 
 # Commandline options
 GetOptions (    "verbose"          => \$verbose,
@@ -156,11 +155,11 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 			&LOG ("$serial: Delay: $delay", "INFO");
 			&LOG ("$serial: Device: $device", "INFO");
 			&LOG ("$serial: Baudrate:$baudrate/$startbaudrate Databits:$databits Stopbits:$stopbits Parity:$parity Handshake:$handshake", "INFO");
-			system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --protocol $protocol --startbaudrate $startbaudrate --baudrate $baudrate --timeout $timeout --delay $delay --handshake $handshake --databits $databits --stopbits $stopbits --parity $parity $verbose");
+			system("$installfolder/webfrontend/cgi/plugins/$psubfolder/bin/sm_logger.pl --device $device --protocol $protocol --startbaudrate $startbaudrate --baudrate $baudrate --timeout $timeout --delay $delay --handshake $handshake --databits $databits --stopbits $stopbits --parity $parity $verbose");
 		} else {
 			# If set to  a meter, use standard settings for this meter
 			&LOG ("$serial: Presetting: $meter.", "INFO");
-			system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --protocol $meter $verbose");
+			system("$installfolder/webfrontend/cgi/plugins/$psubfolder/bin/sm_logger.pl --device $device --protocol $meter $verbose");
 		}
 
 		# Send data by UDP to all configured miniservers
