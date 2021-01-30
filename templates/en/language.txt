@@ -1,8 +1,3 @@
-[MENU]
-VZLOGGER="Smartmeter Configuration (vzLogger)"
-LEGACY="Smartmeter Configuration (Legacy)"
-LEGACY_HINT="This is the legacy implementation to connect to your smartmeters. This is based on very old (and unflexible) scripts with limited options. Please use the standard configuration with vzLogger if you can! This implementation isn't maintained anymore and will be removed in a future release."
-
 [BUTTON]
 RESCAN="Rescan for I/R Heads"
 SHOWLOGFILE="Show Logfiles"
