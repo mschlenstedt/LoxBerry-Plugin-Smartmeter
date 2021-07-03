@@ -198,6 +198,13 @@ class SML_PARSER {
 						return $temp;
 					}
 				}
+				if ($LEN==4) {
+					# Eigenart von DZG DWS7420.1 Loxforum @ULI. Um was für ein Zahlenformat handelt es sich bei 3 Byte länge??
+					# https://www.loxforum.com/forum/projektforen/loxberry/plugins/85702-neues-plugin-smartmeter-stromz%C3%A4hler-auslesen?p=309996#post309996
+					$temp = hexdec($this->read($LEN-1));
+					$this->debug('signed Integer: ('.$temp.')');
+					return $temp;
+				}
 				if ($LEN==5) {
 					# 32 Bit signed Integer
 					$temp = hexdec($this->read($LEN-1));
