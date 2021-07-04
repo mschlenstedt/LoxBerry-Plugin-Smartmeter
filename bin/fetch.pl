@@ -161,6 +161,7 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 			# If set to  a meter, use standard settings for this meter
 			&LOG ("$serial: Presetting: $meter.", "INFO");
 			system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --protocol $meter $verbose");
+			#system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --parse D30A3RFT --protocol $meter $verbose");
 		}
 
 		# Send data by UDP to all configured miniservers
