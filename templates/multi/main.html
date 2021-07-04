@@ -35,13 +35,13 @@
 	<a id="btnshowlog" data-icon="search" data-role="button" data-mini="true" href="./logfiles.cgi" target="_blank"><TMPL_VAR NAME=T::BUTTON.SHOWLOGFILE></a>
 	</td>
 	<td>
-	<a  id="btnlog" data-icon="delete" data-role="button" data-mini="true" href="./index.cgi?clearcache=1"><TMPL_VAR NAME=T::BUTTON.CLEARCACHE></a>
+	<a  id="btnlog" data-icon="delete" data-role="button" data-mini="true" href="./index_legacy.cgi?clearcache=1"><TMPL_VAR NAME=T::BUTTON.CLEARCACHE></a>
 	</td>
 </tr>
 </table>
 </center>
 
-<form method="post" data-ajax="false" name="main_form" id="main_form" action="./index.cgi">
+<form method="post" data-ajax="false" name="main_form" id="main_form" action="./index_legacy.cgi">
 <input type="hidden" name="saveformdata" value="1">
 
 <table border=0 width="100%" cellpadding="10">
@@ -527,7 +527,7 @@
 <p>
 <center>
 	<a id="btncancel" data-role="button" data-inline="true" data-mini="true" data-icon="delete"
-	href="/admin/index.cgi"><TMPL_VAR NAME=T::BUTTON.CANCEL></a>
+	href="/admin/index_legacy.cgi"><TMPL_VAR NAME=T::BUTTON.CANCEL></a>
 	<button type="submit" form="main_form" id="btnsubmit" data-role="button" data-inline="true"
 	data-mini="true" data-icon="check"><TMPL_VAR NAME=T::BUTTON.SAVE></button>
 </center>
