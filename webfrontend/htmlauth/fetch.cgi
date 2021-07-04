@@ -95,7 +95,7 @@ if ($pid == 0) {
   open STDERR, ">/dev/null";
 
   # Trigger fetch
-  system("$installfolder/bin/plugins/$psubfolder/bin/fetch.pl --verbose --force");
+  system("$installfolder/bin/plugins/$psubfolder/fetch.pl --verbose --force");
 }
 
 exit;
