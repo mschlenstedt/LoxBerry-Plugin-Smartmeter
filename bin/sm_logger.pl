@@ -868,7 +868,7 @@ sub PARSE_DUMP
 
 	if ( $type eq "HEAT" ) {
 		### Energy consumption: Readings for Siemens UH50 / Landis+Gyr ULTRAHEAT T550
-		($readingconsT0) = $dumpbuffer =~ /[\n|\r|:|\)]6\.8[\.0]*[\*255|\*00]*\(([\d\.]+)/;
+		($readingconsT0) = $dumpbuffer =~ /[\n|\r|:|\)]*6\.8[\.0]*[\*255|\*00]*\(([\d\.]+)/;
 		($readingconsT1) = $dumpbuffer =~ /[\n|\r|:|\)]6\.8\.1[\*255|\*00]*\(([\d\.]+)/;
 		($readingconsT2) = $dumpbuffer =~ /[\n|\r|:|\)]6\.8\.2[\*255|\*00]*\(([\d\.]+)/;
 		($readingconsT3) = $dumpbuffer =~ /[\n|\r|:|\)]6\.8\.3[\*255|\*00]*\(([\d\.]+)/;
@@ -892,12 +892,14 @@ sub PARSE_DUMP
 		#($readingdelT9) = $dumpbuffer =~ /[\n|\r|:]2\.8\.9[\*255|\*00]*\(([\d\.]+)/;
 
 		### Energy consumption: Power  (OBIS mixture - no standard?)
-		($power1) = $dumpbuffer =~ /[\n|\r|:]6\.6[\.0]*[\*255|\*00]*\(([\d\.]+)/;
-		($volume1) = $dumpbuffer =~ /[\n|\r|:]6\.26[\.0]*[\*255|\*00]*\(([\d\.]+)/;
-		($hour1) = $dumpbuffer =~ /[\n|\r|:]6\.31[\.0]*[\*255|\*00]*\(([\d\.]+)/;
-		($hour2) = $dumpbuffer =~ /[\n|\r|:]6\.32[\.0]*[\*255|\*00]*\(([\d\.]+)/;
-		($flow1) = $dumpbuffer =~ /[\n|\r|:]6\.33[\.0]*[\*255|\*00]*\(([\d\.]+)/;
-		($hour3) = $dumpbuffer =~ /[\n|\r|:]9\.31[\.0]*[\*255|\*00]*\(([\d\.]+)/;
+		($power1) = $dumpbuffer =~ /[\n|\r|:]*6\.6[\.0]*[\*255|\*00]*\(([\d\.]+)/;
+		($volume1) = $dumpbuffer =~ /[\n|\r|:]*6\.26[\.0]*[\*255|\*00]*\(([\d\.]+)/;
+		($hour1) = $dumpbuffer =~ /[\n|\r|:]*6\.31[\.0]*[\*255|\*00]*\(([\d\.]+)/;
+		($hour2) = $dumpbuffer =~ /[\n|\r|:]*6\.32[\.0]*[\*255|\*00]*\(([\d\.]+)/;
+		($flow1) = $dumpbuffer =~ /[\n|\r|:]*6\.33[\.0]*[\*255|\*00]*\(([\d\.]+)/;
+		($hour3) = $dumpbuffer =~ /[\n|\r|:]*9\.31[\.0]*[\*255|\*00]*\(([\d\.]+)/;
+		($heating_flow) = $dumpbuffer =~ /[\n|\r|:]*9\.4[\.0]*[\*255|\*00]*\(([\d\.]+)/;
+		($heating_return) = $dumpbuffer =~ /[\n|\r|:]*9\.4\([^&]+&([^*]+)/;
 
 	} else {
 
@@ -926,14 +928,16 @@ sub PARSE_DUMP
 		($readingdelT9) = $dumpbuffer =~ /[\n|\r|:]2\.8\.9[\*255|\*00]*\(([\d\.]+)/;
 
 		### Energy consumption: Power  (OBIS mixture - no standard?)
-		($power1) = $dumpbuffer =~ /[\n|\r|:]1\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($power1) = $dumpbuffer =~ /[\n|\r|:]1\.7\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
 		($power2) = $dumpbuffer =~ /[\n|\r|:]2\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
 		($power3) = $dumpbuffer =~ /[\n|\r|:]15\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
 		($power4) = $dumpbuffer =~ /[\n|\r|:]16\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
-		($power5) = $dumpbuffer =~ /[\n|\r|:]21\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
-		($power6) = $dumpbuffer =~ /[\n|\r|:]41\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
-		($power7) = $dumpbuffer =~ /[\n|\r|:]61\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
-
+		($power5) = $dumpbuffer =~ /[\n|\r|:]21\.7\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
+		($power6) = $dumpbuffer =~ /[\n|\r|:]41\.7\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
+		($power7) = $dumpbuffer =~ /[\n|\r|:]61\.7\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
+		($power8) = $dumpbuffer =~ /[\n|\r|:]36\.7\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
+		($power9) = $dumpbuffer =~ /[\n|\r|:]56\.7\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
+		($power10) = $dumpbuffer =~ /[\n|\r|:]76\.7\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
 	}
 
 	### Calculate Avg. Power
@@ -996,6 +1000,8 @@ sub PARSE_DUMP
 		print F "$serial:Hour_OBIS_6.32.0:$hour2\n";
 		print F "$serial:Hour_OBIS_9.31.0:$hour3\n";
 		print F "$serial:Flow_OBIS_6.33.0:$flow1\n";
+		print F "$serial:Heating_Flow_OBIS_9.4:$heating_flow\n";
+		print F "$serial:Heating_Return_OBIS_9.4:$heating_return\n";
 		close (F);
 
 	} else {
@@ -1018,6 +1024,9 @@ sub PARSE_DUMP
 		print F "$serial:Consumption_Power_L1_OBIS_21.7.0:$power5\n";
 		print F "$serial:Consumption_Power_L2_OBIS_41.7.0:$power6\n";
 		print F "$serial:Consumption_Power_L3_OBIS_61.7.0:$power7\n";
+		print F "$serial:Consumption_Power_L1_OBIS_36.7.0:$power8\n";
+		print F "$serial:Consumption_Power_L2_OBIS_56.7.0:$power9\n";
+		print F "$serial:Consumption_Power_L3_OBIS_76.7.0:$power10\n";
 		print F "$serial:Delivery_Total_OBIS_2.8.0:$readingdelT0\n";
 		print F "$serial:Delivery_Tarif1_OBIS_2.8.1:$readingdelT1\n";
 		print F "$serial:Delivery_Tarif2_OBIS_2.8.2:$readingdelT2\n";

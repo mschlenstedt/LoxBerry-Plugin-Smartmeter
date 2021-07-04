@@ -17,7 +17,6 @@ class SML_PARSER {
 		'01000E0700FF' => array('1-0:14.7.0*255','Frequenz'),
 		'0100010700FF' => array('1-0:1.7.0*255','Momentane Wirkleistung Bezug'),
 		'0100020700FF' => array('1-0:2.7.0*255','Momentane Wirkleistung Lieferung'),
-		'0100010800FF' => array('1-0:1.8.0*255','Wirkarbeit Bezug Total: Zaehlerstand'),
 		'0100010801FF' => array('1-0:1.8.1*255','Wirk-Energie Tarif 1 Bezug'),
 		'0100020801FF' => array('1-0:2.8.1*255','Wirk-Energie Tarif 1 Lieferung'),
 		'0100010802FF' => array('1-0:1.8.2*255','Wirk-Energie Tarif 2 Bezug'),
@@ -27,6 +26,7 @@ class SML_PARSER {
 		'8181C78203FF' => array('129-129:199.130.3*255','Hersteller-ID '),
 		'8181C78205FF' => array('129-129:199.130.5*255','Public-Key'),
 		'01000F0700FF' => array('1-0:15.7.0*255','Active Power'),
+		'0100010800FF' => array('1-0:1.8.0*255','Wirkarbeit Bezug Total: Zaehlerstand'),
 		'0100020800FF' => array('1-0:2.8.0*255','Wirkarbeit Lieferung Total: Zaehlerstand'),
 		'010060320101' => array('1-0:96.50.1*255','Hersteller-ID '),
 		'0100000009FF' => array('1-0:0.0.9*255',' Geraeteeinzelidentifikation'),
@@ -45,7 +45,10 @@ class SML_PARSER {
 		'0101010806FF' => array('1-1:1.8.6*255','Wirkarbeit Tarif 6 Bezug'),
 		'0101010807FF' => array('1-1:1.8.7*255','Wirkarbeit Tarif 7 Bezug'),
 		'0101010808FF' => array('1-1:1.8.8*255','Wirkarbeit Tarif 8 Bezug'),
-		'0100600505FF' => array('1-0:96.5.5*255','Status')
+		'0100600505FF' => array('1-0:96.5.5*255','Status'),
+		'0100240700FF' => array('1-0:36.7.0*255','aktuelle Wirkleistung L1'),
+		'0100380700FF' => array('1-0:56.7.0*255','aktuelle Wirkleistung L2'),
+		'01004C0700FF' => array('1-0:76.7.0*255','aktuelle Wirkleistung L3')
     );
 	
     private $data;
@@ -136,6 +139,7 @@ class SML_PARSER {
             $this->sml_crc16($match);
             $this->data = substr($this->data,strlen($match));
             #echo "MATCH: $match\n";
+			$this->debug('MATCH: ('.$match.')');
         }
     }
     private function read($len) {
@@ -151,10 +155,12 @@ class SML_PARSER {
     private function parse_sml_data($list_item=0) {
         global $list_indent;
         $TYPE_LEN = $this->read(1);
+		$this->debug('Type_LEN: ('.$TYPE_LEN.')');
         if($TYPE_LEN=='00') {
             return $TYPE_LEN; # EndOfSmlMessage
         }
         $TYPE = $TYPE_LEN{0}.'x';     # only high-nibble
+		$this->debug('Type: ('.$TYPE.')');
         $LEN  = hexdec($TYPE_LEN{1}); # only low-nibble
         while($TYPE{0} &0x8) {  # Multi-Byte TypeLen-Field
             $LEN = $LEN * 0x10;
@@ -169,32 +175,32 @@ class SML_PARSER {
                 #return $this->hex2bin($this->read($LEN-1));
                 return $this->read($LEN-1);
                 break;
-			case '5x': # Integer
+            case '5x': # Integer
 				if ($LEN==2) {
 					# 8 Bit signed Integer
 					$temp = hexdec($this->read($LEN-1));
+					$this->debug('Value 52: ('.$temp.')');
 					if($temp & 0x80) {
 						# negativer Wert, Umrechnung 2er Komplement	
 						$temp -= pow(2,8); # 256
-						$this->debug('signed Integer: ('.$temp.')');
+						$this->debug('signed Integer 52: ('.$temp.')');
 						return $temp;
 					}
 					else{
-						$this->debug('Integer: ('.$temp.')');
 						return $temp;
 					}
 				}
 				if ($LEN==3) {
 					# 16 Bit signed Integer
 					$temp = hexdec($this->read($LEN-1));
+					$this->debug('Value 53: ('.$temp.')');
 					if($temp & 0x8000) {
 						# negativer Wert, Umrechnung 2er Komplement	
 						$temp -= pow(2,16); # 65536
-						$this->debug('signed Integer: ('.$temp.')');
+						$this->debug('signed Integer 53: ('.$temp.')');
 						return $temp;
 					}
 					else{
-						$this->debug('Integer: ('.$temp.')');
 						return $temp;
 					}
 				}
@@ -202,20 +208,20 @@ class SML_PARSER {
 					# Eigenart von DZG DWS7420.1 Loxforum @ULI. Um was für ein Zahlenformat handelt es sich bei 3 Byte länge??
 					# https://www.loxforum.com/forum/projektforen/loxberry/plugins/85702-neues-plugin-smartmeter-stromz%C3%A4hler-auslesen?p=309996#post309996
 					$temp = hexdec($this->read($LEN-1));
-					$this->debug('signed Integer: ('.$temp.')');
+					$this->debug('Value 54: ('.$temp.')');
 					return $temp;
 				}
 				if ($LEN==5) {
 					# 32 Bit signed Integer
 					$temp = hexdec($this->read($LEN-1));
+					$this->debug('Value 55: ('.$temp.')');
 					if($temp & 0x80000000) {
 						# negativer Wert, Umrechnung 2er Komplement	
 						$temp -= pow(2,32); # 4294967296
-						$this->debug('signed Integer: ('.$temp.')');
+						$this->debug('signed Integer 55: ('.$temp.')');
 						return $temp;
 					}
 					else{
-						$this->debug('Integer: ('.$temp.')');
 						return $temp;
 					}
 				}
@@ -223,26 +229,29 @@ class SML_PARSER {
 					# Eigenheit von EMH ED300L Zähler
 					# Überträgt positive Zahlen sporadisch mit Längenangabe 6 im Telegramm
 					$temp = hexdec($this->read($LEN-1));
-					$this->debug('Integer: ('.$temp.')');
+					$this->debug('Value 56: ('.$temp.')');
 					return $temp;
+					
 				}
 				if ($LEN==9) {
 					# 64 Bit signed Integer
 					$temp = hexdec($this->read($LEN-1));
+					$this->debug('Value 59: ('.$temp.')');
 					if($temp & 0x8000000000000000) {
 						# negativer Wert, Umrechnung 2er Komplement	
 						$temp -= pow(2,64); # 18446744073709551616
-						$this->debug('signed Integer: ('.$temp.')');
+						$this->debug('signed Integer 59: ('.$temp.')');
 						return $temp;
 					}
 					else{
-						$this->debug('Integer: ('.$temp.')');
 						return $temp;
 					}
 				}
 				break;
             case '6x': # UnsignedInt
-                return hexdec($this->read($LEN-1));
+				$temp = hexdec($this->read($LEN-1));
+				$this->debug('UnsignedInt 6x: ('.$temp.')');
+                return $temp;
                 break;
             case '7x': # List
                 $list_indent++;
@@ -289,9 +298,9 @@ class SML_PARSER {
         }
     }
     private function readInteger8() {
-	$val = hexdec($this->readInteger($this->data));
-	# Umrechnung erfolgt über 2er Komplement
-	if($val & 0x80) $val -= pow(2,8); # 256
+		$val = hexdec($this->readInteger($this->data));
+		# Umrechnung erfolgt über 2er Komplement
+		if($val & 0x80) $val -= pow(2,8); # 256
 		return $val;
     }
 	private function readSmlTime() {
@@ -321,11 +330,17 @@ class SML_PARSER {
     private function readOpenResponse() {
         $this->match('76'); # 76 = List of 6 items
         $result['codepage']    = $this->readOctet($this->data);
+		$this->debug('codepage ('.$result['codepage'].')');
         $result['clientId']    = $this->readOctet($this->data);
+		$this->debug('clientId ('.$result['clientId'].')');
         $result['reqFileId']   = $this->readOctet($this->data);
+		$this->debug('reqFileId ('.$result['reqFileId'].')');
         $result['serverId']    = $this->readOctet($this->data);
+		$this->debug('serverId ('.$result['serverId'].')');
         $result['refTime']     = $this->readSmlTime($this->data);
+		$this->debug('refTime ('.$result['refTime'].')');
 		$result['sml-Version'] = $this->readUnsigned($this->data);
+		$this->debug('sml-Version ('.$result['sml-Version'].')');
         return $result;
     }
     private function readCloseResponse() {
@@ -339,7 +354,9 @@ class SML_PARSER {
         $result['status']           = $this->readUnsigned($this->data);
         $result['valTime']          = $this->parse_sml_data($this->data);
         $result['unit']             = $this->readUnsigned($this->data);
+		$this->debug('unit ('.$result['unit'].')');
         $result['scaler']           = $this->readInteger8($this->data);
+		$this->debug('scaler ('.$result['scaler'].')');
         $result['value']            = $this->parse_sml_data($this->data);
         $result['valueSignature']   = $this->readOctet($this->data);
         if(isset($this->obis_arr[$result['objName']])) {
@@ -363,8 +380,7 @@ class SML_PARSER {
     }
     private function readValList() {
         $this->debug('ENTER readValList');
-        $TYPE_LEN = $this->read(1);
-
+        $TYPE_LEN = $this->read(1);	
 		# Type-Lenght-Field:
 		# 	7	6	5	4	3	2	1	0
 		# 	1	x	x 	x 	x 	x 	x 	x 	weiteres TL-Field folgt, Vergleich auf 0x8
@@ -373,10 +389,21 @@ class SML_PARSER {
 		# manche DTZ41 vom Bayernwerk schicken 20 OBIS-Kennzahlen 
 			
 		if(hexdec($TYPE_LEN{0}) & 0x8) {
+			$this->debug("TL = $TYPE_LEN");
+			$this->debug("TL(0) = $TYPE_LEN[0]");
+			$this->debug("TL(1) = $TYPE_LEN[1]");
+
 			$TYPE_LEN2 = $this->read(1);
+			$this->debug("TL 04 = $TYPE_LEN2");
+
 			$TYPE_LEN = hexdec($TYPE_LEN) << 4;
+			$this->debug("TL geschoben = $TYPE_LEN1");
+
 			$TYPE_LEN=$TYPE_LEN & 0xFF;
+			$this->debug("TL verundet = $TYPE_LEN1");
+
 			$TYPE_LEN=$TYPE_LEN | $TYPE_LEN2;
+			$this->debug("TL verodert = $TYPE_LEN");
 
 			$LEN = $TYPE_LEN;
 			for($i=0;$i<$LEN;$i++) {
@@ -413,6 +440,7 @@ class SML_PARSER {
     private function readMessageBody() {
         $this->match('72'); # 72 = List of 2 items
         $result['choice']  = $this->readUnsigned($this->data);
+		$this->debug('choice ('.$result['choice'].')');
         switch($result['choice']) {
             case '0101':
                 $this->debug('PROCESS OpenRequest');
@@ -440,12 +468,18 @@ class SML_PARSER {
         $this->crc16_message = 0xFFFF; # Pruefsumme zuruecksetzen
         $this->match('76');       # 76 = List of 6 items
         $result['transactionId'] = $this->readOctet();
+		$this->debug('TRANSACID ('.$result['transactionId'].')');
         $result['groupNo']       = $this->readUnsigned();
+		$this->debug('groupNo ('.$result['groupNo'].')');
         $result['abortOnError']  = $this->readUnsigned();
+		$this->debug('abortOnError ('.$result['abortOnError'].')');
         $result['messageBody']   = $this->readMessageBody();
+		$this->debug('messageBody ('.$result['messageBody'].')');
         $crc_calc = strtoupper(substr('000'.dechex(($this->crc16_message ^ 0xffff)),-4));
         $result['crc_calc'] = substr($crc_calc,-2).substr($crc_calc,0,2); # Wert 4-stellig ausgeben
+		$this->debug('crc_calc ('.$result['crc_calc'].')');
         $result['crc16']         = $this->readUnsigned();
+		$this->debug('crc16 ('.$result['crc16'].')');
         $this->match('00');       # endOfSmlMsg = 00
         $result['crcMsgCheck'] = ($result['crc_calc'] == $result['crc16']);
         $this->debug('EXIT parse_sml_message. CRC='.(($result['crcMsgCheck'])?'OK':'FAIL'),false);
