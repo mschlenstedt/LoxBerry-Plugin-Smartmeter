@@ -20,6 +20,9 @@ ARGV5=$5 # Fifth argument is Base folder of LoxBerry
 /bin/sed -i "s#REPLACEBYSUBFOLDER#$ARGV3#" $ARGV5/system/daemons/plugins/$ARGV2
 /bin/sed -i "s#REPLACEBYBASEFOLDER#$ARGV5#" $ARGV5/system/daemons/plugins/$ARGV2
 
+echo "<INFO> Rename htaccess to .htaccess"
+mv $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/htaccess $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/.htaccess
+
 echo "<INFO> *******************************************************************"
 echo "<INFO> * Please reboot your LoxBerry to initialize the Smartmeter Plugin *"
 echo "<INFO> *******************************************************************"
