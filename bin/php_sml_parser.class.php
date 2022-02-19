@@ -235,11 +235,18 @@ class SML_PARSER {
 				}
 				if ($LEN==9) {
 					# 64 Bit signed Integer
-                    # Wir müssen uns von 32bit, 8 Zeichen trennen, da 32bit System
-                    $temp = substr($this->read($LEN-1), 8);
-                    $temp = unpack('l', strrev(hex2bin($temp)))[1];
-                    $this->debug('signed Integer 59: ('.$temp.')');
-                    return intval($temp);
+					# Wir müssen uns von 32bit, 8 Zeichen trennen, da 32bit System
+					$temp = hexdec(substr($this->read($LEN-1), 8));
+					$this->debug('Value 59: ('.$temp.')');
+					if($temp & 0x80000000) {
+						# negativer Wert, Umrechnung 2er Komplement	
+						$temp -= pow(2,32); # 4294967296
+						$this->debug('signed Integer 59: ('.$temp.')');
+						return $temp;
+					}
+					else{
+						return $temp;
+					}
 				}
 				break;
             case '6x': # UnsignedInt
