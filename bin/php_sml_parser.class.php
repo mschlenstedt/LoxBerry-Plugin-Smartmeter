@@ -235,18 +235,21 @@ class SML_PARSER {
 				}
 				if ($LEN==9) {
 					# 64 Bit signed Integer
-					# Wir müssen uns von 32bit, 8 Zeichen trennen, da 32bit System
-					$temp = hexdec(substr($this->read($LEN-1), 8));
-					$this->debug('Value 59: ('.$temp.')');
-					if($temp & 0x80000000) {
-						# negativer Wert, Umrechnung 2er Komplement	
-						$temp -= pow(2,32); # 4294967296
-						$this->debug('signed Integer 59: ('.$temp.')');
-						return $temp;
-					}
-					else{
-						return $temp;
-					}
+                    $temp = $this->read($LEN-1);
+					$this->debug('Value 59 in hex: ('.$temp.')');
+                    $temp1 = substr($temp, 1,1);                    // Schauen wir uns das linke Zeichen an
+                    $this->debug('linkes Zeichen: ('.$temp1.')');
+                    if ($temp1 == 'F') {                            // wenn linkes Zeichen 'F' dann gehen wir mal davon aus, das die nächsten 7 Zeichen auch ein 'F' sind
+                        $temp = hexdec(substr($temp, 8));           // linke 8 Zeichen abschneiden und vorzeichenlosen Int Wert betrachten
+                        $temp -= pow(2,32);                         // davon 4294967296 abziehen
+                        $this->debug('signed Integer 59: ('.$temp.')');
+                        return $temp;
+                    }
+                    else{
+                        $temp = hexdec($temp);
+                        $this->debug('Value 59 in dez: ('.$temp.')');
+                        return $temp;
+                    }
 				}
 				break;
             case '6x': # UnsignedInt
