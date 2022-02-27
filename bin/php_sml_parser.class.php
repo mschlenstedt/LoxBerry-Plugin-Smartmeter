@@ -237,7 +237,7 @@ class SML_PARSER {
 					# 64 Bit signed Integer
                     $temp = $this->read($LEN-1);
 					$this->debug('Value 59 in hex: ('.$temp.')');
-                    $temp1 = substr($temp, 1,1);                    // Schauen wir uns das linke Zeichen an
+                    $temp1 = substr($temp, 0,1);                    // Schauen wir uns das linke Zeichen an
                     $this->debug('linkes Zeichen: ('.$temp1.')');
                     if ($temp1 == 'F') {                            // wenn linkes Zeichen 'F' dann gehen wir mal davon aus, das die nächsten 7 Zeichen auch ein 'F' sind
                         $temp = hexdec(substr($temp, 8));           // linke 8 Zeichen abschneiden und vorzeichenlosen Int Wert betrachten
