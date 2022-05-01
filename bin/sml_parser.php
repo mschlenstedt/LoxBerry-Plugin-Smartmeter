@@ -17,7 +17,7 @@
 
 require_once	'php_sml_parser.class.php';
 
-if ($argc != 2 || in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
+if ($argc != 3 || in_array($argv[1], array('--help', '-help', '-h', '-?'))) {
 ?>
 This script will parse dumped SML data in HEX format.
   Usage: <?php echo $argv[0]; ?> <FILENAME>
@@ -28,12 +28,13 @@ exit(1);
 
 //$pathname='/var/run/shm/cgi/';
 $filename=$argv[1];
+$crc=$argv[2];
 $string = file_get_contents($filename);
 
 $sml_parser = new SML_PARSER();
 
 // Try to parse read data
-$record = ($sml_parser->parse_sml_hexdata($string));
+$record = ($sml_parser->parse_sml_hexdata($string,$crc));
 
 // If empty parser response, exit
 if (!isset($record)) 

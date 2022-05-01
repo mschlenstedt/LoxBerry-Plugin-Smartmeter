@@ -49,7 +49,7 @@ GetOptions (    "verbose"          => \$verbose,
                 "databits=i"       => \$databits,
                 "stopbits=i"       => \$stopbits,
                 "parity=s"         => \$parity,
-                "protocol=s"       => \$protocol,
+                "crc=s"            => \$crc,
                 "help"             => \$help,
 );
 
@@ -57,7 +57,7 @@ GetOptions (    "verbose"          => \$verbose,
 if ( $help ) {
 	print "Usage: $0 --device TTYDEVICE [--protocol PROTOCOL] [--startbaudrate STARTBAUDRATE]\n";
 	print "       [--baudrate BAUDRATE] [--timeout TIMEOUT] [--delay DELAY} [--handshake HANDSHAKE] [--databits DATABITS]\n";
-	print "       [--stopbits STOPBITS] [--parity PARITY] [--help] [--verbose] [--help] [--verbose] [--parse DUMPFILE]\n";
+	print "       [--stopbits STOPBITS] [--parity PARITY] [--crc CRC] [--help] [--verbose] [--help] [--verbose] [--parse DUMPFILE]\n";
 	exit;
 }
 
@@ -145,6 +145,7 @@ elsif ( $protocol eq "genericsml" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "120" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -163,6 +164,7 @@ elsif ( $protocol eq "emhed300sml" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "20" if !$timeout;
 	our $delay = "1" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -181,6 +183,7 @@ elsif ( $protocol eq "emhehzksml" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "30" if !$timeout;
 	our $delay = "30" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -217,6 +220,7 @@ elsif ( $protocol eq "iskra173sml" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -253,6 +257,7 @@ elsif ( $protocol eq "iskra174sml" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -289,6 +294,7 @@ elsif ( $protocol eq "iskra175sml" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "60" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -325,6 +331,7 @@ elsif ( $protocol eq "iskra681sml" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "60" if !$timeout;
 	our $delay = "2" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -343,6 +350,7 @@ elsif ( $protocol eq "iskra691sml" ) {
 	our $handshake = "none" if !$handshake;
 	our $timeout = "5" if !$timeout;
 	our $delay = "1" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -586,6 +594,7 @@ sub PROTO_GENERICSML
 		&LOG ("Protocol: $protocol", "INFO");
 		&LOG ("Timeout: $timeout", "INFO");
 		&LOG ("Delay: $delay", "INFO");
+		&LOG ("CRC: $crc", "INFO");
 
 		### Open serial port
 		&INITIALIZE_PORT();
@@ -897,7 +906,7 @@ sub PARSE_DUMP
 	our $type = shift; # http://wiki.selfhtml.org/wiki/Perl/Subroutinen
 	if ($proto eq "SML") {
 		&LOG ("Parse /var/run/shm/$psubfolder/$serial\.dump as SML-Protocol.", "INFO");
-		our $dumpbuffer = `php $home/bin/plugins/$psubfolder/sml_parser.php /var/run/shm/$psubfolder/$serial\.dump`;
+		our $dumpbuffer = `php $home/bin/plugins/$psubfolder/sml_parser.php /var/run/shm/$psubfolder/$serial\.dump $crc`;
 		print "Buffer: $dumpbuffer\n";
 	} else {
 		&LOG ("Parse /var/run/shm/$psubfolder/$serial\.dump as D0-Protocol.", "INFO");
@@ -1030,6 +1039,7 @@ sub PARSE_DUMP
 		($power8) = $dumpbuffer =~ /[\n|\r|:]36\.7\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
 		($power9) = $dumpbuffer =~ /[\n|\r|:]56\.7\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
 		($power10) = $dumpbuffer =~ /[\n|\r|:]76\.7\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
+        ($del_cons) = $dumpbuffer =~ /[\n|\r|:]C\.5\.(?:255|0)[\*255|\*00]*\(([-\d\.]+);
 	}
 
 	### Calculate Avg. Power
@@ -1182,6 +1192,7 @@ sub PARSE_DUMP
 		print F "$serial:Delivery_Power_OBIS_2.7.0:$power2\n";
 		print F "$serial:Total_Power_OBIS_15.7.0:$power3\n";
 		print F "$serial:Total_Power_OBIS_16.7.0:$power4\n";
+        print F "$serial:Delivery_Consumption_OBIS_C.5.0:$del_cons\n";
 		close (F);
 
 	}

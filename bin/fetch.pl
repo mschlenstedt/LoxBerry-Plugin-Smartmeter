@@ -136,6 +136,7 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 		$stopbits	=	$plugin_cfg->param("$configvalue.STOPBITS");
 		$parity		=	$plugin_cfg->param("$configvalue.PARITY");
 		$delay 		=	$plugin_cfg->param("$configvalue.DELAY");
+		$crc 		=	$plugin_cfg->param("$configvalue.CRC");
 		&LOG ("$serial: Found configuration for $name", "INFO");
 
 		# Check if head is connected and config is complete
@@ -154,15 +155,17 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 			&LOG ("$serial: Protocol: $protocol", "INFO");
 			&LOG ("$serial: Timeout: $timeout", "INFO");
 			&LOG ("$serial: Delay: $delay", "INFO");
+			&LOG ("$serial: CRC: $crc", "INFO");
 			&LOG ("$serial: Device: $device", "INFO");
 			&LOG ("$serial: Baudrate:$baudrate/$startbaudrate Databits:$databits Stopbits:$stopbits Parity:$parity Handshake:$handshake", "INFO");
-			system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --protocol $protocol --startbaudrate $startbaudrate --baudrate $baudrate --timeout $timeout --delay $delay --handshake $handshake --databits $databits --stopbits $stopbits --parity $parity $verbose");
-		} else {
+			system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --protocol $protocol --startbaudrate $startbaudrate --baudrate $baudrate --timeout $timeout --delay $delay --handshake $handshake --databits $databits --stopbits $stopbits --parity $parity --crc $crc $verbose");
+            #system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --parse 015A98CA --protocol $protocol --startbaudrate $startbaudrate --baudrate $baudrate --timeout $timeout --delay $delay --handshake $handshake --databits $databits --stopbits $stopbits --parity $parity --crc $crc $verbose");
+        } else {
 			# If set to  a meter, use standard settings for this meter
 			&LOG ("$serial: Presetting: $meter.", "INFO");
 			system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --protocol $meter $verbose");
-			#system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --parse D30A3RFT --protocol $meter $verbose");
-		}
+			#system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --parse 01304DD6 --protocol $meter $verbose");
+            }
 
 		# Send data by UDP to all configured miniservers
 		# If we should send by UDP, figure out which Miniservers are configured

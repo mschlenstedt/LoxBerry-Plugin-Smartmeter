@@ -467,9 +467,15 @@ class SML_PARSER {
         }
         return $result;
     }
-    private function parse_sml_message() {
+    private function parse_sml_message($crc) {
         $this->debug('ENTER parse_sml_message');
-        $this->crc16_message = 0xFFFF; # Pruefsumme zuruecksetzen
+        if ($crc=="CRC16_X_25") {
+            $this->crc16_message = 0xFFFF; # Pruefsumme zuruecksetzen // CRC16_X_25
+        } elseif ($crc=="CRC16_KERMIT") {
+            $this->crc16_message = 0x0000; # Pruefsumme zuruecksetzen // CRC16 Kermit
+        } else {
+            $this->error("Weder CRC16_X_25 noch CRC16_KERMIT ausgewählt...$crc");
+        }
         $this->match('76');       # 76 = List of 6 items
         $result['transactionId'] = $this->readOctet();
 		$this->debug('TRANSACID ('.$result['transactionId'].')');
@@ -479,8 +485,13 @@ class SML_PARSER {
 		$this->debug('abortOnError ('.$result['abortOnError'].')');
         $result['messageBody']   = $this->readMessageBody();
 		$this->debug('messageBody ('.$result['messageBody'].')');
-        $crc_calc = strtoupper(substr('000'.dechex(($this->crc16_message ^ 0xffff)),-4));
-        $result['crc_calc'] = substr($crc_calc,-2).substr($crc_calc,0,2); # Wert 4-stellig ausgeben
+        if ($crc=="CRC16_X_25") {
+            $crc_calc = strtoupper(substr('000'.dechex(($this->crc16_message ^ 0xffff)),-4)); # CRC16_X_25
+            $result['crc_calc'] = substr($crc_calc,-2).substr($crc_calc,0,2); # Wert 4-stellig ausgeben  // CRC16_X_25
+        } elseif ($crc=="CRC16_KERMIT") {
+            $crc_calc = strtoupper(substr('000'.dechex(($this->crc16_message ^ 0x0000)),-4)); # CRC16 Kermit
+            $result['crc_calc'] = substr($crc_calc,0,2).substr($crc_calc,-2); # Wert 4-stellig ausgeben // CRC16 Kermit
+        }
 		$this->debug('crc_calc ('.$result['crc_calc'].')');
         $result['crc16']         = $this->readUnsigned();
 		$this->debug('crc16 ('.$result['crc16'].')');
@@ -493,7 +504,7 @@ class SML_PARSER {
     # =============================================================================================
     # Schnittstellenfunktionen
     # =============================================================================================
-    public function parse_sml_hexdata($hexdata) {
+    public function parse_sml_hexdata($hexdata,$crc) {
         $this->files = array();
         $this->data = strtoupper($hexdata);
         $sml_header='1B1B1B1B01010101';
@@ -510,7 +521,7 @@ class SML_PARSER {
             $this->crc16_global = 0xffff;
             $this->match($sml_header);
             while($this->data<>'' && substr($this->data,0,16)!=$sml_footer) {
-                $message = $this->parse_sml_message();
+                $message = $this->parse_sml_message($crc);
  
                 if($message['crcMsgCheck']) {
 					 $messages[] = $message;
@@ -520,9 +531,9 @@ class SML_PARSER {
 					 }
                 }else{ # if no success, skip to next file
                     $start = strpos($this->data,$sml_header);
-                    //if($start===false) return;
+                    if($start===false) return;
                     if($start) {
-                        #echo "$start bytes skipped in between!\n";
+                        echo "$start bytes skipped in between!\n";
                         $this->data=substr($this->data,$start);
                         $skip=true;
                         break;
@@ -534,7 +545,9 @@ class SML_PARSER {
             $this->match('03');
             $crc_calc = strtoupper(substr('000'.dechex(($this->crc16_global ^ 0xffff)),-4));
             $crc_calc = substr($crc_calc,-2).substr($crc_calc,0,2); # Wert 4-stellig ausgeben
+            $this->debug('crc_cal ('.$crc_calc.')');
             $crc16 = $this->read(2);
+            $this->debug('crc16 ('.$crc16.')');
             $this->files[] = array(
                 'crcFileCheck'=>($crc_calc == $crc16),
                 'messages'=>$messages

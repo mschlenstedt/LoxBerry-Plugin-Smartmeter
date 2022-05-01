@@ -55,6 +55,7 @@ DATABITS="Databits:"
 STOPBITS="Stopbits:"
 TIMEOUT="Timeout:"
 DELAY="Verzögerung:"
+CRC="CRC:"
 
 [LOGFILETABLEROWS]
 ROWTITLE="I/R Lesekopf - Seriennummer:"

@@ -55,6 +55,7 @@ DATABITS="Databits:"
 STOPBITS="Stopbits:"
 TIMEOUT="Timeout:"
 DELAY="Delay:"
+CRC="CRC:"
 
 [LOGFILETABLEROWS]
 ROWTITLE="I/R Head - Serial:"

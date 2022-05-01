@@ -132,6 +132,7 @@ foreach (@heads) {
 		$plugin_cfg->param("$serial.DATABITS", "");
 		$plugin_cfg->param("$serial.STOPBITS", "");
 		$plugin_cfg->param("$serial.PARITY", "");
+        $plugin_cfg->param("$serial.CRC", "");
 	}
 }
 $plugin_cfg->save;
@@ -257,6 +258,7 @@ sub form
 				$plugin_cfg->param("$serial.DATABITS", $cgi->param("$serial\_databits") );
 				$plugin_cfg->param("$serial.STOPBITS", $cgi->param("$serial\_stopbits") );
 				$plugin_cfg->param("$serial.PARITY", $cgi->param("$serial\_parity") );
+				$plugin_cfg->param("$serial.CRC", $cgi->param("$serial\_crc") );
 			} else {
 				$plugin_cfg->param("$serial.PROTOCOL", "");
 				$plugin_cfg->param("$serial.STARTBAUDRATE", "");
@@ -267,6 +269,7 @@ sub form
 				$plugin_cfg->param("$serial.DATABITS", "");
 				$plugin_cfg->param("$serial.STOPBITS", "");
 				$plugin_cfg->param("$serial.PARITY", "");
+				$plugin_cfg->param("$serial.CRC", "");
 			}
 		}
 		$plugin_cfg->save;
@@ -441,6 +444,7 @@ sub form
 			DATABITS	=>	$plugin_cfg->param("$serial.DATABITS"),
 			STOPBITS	=>	$plugin_cfg->param("$serial.STOPBITS"),
 			PARITY		=>	$plugin_cfg->param("$serial.PARITY"),
+			CRC		    =>	$plugin_cfg->param("$serial.CRC"),
 			);
 			push (@rows, \%{"hash".$i});
 			$i++;

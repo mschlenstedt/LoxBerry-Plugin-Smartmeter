@@ -271,6 +271,10 @@
 			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).removeClass('ui-disabled');
 			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).selectmenu();
 			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_crc" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_crc" ).removeClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_crc" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_crc" ).selectmenu('refresh', true);
 		} else {
 			$( "#label<TMPL_VAR NAME=SERIAL>_protocol" ).addClass('ui-disabled');
 			$( "#<TMPL_VAR NAME=SERIAL>_protocol" ).addClass('ui-disabled');
@@ -308,6 +312,10 @@
 			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).addClass('ui-disabled');
 			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).selectmenu();
 			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).selectmenu('refresh', true);
+			$( "#label<TMPL_VAR NAME=SERIAL>_crc" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_crc" ).addClass('ui-disabled');
+			$( "#<TMPL_VAR NAME=SERIAL>_crc" ).selectmenu();
+			$( "#<TMPL_VAR NAME=SERIAL>_crc" ).selectmenu('refresh', true);
 		}
 	}
 	</script>
@@ -493,6 +501,20 @@
 		<script>
 		// Select option depending on saved config
 		$( "#<TMPL_VAR NAME=SERIAL>_delay").val( "<TMPL_VAR NAME=DELAY>" );
+		</script>
+		</td>
+	</tr>
+	<tr>
+		<td>
+		<label id="label<TMPL_VAR NAME=SERIAL>_crc"><TMPL_VAR NAME=T::FORMTABLEROWS.CRC></label>
+		<td>
+		<select id="<TMPL_VAR NAME=SERIAL>_crc" name="<TMPL_VAR NAME=SERIAL>_crc" data-mini="true" data-native-menu="true" title="Standard=CRC16_X_25">
+		<option value="CRC16_X_25">CRC16_X_25</option>
+		<option value="CRC16_KERMIT">CRC16_KERMIT</option>
+		</select>
+		<script>
+		// Select option depending on saved config
+		$( "#<TMPL_VAR NAME=SERIAL>_crc").val( "<TMPL_VAR NAME=CRC>" );
 		</script>
 		</td>
 	</tr>
