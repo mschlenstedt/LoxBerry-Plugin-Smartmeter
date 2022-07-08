@@ -111,7 +111,9 @@ if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
 }
 
 # Delete old Logfile
-system("rm /var/run/shm/$psubfolder/fetch.log > /dev/null 2>&1");
+if (-e "/var/run/shm/$psubfolder/fetch.log") {
+    system("rm /var/run/shm/$psubfolder/fetch.log > /dev/null 2>&1");
+}
 
 # Check if we should read automatically
 if ( !$plugin_cfg->param("MAIN.READ") && !$force ) {

@@ -279,14 +279,12 @@ sub form
 		{
 			if ($cgi->param('cron') eq "M") 
 			{
-				Cronjob("Install");
-				
 				# Check if Script already running?
 				if (!scalar(grep{/sm_logger.pl/} `ps aux`))
 				{	
 					system ("perl $installfolder/bin/plugins/$psubfolder/fetch.pl >/dev/null 2>&1 &");
 				}
-								
+				system ("ln -s $installfolder/bin/plugins/$psubfolder/reboot_cron_runner.sh $installfolder/system/cron/cron.reboot/$pname");
 				unlink ("$installfolder/system/cron/cron.01min/$pname");
 				unlink ("$installfolder/system/cron/cron.03min/$pname");
 				unlink ("$installfolder/system/cron/cron.05min/$pname");
@@ -297,7 +295,6 @@ sub form
 			}
 			if ($cgi->param('cron') eq "1") 
 			{
-				Cronjob("Uninstall");
 				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.01min/$pname");
 				unlink ("$installfolder/system/cron/cron.03min/$pname");
 				unlink ("$installfolder/system/cron/cron.05min/$pname");
@@ -305,10 +302,10 @@ sub form
 				unlink ("$installfolder/system/cron/cron.15min/$pname");
 				unlink ("$installfolder/system/cron/cron.30min/$pname");
 				unlink ("$installfolder/system/cron/cron.hourly/$pname");
+				unlink ("$installfolder/system/cron/cron.reboot/$pname");
 			}
 			if ($cgi->param('cron') eq "3") 
 			{
-				Cronjob("Uninstall");
 				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.03min/$pname");
 				unlink ("$installfolder/system/cron/cron.01min/$pname");
 				unlink ("$installfolder/system/cron/cron.05min/$pname");
@@ -316,10 +313,10 @@ sub form
 				unlink ("$installfolder/system/cron/cron.15min/$pname");
 				unlink ("$installfolder/system/cron/cron.30min/$pname");
 				unlink ("$installfolder/system/cron/cron.hourly/$pname");
+				unlink ("$installfolder/system/cron/cron.reboot/$pname");
 			}
 			if ($cgi->param('cron') eq "5") 
 			{
-				Cronjob("Uninstall");
 				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.05min/$pname");
 				unlink ("$installfolder/system/cron/cron.01min/$pname");
 				unlink ("$installfolder/system/cron/cron.03min/$pname");
@@ -327,10 +324,10 @@ sub form
 				unlink ("$installfolder/system/cron/cron.15min/$pname");
 				unlink ("$installfolder/system/cron/cron.30min/$pname");
 				unlink ("$installfolder/system/cron/cron.hourly/$pname");
+				unlink ("$installfolder/system/cron/cron.reboot/$pname");
 			}
 			if ($cgi->param('cron') eq "10") 
 			{
-				Cronjob("Uninstall");
 				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.10min/$pname");
 				unlink ("$installfolder/system/cron/cron.1min/$pname");
 				unlink ("$installfolder/system/cron/cron.3min/$pname");
@@ -338,10 +335,10 @@ sub form
 				unlink ("$installfolder/system/cron/cron.15min/$pname");
 				unlink ("$installfolder/system/cron/cron.30min/$pname");
 				unlink ("$installfolder/system/cron/cron.hourly/$pname");
+				unlink ("$installfolder/system/cron/cron.reboot/$pname");
 			}
 			if ($cgi->param('cron') eq "15") 
 			{
-				Cronjob("Uninstall");
 				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.15min/$pname");
 				unlink ("$installfolder/system/cron/cron.01min/$pname");
 				unlink ("$installfolder/system/cron/cron.03min/$pname");
@@ -349,10 +346,10 @@ sub form
 				unlink ("$installfolder/system/cron/cron.10min/$pname");
 				unlink ("$installfolder/system/cron/cron.30min/$pname");
 				unlink ("$installfolder/system/cron/cron.hourly/$pname");
+				unlink ("$installfolder/system/cron/cron.reboot/$pname");
 			}
 			if ($cgi->param('cron') eq "30") 
 			{
-				Cronjob("Uninstall");
 				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.30min/$pname");
 				unlink ("$installfolder/system/cron/cron.01min/$pname");
 				unlink ("$installfolder/system/cron/cron.03min/$pname");
@@ -360,10 +357,10 @@ sub form
 				unlink ("$installfolder/system/cron/cron.10min/$pname");
 				unlink ("$installfolder/system/cron/cron.15min/$pname");
 				unlink ("$installfolder/system/cron/cron.hourly/$pname");
+				unlink ("$installfolder/system/cron/cron.reboot/$pname");
 			}
 			if ($cgi->param('cron') eq "60") 
 			{
-				Cronjob("Uninstall");
 				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.hourly/$pname");
 				unlink ("$installfolder/system/cron/cron.01min/$pname");
 				unlink ("$installfolder/system/cron/cron.03min/$pname");
@@ -371,10 +368,10 @@ sub form
 				unlink ("$installfolder/system/cron/cron.10min/$pname");
 				unlink ("$installfolder/system/cron/cron.15min/$pname");
 				unlink ("$installfolder/system/cron/cron.30min/$pname");
+				unlink ("$installfolder/system/cron/cron.reboot/$pname");
 			}
 			  
 		} else {
-			Cronjob("Uninstall");
 			unlink ("$installfolder/system/cron/cron.01min/$pname");
 			unlink ("$installfolder/system/cron/cron.03min/$pname");
 			unlink ("$installfolder/system/cron/cron.05min/$pname");
@@ -382,6 +379,7 @@ sub form
 			unlink ("$installfolder/system/cron/cron.15min/$pname");
 			unlink ("$installfolder/system/cron/cron.30min/$pname");
 			unlink ("$installfolder/system/cron/cron.hourly/$pname");
+            unlink ("$installfolder/system/cron/cron.reboot/$pname");
 		}
 
 	}
@@ -487,92 +485,6 @@ sub lbheader
       print $_;
     }
   close(F);
-}
-
-sub Cronjob 
-{
-	my $Job = shift;
-		
-	# Remove Cronjob
-	if ($Job eq "Uninstall")
-	{
-		if (-e $crontabtmp) {
-			unlink $crontabtmp;
-		}
-	
-		my ($comment) = $crontab->select( -type => 'comment', -data => '## Startup Smartmeter');
-					
-		#Schedule does not exist and should be removed --> nothing to do
-		if (! $comment ) {
-			return;
-		}
-		
-		#We fully remove the old block
-		if ($comment) {
-			my ($block) = $crontab->block($comment);
-			$crontab->remove($block);
-		}
-		
-		#We are finished, write the crontab
-		$crontab->write($crontabtmp);
-	
-		if (installcrontab()) {
-			return;
-		} else {
-			print $cgi->header(-status => "204 Cannot remove cronjob");
-			exit(0);
-		}
-	}
-	
-	# Install Cronjob
-	if ($Job eq "Install")
-	{
-		#Check if Cronjob exist already
-		my ($comment) = $crontab->select( -type => 'comment', -data => '## Startup Smartmeter');
-		
-		if ($comment) {
-			return;
-		}
-		
-		# Create the event
-		my $event = new Config::Crontab::Event (
-		-command => "$installfolder/bin/plugins/$psubfolder/fetch.pl > /dev/null 2>&1",
-		-user => 'loxberry',
-		-system => 1,
-		);
-		
-		$event->datetime('@reboot');
-		
-		# Insert block and event to crontab
-		my $block = new Config::Crontab::Block;
-		$block->last( new Config::Crontab::Comment( -data => '## Startup Smartmeter') );
-		$block->last($event);
-		$crontab->last($block); 
-		
-		$crontab->write($crontabtmp);
-		
-		if (installcrontab()) {
-			return;
-		} else {
-			print $cgi->header(-status => "204 Cannot remove cronjob");
-			exit(0);
-		}
-	}	
-	return;
-}
-	
-	
-sub installcrontab
-{
-	if (! -e $crontabtmp) {
-		return (0);
-	}
-	qx ( $lbhomedir/sbin/installcrontab.sh $lbpplugindir $crontabtmp );
-	if ($!) {
-		print $cgi->header(-status => "500 Error activating new crontab");
-		return(0);
-	}
-	return(1);
 }
 
 #####################################################
