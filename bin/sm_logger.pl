@@ -1158,7 +1158,7 @@ sub PARSE_DUMP
 		print F "$serial:Breaker_State_Electricity_96.1.4:$breakerstate\n"          if ( $breakerstate ne "" );
 		print F "$serial:Text_Message_96.13.0:$messagetext\n"                       if ( $messagetext ne "" );
 		print F "$serial:Message_Code_96.13.1:$messagecode\n"                       if ( $messagecode ne "" );
-		print F "$serial:Gas_Consumption_24.2.3:$gasResult\n";						if ( $gasResult ne "" );
+		print F "$serial:Gas_Consumption_24.2.3:$gasResult\n"                       if ( $gasResult ne "" );
 		close (F);
 
 	}	else {
