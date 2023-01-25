@@ -97,7 +97,7 @@ class SML_PARSER {
         echo "\n";
     }
     function error($message) {
-#       return; # ggfs. auskommentieren.
+        return; # ggfs. auskommentieren.
         $e = new Exception();
         $m = $e->getTraceAsString();
         $m = explode("\n",$m);
@@ -159,14 +159,14 @@ class SML_PARSER {
         if($TYPE_LEN=='00') {
             return $TYPE_LEN; # EndOfSmlMessage
         }
-        $TYPE = $TYPE_LEN{0}.'x';     # only high-nibble
+        $TYPE = $TYPE_LEN[0].'x';     # only high-nibble
 		$this->debug('Type: ('.$TYPE.')');
-        $LEN  = hexdec($TYPE_LEN{1}); # only low-nibble
-        while($TYPE{0} &0x8) {  # Multi-Byte TypeLen-Field
+        $LEN  = hexdec($TYPE_LEN[1]); # only low-nibble
+        while($TYPE[0] &0x8) {  # Multi-Byte TypeLen-Field
             $LEN = $LEN * 0x10;
             $TYPE_LEN = $this->read(1);
-            $TYPE = $TYPE_LEN{0}.'x';     # only high-nibble
-            $LEN  += hexdec($TYPE_LEN{1}); # only low-nibble
+            $TYPE = $TYPE_LEN[0].'x';     # only high-nibble
+            $LEN  += hexdec($TYPE_LEN[1]); # only low-nibble
             $LEN--; # 1 abziehen wegen zusätzlichem TL-Byte
         }
         if($LEN==1) return;
@@ -271,8 +271,8 @@ class SML_PARSER {
     private function readOctet() {
         $TYPE_LEN = $this->read(1);
         if($TYPE_LEN=='01') return;
-        if($TYPE_LEN{0}=='0') {
-            $LEN  = hexdec($TYPE_LEN{1}); # only low-nibble
+        if($TYPE_LEN[0]=='0') {
+            $LEN  = hexdec($TYPE_LEN[1]); # only low-nibble
             $octet = $this->read($LEN-1);
             return $octet;
         }else{
@@ -282,8 +282,8 @@ class SML_PARSER {
     private function readInteger() {
         $TYPE_LEN = $this->read(1);
         if($TYPE_LEN=='01') return;
-        if($TYPE_LEN{0}=='5') {
-            $LEN  = hexdec($TYPE_LEN{1}); # only low-nibble
+        if($TYPE_LEN[0]=='5') {
+            $LEN  = hexdec($TYPE_LEN[1]); # only low-nibble
             $integer = $this->read($LEN-1);
             return $integer;
         }else{
@@ -293,8 +293,8 @@ class SML_PARSER {
     private function readUnsigned() {
         $TYPE_LEN = $this->read(1);
         if($TYPE_LEN=='01') return;
-        if($TYPE_LEN{0}=='6') {
-            $LEN  = hexdec($TYPE_LEN{1}); # only low-nibble
+        if($TYPE_LEN[0]=='6') {
+            $LEN  = hexdec($TYPE_LEN[1]); # only low-nibble
             $unsigned = $this->read($LEN-1);
             return $unsigned;
         }else{
@@ -392,7 +392,7 @@ class SML_PARSER {
 
 		# manche DTZ41 vom Bayernwerk schicken 20 OBIS-Kennzahlen 
 			
-		if(hexdec($TYPE_LEN{0}) & 0x8) {
+		if(hexdec($TYPE_LEN[0]) & 0x8) {
 			$this->debug("TL = $TYPE_LEN");
 			$this->debug("TL(0) = $TYPE_LEN[0]");
 			$this->debug("TL(1) = $TYPE_LEN[1]");
@@ -417,8 +417,8 @@ class SML_PARSER {
 			$this->debug('EXIT readValList : '.print_r($result,true),false);
 			return $result;
 			
-		 } elseif (hexdec($TYPE_LEN{0}) == '7') {
-            $LEN = hexdec($TYPE_LEN{1});
+		 } elseif (hexdec($TYPE_LEN[0]) == '7') {
+            $LEN = hexdec($TYPE_LEN[1]);
             for($i=0;$i<$LEN;$i++) {
                 $this->debug("ENTER readListEntry [$i]");
                 $result[]=$this->readListEntry($this->data);
