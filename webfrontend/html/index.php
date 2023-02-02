@@ -9,7 +9,9 @@ header('Expires: 0');
 header('Cache-Control: must-revalidate');
 header('Pragma: public');
 
-$psubdir  	=array_pop(array_filter(explode('/',pathinfo($_SERVER["SCRIPT_FILENAME"],PATHINFO_DIRNAME))));
+$pathinfo = pathinfo($_SERVER["SCRIPT_FILENAME"],PATHINFO_DIRNAME);
+$arrayfilter = array_filter(explode('/',$pathinfo));
+$psubdir        =array_pop($arrayfilter);
 $directory	="/var/run/shm/$psubdir/";
 $dateitypen = array("data");
 
