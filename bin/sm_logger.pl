@@ -1001,7 +1001,12 @@ sub PARSE_DUMP
 		($breakerstate) = $dumpbuffer =~ /[\n|\r|:]96\.3\.10[\*255|\*00]*\(([-\d\.]+)/;
 		($messagecode) = $dumpbuffer =~ /[\n|\r|:]96\.13\.1[\*255|\*00]*\(([-\d\.]+)/;
 		($messagetext) = $dumpbuffer =~ /[\n|\r|:]96\.13\.0[\*255|\*00]*\(([-\d\.]+)/;
-		
+
+		### Total gas consumption in m3
+		($gas) = $dumpbuffer =~ /[\n|\r|:]24\.2\.3*\(([0-9]{12}W\)\([0-9]{5}.[0-9]{3}\*m3\))/;
+		@gasSplit = split(/\(/, $gas);
+		@gasSplit[1] =~ /[0-9]{5}.[0-9]{3}/;
+		($gasResult) = $&;
 	}	else {
 
 		### Energy consumption: Readings  (OBIS 1.8.x*255)
@@ -1153,6 +1158,7 @@ sub PARSE_DUMP
 		print F "$serial:Breaker_State_Electricity_96.1.4:$breakerstate\n"          if ( $breakerstate ne "" );
 		print F "$serial:Text_Message_96.13.0:$messagetext\n"                       if ( $messagetext ne "" );
 		print F "$serial:Message_Code_96.13.1:$messagecode\n"                       if ( $messagecode ne "" );
+		print F "$serial:Gas_Consumption_24.2.3:$gasResult\n"                       if ( $gasResult ne "" );
 		close (F);
 
 	}	else {
