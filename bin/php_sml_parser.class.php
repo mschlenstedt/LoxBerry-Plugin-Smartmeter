@@ -48,7 +48,9 @@ class SML_PARSER {
 		'0100600505FF' => array('1-0:96.5.5*255','Status'),
 		'0100240700FF' => array('1-0:36.7.0*255','aktuelle Wirkleistung L1'),
 		'0100380700FF' => array('1-0:56.7.0*255','aktuelle Wirkleistung L2'),
-		'01004C0700FF' => array('1-0:76.7.0*255','aktuelle Wirkleistung L3')
+		'01004C0700FF' => array('1-0:76.7.0*255','aktuelle Wirkleistung L3'),
+		'0100600100FF' => array('1-0:96.1.0*255','Server ID'),
+		'010000020000' => array('1-0:0.2.0*0','Firmwareversion MTR')
     );
 	
     private $data;
@@ -401,12 +403,12 @@ class SML_PARSER {
 			$this->debug("TL 04 = $TYPE_LEN2");
 
 			$TYPE_LEN = hexdec($TYPE_LEN) << 4;
-			$this->debug("TL geschoben = $TYPE_LEN1");
+			$this->debug("TL geschoben = $TYPE_LEN");
 
 			$TYPE_LEN=$TYPE_LEN & 0xFF;
-			$this->debug("TL verundet = $TYPE_LEN1");
+			$this->debug("TL verundet = $TYPE_LEN");
 
-			$TYPE_LEN=$TYPE_LEN | $TYPE_LEN2;
+			$TYPE_LEN=$TYPE_LEN | hexdec($TYPE_LEN2);
 			$this->debug("TL verodert = $TYPE_LEN");
 
 			$LEN = $TYPE_LEN;
