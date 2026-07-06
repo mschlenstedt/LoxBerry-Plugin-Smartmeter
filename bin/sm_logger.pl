@@ -1043,6 +1043,8 @@ sub PARSE_DUMP
 		($power9) = $dumpbuffer =~ /[\n|\r|:]56\.7\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
 		($power10) = $dumpbuffer =~ /[\n|\r|:]76\.7\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
         ($del_cons) = $dumpbuffer =~ /[\n|\r|:]C\.5\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
+		($manufacturerid) = $dumpbuffer =~ /(?:^|[\n\r:])96\.50\.1(?:\*255|\*00)?\(([^*]+)/;
+		($serverid) = $dumpbuffer =~ /(?:^|[\n\r:])96\.1\.0(?:\*255|\*00)?\(([^*]+)/;
 	}
 
 	### Calculate Avg. Power
@@ -1163,6 +1165,8 @@ sub PARSE_DUMP
 		open(F,">/var/run/shm/$psubfolder/$serial\.data");
 		print F "$serial:Last_Update:$datereadable\n";
 		print F "$serial:Last_UpdateLoxEpoche:$epoche_time_lox\n";
+		print F "$serial:Manufacturer_ID_OBIS_96.50.1:$manufacturerid\n"            if ( $manufacturerid ne "" );
+		print F "$serial:Server_ID_OBIS_96.1.0:$serverid\n"                         if ( $serverid ne "" );
 		print F "$serial:Consumption_Total_OBIS_1.8.0:$readingconsT0\n"             if ( $readingconsT0 ne "" );
 		print F "$serial:Consumption_Tarif1_OBIS_1.8.1:$readingconsT1\n"            if ( $readingconsT1 ne "" );
 		print F "$serial:Consumption_Tarif2_OBIS_1.8.2:$readingconsT2\n"            if ( $readingconsT2 ne "" );

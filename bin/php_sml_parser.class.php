@@ -530,6 +530,9 @@ class SML_PARSER {
         while($this->data) {
             $skip = false;
             $messages = array();
+            if(strpos($this->data,$sml_footer)===false) {
+                return (count($result['body']['vallist']) > 0) ? $result : null;
+            }
             $this->crc16_global = 0xffff;
             $this->match($sml_header);
             while($this->data<>'' && substr($this->data,0,16)!=$sml_footer) {
