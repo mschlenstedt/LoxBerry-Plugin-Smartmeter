@@ -59,6 +59,8 @@ our $miniservers;
 our $clouddns;
 our $udpport;
 our $sendudp;
+our $sendmqtt;
+our $mqtttopic;
 my  $udpstring;
 my  @lines;
 my  $i;
@@ -90,6 +92,8 @@ $plugin_cfg 	= new Config::Simple("$installfolder/config/plugins/$psubfolder/sma
 $pname          = $plugin_cfg->param("MAIN.SCRIPTNAME");
 $udpport        = $plugin_cfg->param("MAIN.UDPPORT");
 $sendudp        = $plugin_cfg->param("MAIN.SENDUDP");
+$sendmqtt       = $plugin_cfg->param("MAIN.SENDMQTT");
+$mqtttopic      = $plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter";
 $cron		= $plugin_cfg->param("MAIN.CRON");
 
 # Commandline options
@@ -234,6 +238,18 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 
 		}
 
+		# Publish the same meter values by MQTT.
+		if ($sendmqtt) {
+			if ( !-e "/var/run/shm/$psubfolder/$serial\.data" ) {
+				&LOG("$serial: No data found for MQTT publish.", "WARN");
+			} else {
+				open(F,"</var/run/shm/$psubfolder/$serial\.data");
+					@lines = <F>;
+				close(F);
+				&publish_mqtt_data($serial, @lines);
+			}
+		}
+
 	}
 
 }
@@ -273,4 +289,97 @@ sub LOG
 
         return();
 
+}
+
+################################
+### SUB: Publish MQTT data
+################################
+
+sub publish_mqtt_data
+{
+	my $serial = shift;
+	my @data_lines = @_;
+
+	eval {
+		require JSON::PP;
+		require Net::MQTT::Simple;
+	};
+	if ($@) {
+		&LOG("$serial: MQTT modules are not available: $@", "FAIL");
+		return;
+	}
+
+	my $general_json = "$home/config/system/general.json";
+	if (!-e $general_json) {
+		&LOG("$serial: MQTT settings not found in $general_json. Is LoxBerry MQTT Gateway installed?", "WARN");
+		return;
+	}
+
+	open(my $json_fh, "<", $general_json) or do {
+		&LOG("$serial: Could not open MQTT settings $general_json: $!", "FAIL");
+		return;
+	};
+	local $/;
+	my $json_text = <$json_fh>;
+	close($json_fh);
+
+	my $general = eval { JSON::PP->new->utf8->decode($json_text) };
+	if ($@ || !ref($general) || !ref($general->{Mqtt})) {
+		&LOG("$serial: Could not read MQTT settings from $general_json.", "FAIL");
+		return;
+	}
+
+	my $mqtt_settings = $general->{Mqtt};
+	my $host = $mqtt_settings->{Brokerhost};
+	my $port = $mqtt_settings->{Brokerport};
+	if (!$host || !$port) {
+		&LOG("$serial: MQTT broker host or port is missing in $general_json.", "FAIL");
+		return;
+	}
+
+	my $base_topic = $mqtttopic || "smartmeter";
+	$base_topic =~ s/^\s+|\s+$//g;
+	$base_topic =~ s/^\/+|\/+$//g;
+	$base_topic = "smartmeter" if (!$base_topic);
+
+	my $mqtt = eval { Net::MQTT::Simple->new("$host:$port") };
+	if ($@ || !$mqtt) {
+		&LOG("$serial: Could not connect to MQTT broker $host:$port: $@", "FAIL");
+		return;
+	}
+
+	my $user = $mqtt_settings->{Brokeruser};
+	my $pass = $mqtt_settings->{Brokerpass};
+	if (defined $user && $user ne "") {
+		eval { $mqtt->login($user, $pass || "") };
+		if ($@) {
+			&LOG("$serial: MQTT login failed: $@", "FAIL");
+			return;
+		}
+	}
+
+	my $published = 0;
+	foreach my $line (@data_lines) {
+		chomp($line);
+		next if ($line eq "");
+
+		my ($line_serial, $value_name, $value) = split(/:/, $line, 3);
+		if (!defined $line_serial || !defined $value_name || !defined $value) {
+			&LOG("$serial: Skip invalid MQTT data line: $line", "WARN");
+			next;
+		}
+
+		my $topic = "$base_topic/$line_serial/$value_name";
+		$topic =~ s/[#+]//g;
+
+		eval { $mqtt->publish($topic => $value) };
+		if ($@) {
+			&LOG("$serial: MQTT publish failed for $topic: $@", "FAIL");
+			next;
+		}
+		$published++;
+	}
+
+	eval { $mqtt->disconnect };
+	&LOG("$serial: Published $published values by MQTT using topic $base_topic/$serial/<value>.", "OK");
 }

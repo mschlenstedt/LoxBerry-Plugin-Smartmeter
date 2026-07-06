@@ -140,6 +140,49 @@
 </tr>
 <tr>
 	<td width="20%">
+		<label id="labelsendmqtt"><TMPL_VAR NAME=T::FORMTABLE.SEND_MQTT></label>
+	</td>
+	<td width="55%">
+		<table border=0	width="100%">
+		<tr>
+			<td width="20%">
+			<fieldset>
+			<select onChange="disable_mqtt();" id="sendmqtt" name="sendmqtt" data-role="flipswitch">
+			<option	value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option>
+			<option	value="1"><TMPL_VAR NAME=T::GENERIC.ON></option>
+			</select>
+			</fieldset>
+			<script>
+			// Select option depending on saved config
+			$( "#sendmqtt").val( "<TMPL_VAR NAME=SENDMQTT>" );
+			</script>
+			</td>
+			<td>
+			<table border=0 width="100%">
+			<tr>
+				<td>
+				<label id="labelmqtttopic"><TMPL_VAR NAME=T::FORMTABLE.MQTT_TOPIC></label>
+				</td>
+				<td>
+				<input id="mqtttopic" name="mqtttopic" type="text" class="textfield" value="<TMPL_VAR NAME=MQTTTOPIC>"
+				data-validation="custom" data-validation-regexp="^[^#+]+$"
+				data-validation-error-msg="<TMPL_VAR NAME=T::FORMTABLE.MQTT_TOPIC_VALIDATION>">
+				</td>
+			</tr>
+			</table>
+			</td>
+		</tr>
+		</table>
+	</td>
+	<td width="5%" valign="middle">
+	 &nbsp;
+	</td>
+	<td width="20%">
+	 <font size="-1"><TMPL_VAR NAME=T::FORMTABLE.SEND_MQTT_HELP></font>
+	</td>
+</tr>
+<tr>
+	<td width="20%">
 	<label id="labelsendhtml"><TMPL_VAR NAME=T::FORMTABLE.SEND_HTTP></label>
 	</td>
 	<td width="55%">
@@ -575,6 +618,7 @@
 	// Disable some options on Load depending on selected value
 	disable_cron();
 	disable_udp();
+	disable_mqtt();
 
 	function disable_cron() {
 		if ( $( "#read" ).val() == "0" ) {
@@ -597,6 +641,17 @@
 		if ( $( "#sendudp" ).val() == "1" ) {
 			$( "#udpport" ).removeClass('ui-disabled');
 			$( "#labeludpport" ).removeClass('ui-disabled');
+		}
+	}
+
+	function disable_mqtt() {
+		if ( $( "#sendmqtt" ).val() == "0" ) {
+			$( "#mqtttopic" ).addClass('ui-disabled');
+			$( "#labelmqtttopic" ).addClass('ui-disabled');
+		}
+		if ( $( "#sendmqtt" ).val() == "1" ) {
+			$( "#mqtttopic" ).removeClass('ui-disabled');
+			$( "#labelmqtttopic" ).removeClass('ui-disabled');
 		}
 	}
 </script>

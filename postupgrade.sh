@@ -75,8 +75,26 @@ restore_cronjob()
 	esac
 }
 
+migrate_config()
+{
+	configfile="$ARGV5/config/plugins/$ARGV3/smartmeter.cfg"
+
+	if ! grep -q '^SENDMQTT=' "$configfile"; then
+		sed -i '/^UDPPORT=/a SENDMQTT=0' "$configfile"
+		echo "<INFO> Added default MQTT send setting"
+	fi
+
+	if ! grep -q '^MQTTTOPIC=' "$configfile"; then
+		sed -i '/^SENDMQTT=/a MQTTTOPIC=smartmeter' "$configfile"
+		echo "<INFO> Added default MQTT topic"
+	fi
+}
+
 echo "<INFO> Copy back existing config files"
 cp -v -r "/tmp/$ARGV1"_upgrade/config/"$ARGV3"/* "$ARGV5/config/plugins/$ARGV3/"
+
+echo "<INFO> Migrate config files"
+migrate_config
 
 echo "<INFO> Copy back existing log files"
 if [ -d "/tmp/$ARGV1"_upgrade/log/"$ARGV3" ]; then

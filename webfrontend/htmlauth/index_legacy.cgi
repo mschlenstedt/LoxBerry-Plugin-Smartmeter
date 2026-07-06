@@ -101,6 +101,8 @@ $lang		= $cfg->param("BASE.LANG");
 # Read plugin config
 $plugin_cfg 	= new Config::Simple("$installfolder/config/plugins/$psubfolder/smartmeter.cfg") or die $plugin_cfg->error();
 $pname          = $plugin_cfg->param("MAIN.SCRIPTNAME");
+$plugin_cfg->param("MAIN.SENDMQTT", "0") if (!defined $plugin_cfg->param("MAIN.SENDMQTT"));
+$plugin_cfg->param("MAIN.MQTTTOPIC", "smartmeter") if (!$plugin_cfg->param("MAIN.MQTTTOPIC"));
 
 # Create temp folder if not already exist
 if (!-d "/var/run/shm/$psubfolder") {
@@ -243,6 +245,8 @@ sub form
 		$plugin_cfg->param( "MAIN.CRON", $cgi->param('cron') );
 		$plugin_cfg->param( "MAIN.SENDUDP", $cgi->param('sendudp') );
 		$plugin_cfg->param( "MAIN.UDPPORT", $cgi->param('udpport') );
+		$plugin_cfg->param( "MAIN.SENDMQTT", $cgi->param('sendmqtt') );
+		$plugin_cfg->param( "MAIN.MQTTTOPIC", $cgi->param('mqtttopic') || "smartmeter" );
 		foreach (@heads) {
 			$serial = $_;
 			$serial =~ s%/dev/serial/smartmeter/%%g;
@@ -359,6 +363,8 @@ sub form
 	$maintemplate->param( CRON 		=> $plugin_cfg->param("MAIN.CRON") );
 	$maintemplate->param( SENDUDP 		=> $plugin_cfg->param("MAIN.SENDUDP") );
 	$maintemplate->param( UDPPORT 		=> $plugin_cfg->param("MAIN.UDPPORT") );
+	$maintemplate->param( SENDMQTT 		=> $plugin_cfg->param("MAIN.SENDMQTT") );
+	$maintemplate->param( MQTTTOPIC 		=> $plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter" );
 
   	# Read the config for all found heads
 	my $i = 0;
