@@ -7,14 +7,93 @@ ARGV3=$3 # Third argument is Plugin installation folder
 ARGV4=$4 # Forth argument is Plugin version
 ARGV5=$5 # Fifth argument is Base folder of LoxBerry
 
+remove_cronjobs()
+{
+	for cronfolder in cron.01min cron.03min cron.05min cron.10min cron.15min cron.30min cron.hourly cron.reboot
+	do
+		rm -f "$ARGV5/system/cron/$cronfolder/$ARGV2"
+	done
+}
+
+create_cronjob()
+{
+	cronfolder=$1
+	scriptname=$2
+
+	ln -s "$ARGV5/bin/plugins/$ARGV3/$scriptname" "$ARGV5/system/cron/$cronfolder/$ARGV2"
+}
+
+restore_cronjob()
+{
+	configfile="$ARGV5/config/plugins/$ARGV3/smartmeter.cfg"
+	read_enabled=$(sed -n 's/^READ=//p' "$configfile")
+	cron_interval=$(sed -n 's/^CRON=//p' "$configfile")
+
+	remove_cronjobs
+
+	if [ "$read_enabled" != "1" ]; then
+		echo "<INFO> Automatic meter polling is disabled. No cronjob restored."
+		return
+	fi
+
+	case "$cron_interval" in
+		M)
+			create_cronjob "cron.reboot" "reboot_cron_runner.sh"
+			echo "<INFO> Restored automatic meter polling cronjob: reboot"
+			;;
+		1)
+			create_cronjob "cron.01min" "fetch.pl"
+			echo "<INFO> Restored automatic meter polling cronjob: 1 minute"
+			;;
+		3)
+			create_cronjob "cron.03min" "fetch.pl"
+			echo "<INFO> Restored automatic meter polling cronjob: 3 minutes"
+			;;
+		5)
+			create_cronjob "cron.05min" "fetch.pl"
+			echo "<INFO> Restored automatic meter polling cronjob: 5 minutes"
+			;;
+		10)
+			create_cronjob "cron.10min" "fetch.pl"
+			echo "<INFO> Restored automatic meter polling cronjob: 10 minutes"
+			;;
+		15)
+			create_cronjob "cron.15min" "fetch.pl"
+			echo "<INFO> Restored automatic meter polling cronjob: 15 minutes"
+			;;
+		30)
+			create_cronjob "cron.30min" "fetch.pl"
+			echo "<INFO> Restored automatic meter polling cronjob: 30 minutes"
+			;;
+		60)
+			create_cronjob "cron.hourly" "fetch.pl"
+			echo "<INFO> Restored automatic meter polling cronjob: hourly"
+			;;
+		*)
+			echo "<WARNING> Unknown cron interval '$cron_interval'. No cronjob restored."
+			;;
+	esac
+}
+
 echo "<INFO> Copy back existing config files"
-cp -v -r /tmp/$ARGV1\_upgrade/config/$ARGV3/* $ARGV5/config/plugins/$ARGV3/ 
+cp -v -r "/tmp/$ARGV1"_upgrade/config/"$ARGV3"/* "$ARGV5/config/plugins/$ARGV3/"
 
 echo "<INFO> Copy back existing log files"
-cp -v -r /tmp/$ARGV1\_upgrade/log/$ARGV3/* $ARGV5/log/plugins/$ARGV3/ 
+if [ -d "/tmp/$ARGV1"_upgrade/log/"$ARGV3" ]; then
+	for logfile in "/tmp/$ARGV1"_upgrade/log/"$ARGV3"/*
+	do
+		[ -e "$logfile" ] || continue
+		target="$ARGV5/log/plugins/$ARGV3/$(basename "$logfile")"
+		rm -rf "$target"
+		cp -v -r "$logfile" "$ARGV5/log/plugins/$ARGV3/" || echo "<WARNING> Could not restore log file $logfile"
+	done
+fi
+
+echo "<INFO> Restore automatic meter polling cronjob"
+restore_cronjob
 
 echo "<INFO> Remove temporary folders"
-rm -r /tmp/$ARGV1\_upgrade
+rm -r "/tmp/$ARGV1"_upgrade
 
 # Exit with Status 0
 exit 0
