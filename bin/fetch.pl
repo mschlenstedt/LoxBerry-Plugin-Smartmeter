@@ -302,10 +302,9 @@ sub publish_mqtt_data
 
 	eval {
 		require JSON::PP;
-		require Net::MQTT::Simple;
 	};
 	if ($@) {
-		&LOG("$serial: MQTT modules are not available: $@", "FAIL");
+		&LOG("$serial: JSON module for MQTT Gateway publish is not available: $@", "FAIL");
 		return;
 	}
 
@@ -330,10 +329,9 @@ sub publish_mqtt_data
 	}
 
 	my $mqtt_settings = $general->{Mqtt};
-	my $host = $mqtt_settings->{Brokerhost};
-	my $port = $mqtt_settings->{Brokerport};
-	if (!$host || !$port) {
-		&LOG("$serial: MQTT broker host or port is missing in $general_json.", "FAIL");
+	my $udpport = $mqtt_settings->{Udpinport};
+	if (!$udpport) {
+		&LOG("$serial: MQTT Gateway UDP in-port is missing in $general_json.", "FAIL");
 		return;
 	}
 
@@ -342,21 +340,15 @@ sub publish_mqtt_data
 	$base_topic =~ s/^\/+|\/+$//g;
 	$base_topic = "smartmeter" if (!$base_topic);
 
-	my $mqtt = eval { Net::MQTT::Simple->new("$host:$port") };
-	if ($@ || !$mqtt) {
-		&LOG("$serial: Could not connect to MQTT broker $host:$port: $@", "FAIL");
+	my $json = JSON::PP->new->utf8;
+	my $sock = IO::Socket::INET->new(
+		Proto    => 'udp',
+		PeerPort => $udpport,
+		PeerAddr => '127.0.0.1',
+	) or do {
+		&LOG("$serial: Could not create MQTT Gateway UDP socket on port $udpport: $!", "FAIL");
 		return;
-	}
-
-	my $user = $mqtt_settings->{Brokeruser};
-	my $pass = $mqtt_settings->{Brokerpass};
-	if (defined $user && $user ne "") {
-		eval { $mqtt->login($user, $pass || "") };
-		if ($@) {
-			&LOG("$serial: MQTT login failed: $@", "FAIL");
-			return;
-		}
-	}
+	};
 
 	my $published = 0;
 	foreach my $line (@data_lines) {
@@ -372,14 +364,18 @@ sub publish_mqtt_data
 		my $topic = "$base_topic/$line_serial/$value_name";
 		$topic =~ s/[#+]//g;
 
-		eval { $mqtt->publish($topic => $value) };
-		if ($@) {
-			&LOG("$serial: MQTT publish failed for $topic: $@", "FAIL");
+		my %packet = (
+			topic  => $topic,
+			value  => $value,
+			retain => 1,
+		);
+		my $payload = $json->encode(\%packet);
+		if (!$sock->send($payload)) {
+			&LOG("$serial: MQTT Gateway UDP send failed for $topic: $!", "FAIL");
 			next;
 		}
 		$published++;
 	}
 
-	eval { $mqtt->disconnect };
-	&LOG("$serial: Published $published values by MQTT using topic $base_topic/$serial/<value>.", "OK");
+	&LOG("$serial: Published $published values by MQTT Gateway UDP on port $udpport using topic $base_topic/$serial/<value>.", "OK");
 }
