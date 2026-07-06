@@ -95,6 +95,7 @@ if ( !$parse ) {
 
 ### Figure out in which subfolder we are installed
 our $home = $lbhomedir;
+our $installfolder = $lbhomedir;
 our $psubfolder = $lbpplugindir;
 
 # Create temp folder if not already exist

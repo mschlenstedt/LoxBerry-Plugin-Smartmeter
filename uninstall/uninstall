@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# Executed as root during plugin uninstall.
+# Remove only the UDEV rule created by this plugin's daemon.
+
+UDEV_RULE="/etc/udev/rules.d/99-smartmeter.rules"
+
+if [ -f "$UDEV_RULE" ] && grep -q "LoxBerry SML-eMon Plugin device rule file" "$UDEV_RULE"; then
+    echo "<INFO> Removing Smartmeter UDEV rule"
+    rm -f "$UDEV_RULE"
+
+    if command -v udevadm >/dev/null 2>&1; then
+        udevadm control --reload-rules >/dev/null 2>&1
+        udevadm trigger >/dev/null 2>&1
+    fi
+else
+    echo "<INFO> Smartmeter UDEV rule not found or not owned by this plugin"
+fi
+
+exit 0
