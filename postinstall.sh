@@ -24,7 +24,7 @@ echo "<INFO> Rename htaccess to .htaccess"
 mv $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/htaccess $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/.htaccess
 
 echo "<INFO> *******************************************************************"
-echo "<INFO> * Please reboot your LoxBerry to initialize the Smartmeter Plugin *"
+echo "<INFO> * Please reboot your LoxBerry to initialize the Smartmeter v2 Plugin *"
 echo "<INFO> *******************************************************************"
 
 # Exit with Status 0
