@@ -277,6 +277,7 @@ sub form
 		# Create Cronjob
 		if ( $cgi->param('read') eq "1" ) 
 		{
+			&remove_cronjobs;
 			if ($cgi->param('cron') eq "M") 
 			{
 				# Check if Script already running?
@@ -284,102 +285,39 @@ sub form
 				{	
 					system ("perl $installfolder/bin/plugins/$psubfolder/fetch.pl >/dev/null 2>&1 &");
 				}
-				system ("ln -s $installfolder/bin/plugins/$psubfolder/reboot_cron_runner.sh $installfolder/system/cron/cron.reboot/$pname");
-				unlink ("$installfolder/system/cron/cron.01min/$pname");
-				unlink ("$installfolder/system/cron/cron.03min/$pname");
-				unlink ("$installfolder/system/cron/cron.05min/$pname");
-				unlink ("$installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.30min/$pname");
-				unlink ("$installfolder/system/cron/cron.hourly/$pname");
+				&create_cronjob("cron.reboot", "reboot_cron_runner.sh");
 			}
 			if ($cgi->param('cron') eq "1") 
 			{
-				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.01min/$pname");
-				unlink ("$installfolder/system/cron/cron.03min/$pname");
-				unlink ("$installfolder/system/cron/cron.05min/$pname");
-				unlink ("$installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.30min/$pname");
-				unlink ("$installfolder/system/cron/cron.hourly/$pname");
-				unlink ("$installfolder/system/cron/cron.reboot/$pname");
+				&create_cronjob("cron.01min", "fetch.pl");
 			}
 			if ($cgi->param('cron') eq "3") 
 			{
-				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.03min/$pname");
-				unlink ("$installfolder/system/cron/cron.01min/$pname");
-				unlink ("$installfolder/system/cron/cron.05min/$pname");
-				unlink ("$installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.30min/$pname");
-				unlink ("$installfolder/system/cron/cron.hourly/$pname");
-				unlink ("$installfolder/system/cron/cron.reboot/$pname");
+				&create_cronjob("cron.03min", "fetch.pl");
 			}
 			if ($cgi->param('cron') eq "5") 
 			{
-				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.05min/$pname");
-				unlink ("$installfolder/system/cron/cron.01min/$pname");
-				unlink ("$installfolder/system/cron/cron.03min/$pname");
-				unlink ("$installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.30min/$pname");
-				unlink ("$installfolder/system/cron/cron.hourly/$pname");
-				unlink ("$installfolder/system/cron/cron.reboot/$pname");
+				&create_cronjob("cron.05min", "fetch.pl");
 			}
 			if ($cgi->param('cron') eq "10") 
 			{
-				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.1min/$pname");
-				unlink ("$installfolder/system/cron/cron.3min/$pname");
-				unlink ("$installfolder/system/cron/cron.5min/$pname");
-				unlink ("$installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.30min/$pname");
-				unlink ("$installfolder/system/cron/cron.hourly/$pname");
-				unlink ("$installfolder/system/cron/cron.reboot/$pname");
+				&create_cronjob("cron.10min", "fetch.pl");
 			}
 			if ($cgi->param('cron') eq "15") 
 			{
-				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.01min/$pname");
-				unlink ("$installfolder/system/cron/cron.03min/$pname");
-				unlink ("$installfolder/system/cron/cron.05min/$pname");
-				unlink ("$installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.30min/$pname");
-				unlink ("$installfolder/system/cron/cron.hourly/$pname");
-				unlink ("$installfolder/system/cron/cron.reboot/$pname");
+				&create_cronjob("cron.15min", "fetch.pl");
 			}
 			if ($cgi->param('cron') eq "30") 
 			{
-				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.30min/$pname");
-				unlink ("$installfolder/system/cron/cron.01min/$pname");
-				unlink ("$installfolder/system/cron/cron.03min/$pname");
-				unlink ("$installfolder/system/cron/cron.05min/$pname");
-				unlink ("$installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.hourly/$pname");
-				unlink ("$installfolder/system/cron/cron.reboot/$pname");
+				&create_cronjob("cron.30min", "fetch.pl");
 			}
 			if ($cgi->param('cron') eq "60") 
 			{
-				system ("ln -s $installfolder/bin/plugins/$psubfolder/fetch.pl $installfolder/system/cron/cron.hourly/$pname");
-				unlink ("$installfolder/system/cron/cron.01min/$pname");
-				unlink ("$installfolder/system/cron/cron.03min/$pname");
-				unlink ("$installfolder/system/cron/cron.05min/$pname");
-				unlink ("$installfolder/system/cron/cron.10min/$pname");
-				unlink ("$installfolder/system/cron/cron.15min/$pname");
-				unlink ("$installfolder/system/cron/cron.30min/$pname");
-				unlink ("$installfolder/system/cron/cron.reboot/$pname");
+				&create_cronjob("cron.hourly", "fetch.pl");
 			}
 			  
 		} else {
-			unlink ("$installfolder/system/cron/cron.01min/$pname");
-			unlink ("$installfolder/system/cron/cron.03min/$pname");
-			unlink ("$installfolder/system/cron/cron.05min/$pname");
-			unlink ("$installfolder/system/cron/cron.10min/$pname");
-			unlink ("$installfolder/system/cron/cron.15min/$pname");
-			unlink ("$installfolder/system/cron/cron.30min/$pname");
-			unlink ("$installfolder/system/cron/cron.hourly/$pname");
-            unlink ("$installfolder/system/cron/cron.reboot/$pname");
+			&remove_cronjobs;
 		}
 
 	}
@@ -458,6 +396,23 @@ sub form
 
 	exit;
 
+}
+
+sub remove_cronjobs
+{
+	foreach my $cronfolder ("cron.01min", "cron.03min", "cron.05min", "cron.10min", "cron.15min", "cron.30min", "cron.hourly", "cron.reboot") {
+		unlink ("$installfolder/system/cron/$cronfolder/$pname");
+	}
+}
+
+sub create_cronjob
+{
+	my ($cronfolder, $scriptname) = @_;
+	my $source = "$installfolder/bin/plugins/$psubfolder/$scriptname";
+	my $target = "$installfolder/system/cron/$cronfolder/$pname";
+
+	unlink ($target);
+	symlink ($source, $target);
 }
 
 #####################################################
