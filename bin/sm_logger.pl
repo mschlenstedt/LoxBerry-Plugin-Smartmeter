@@ -1213,6 +1213,7 @@ sub CALCULATE_POWER
 
 	our $reading = shift;
 	our $direction = lc shift;
+	our $statefile = "/var/run/shm/$psubfolder/$serial\.last$direction";
 	&LOG ("Calculate average power for $direction.", "INFO");
 
 	$reading = sprintf("%.3f", $reading);
@@ -1223,8 +1224,8 @@ sub CALCULATE_POWER
 
 	# Calculate power - the ISKRA MT174 doesn't provide power
 	$now = time;
-	if ( -e "/var/run/shm/$psubfolder/$serial\.last$direction" ) {
-		open(F,"</var/run/shm/$psubfolder/$serial\.last$direction");
+	if ( -e "$statefile" ) {
+		open(F,"<$statefile");
 		@lines = <F>;
 		foreach (@lines){
 			s/[\n\r]//g;
@@ -1233,18 +1234,55 @@ sub CALCULATE_POWER
 			$lastreading = @fields[1];
 		}
 		close(F);
-		if ( $reading < $lastreading ) {
+		if ( !defined($lasttime) || !defined($lastreading) || $lasttime eq "" || $lastreading eq "" ) {
+			&LOG ("No valid last meter reading available. Reset calculation state.", "WARNING");
 			$lastreading = $reading;
+			$period = 0;
+			$energy = 0;
+			$power = 0;
+			open(F,">$statefile");
+				print F "$now|$reading\n";
+			close(F);
+		} elsif ( $reading < $lastreading ) {
+			&LOG ("Current meter reading is lower than last reading. Reset calculation state.", "WARNING");
+			$lastreading = $reading;
+			$period = 0;
+			$energy = 0;
+			$power = 0;
+			open(F,">$statefile");
+				print F "$now|$reading\n";
+			close(F);
+		} elsif ( $reading == $lastreading ) {
+			$period = ($now - $lasttime) / 3600;
+			$energy = 0;
+			$power = 0;
+		} else {
+			$period = ($now - $lasttime) / 3600;
+			if ( $period > 0 ) {
+				$energy = $reading - $lastreading;
+				$power = $energy / $period;
+				open(F,">$statefile");
+					print F "$now|$reading\n";
+				close(F);
+			} else {
+				&LOG ("Invalid calculation period. Reset calculation state.", "WARNING");
+				$period = 0;
+				$energy = 0;
+				$power = 0;
+				open(F,">$statefile");
+					print F "$now|$reading\n";
+				close(F);
+			}
 		}
-		$period = ($now - $lasttime) / 3600;
-		$energy = $reading - $lastreading;
-		$power = $energy / $period;
 	} else {
 		&LOG ("No last meter reading available. Calculation not possible,", "WARNING");
-		system("touch /var/run/shm/$psubfolder/$serial\.last$direction > /dev/null 2>&1");
+		$lastreading = $reading;
 		$period = 0;
 		$energy = 0;
 		$power = 0;
+		open(F,">$statefile");
+			print F "$now|$reading\n";
+		close(F);
 	}
 
 	### Round
@@ -1254,13 +1292,6 @@ sub CALCULATE_POWER
 
 	### Debug output
 	&LOG ("Last Reading: $lastreading. Saved before: $period hours. Consumption: $energy. Avg. Power: $power,", "INFO");
-
-	### Zaehlerstand und Leistung speichern
-	if ( $reading > 0 ) {
-		open(F,">/var/run/shm/$psubfolder/$serial\.last$direction");
-			print F "$now|$reading\n";
-		close(F);
-	}
 
 	return ($power);
 
