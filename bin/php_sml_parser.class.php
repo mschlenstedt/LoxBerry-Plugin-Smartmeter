@@ -368,6 +368,10 @@ class SML_PARSER {
         if(isset($this->obis_arr[$result['objName']])) {
             $result['OBIS']=$this->obis_arr[$result['objName']][0];
             $result['OBIS-Text']=$this->obis_arr[$result['objName']][1];
+        } elseif (strlen($result['objName']) == 12) {
+            $obis = array_map('hexdec', str_split($result['objName'], 2));
+            $result['OBIS'] = $obis[0].'-'.$obis[1].':'.$obis[2].'.'.$obis[3].'.'.$obis[4].'*'.$obis[5];
+            $result['OBIS-Text'] = 'Unbekannter OBIS-Code';
         }
         if(in_array($result['objName'],array('8181C78203FF','0100000000FF','00006001FFFF','010060320101'))) {
             # ggfs. weitere objNames in die Liste aufnehmen
@@ -511,6 +515,12 @@ class SML_PARSER {
         $this->data = strtoupper($hexdata);
         $sml_header='1B1B1B1B01010101';
         $sml_footer='0000001B1B1B1B1A';
+        $result = array(
+            'choice' => 'GetListResponse',
+            'body' => array(
+                'vallist' => array()
+            )
+        );
         $start = strpos($this->data,$sml_header);
         if($start===false) return;
         if($start) {
@@ -529,11 +539,15 @@ class SML_PARSER {
 					 $messages[] = $message;
 					 if ( $message['messageBody']['choice'] == "GetListResponse" ) 
 					 {
-						return($message['messageBody']);
+						foreach($message['messageBody']['body']['vallist'] as $value) {
+							$result['body']['vallist'][$value['objName']] = $value;
+						}
 					 }
                 }else{ # if no success, skip to next file
                     $start = strpos($this->data,$sml_header);
-                    if($start===false) return;
+                    if($start===false) {
+                        return (count($result['body']['vallist']) > 0) ? $result : null;
+                    }
                     if($start) {
                         echo "$start bytes skipped in between!\n";
                         $this->data=substr($this->data,$start);
@@ -555,6 +569,7 @@ class SML_PARSER {
                 'messages'=>$messages
             );
         }
+        return (count($result['body']['vallist']) > 0) ? $result : null;
     }
     public function parse_sml_string($string) {
         return $this->parse_sml_hexdata(bin2hex($string));
