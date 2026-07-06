@@ -80,7 +80,7 @@ $crontab->read( -file => "$lbhomedir/system/cron/cron.d/$lbpplugindir" );
 ##########################################################################
 
 # Version of this script
-$version = "2.0.0.3";
+$version = "2.0.0.4";
 
 # Figure out in which subfolder we are installed
 $psubfolder = abs_path($0);
