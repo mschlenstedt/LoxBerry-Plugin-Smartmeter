@@ -19,8 +19,6 @@ ARGV5=$5 # Fifth argument is Base folder of LoxBerry
 /bin/sed -i "s#REPLACEBYNAME#$ARGV2#" $ARGV5/config/plugins/$ARGV3/smartmeter.cfg
 /bin/sed -i "s#REPLACELBHOMEDIR#$ARGV5#" $ARGV5/bin/plugins/$ARGV3/reboot_cron_runner.sh
 /bin/sed -i "s#REPLACELBPPLUGINDIR#$ARGV3#" $ARGV5/bin/plugins/$ARGV3/reboot_cron_runner.sh
-/bin/sed -i "s#REPLACEBYSUBFOLDER#$ARGV3#" $ARGV5/system/daemons/plugins/$ARGV2
-/bin/sed -i "s#REPLACEBYBASEFOLDER#$ARGV5#" $ARGV5/system/daemons/plugins/$ARGV2
 
 echo "<INFO> Rename htaccess to .htaccess"
 mv $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/htaccess $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/.htaccess

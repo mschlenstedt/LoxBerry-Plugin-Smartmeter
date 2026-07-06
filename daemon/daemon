@@ -1,6 +1,6 @@
 #!/bin/bash
 
-logfile=REPLACEBYBASEFOLDER/log/plugins/REPLACEBYSUBFOLDER/smartmeter.log
+logfile=REPLACELBHOMEDIR/log/plugins/REPLACELBPPLUGINDIR/smartmeter.log
 
 echo "`date` - Start Init " >>$logfile
 echo "`date` - Creating new UDEV Rules for I/R heads: /etc/udev/rules.d/99-smartmeter.rules " >>$logfile
