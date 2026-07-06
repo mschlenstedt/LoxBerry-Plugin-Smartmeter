@@ -599,6 +599,9 @@ sub PROTO_GENERICSML
 		### Open serial port
 		&INITIALIZE_PORT();
 
+		### Wait for next cyclic SML frame after purging the port
+		sleep($delay) if ( $delay > 0 );
+
 		### Read serial device
 		&READ_SERIAL("HEX");
 
