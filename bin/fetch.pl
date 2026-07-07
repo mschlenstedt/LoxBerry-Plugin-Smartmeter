@@ -25,6 +25,8 @@ use Cwd 'abs_path';
 use IO::Socket; # For sending UDP packages
 use Getopt::Long;
 use LoxBerry::System;
+use File::Path qw(make_path);
+use Fcntl qw(:flock);
 #use warnings;
 #use strict;
 no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
@@ -40,6 +42,7 @@ my  $installfolder;
 my  $version;
 my  $home = $lbhomedir;
 my  $psubfolder = $lbpplugindir;
+my  $runtime_dir = "/var/run/shm/$psubfolder";
 my  $pname;
 my  @heads;
 my  $name;
@@ -106,17 +109,23 @@ if ($verbose) {
 }
 
 # Create temp folder if not already exist
-if (!-d "/var/run/shm/$psubfolder") {
-	system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
+if (!-d $runtime_dir) {
+	make_path($runtime_dir);
 }
 # Check for temporary log folder
 if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
-	system("ln -s /var/run/shm/$psubfolder  $installfolder/log/plugins/$psubfolder/shm > /dev/null 2>&1");
+	symlink($runtime_dir, "$installfolder/log/plugins/$psubfolder/shm");
+}
+
+open(my $lock_fh, ">", "$runtime_dir/fetch.lock") or die "Could not open fetch lock: $!";
+if (!flock($lock_fh, LOCK_EX | LOCK_NB)) {
+	&LOG("Another meter polling run is already active. Giving up.", "WARN");
+	exit;
 }
 
 # Delete old Logfile
-if (-e "/var/run/shm/$psubfolder/fetch.log") {
-    system("rm /var/run/shm/$psubfolder/fetch.log > /dev/null 2>&1");
+if (-e "$runtime_dir/fetch.log") {
+	unlink("$runtime_dir/fetch.log");
 }
 
 # Check if we should read automatically
@@ -164,13 +173,24 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 			&LOG ("$serial: CRC: $crc", "INFO");
 			&LOG ("$serial: Device: $device", "INFO");
 			&LOG ("$serial: Baudrate:$baudrate/$startbaudrate Databits:$databits Stopbits:$stopbits Parity:$parity Handshake:$handshake", "INFO");
-			system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --protocol $protocol --startbaudrate $startbaudrate --baudrate $baudrate --timeout $timeout --delay $delay --handshake $handshake --databits $databits --stopbits $stopbits --parity $parity --crc $crc $verbose");
-            #system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --parse 015A98CA --protocol $protocol --startbaudrate $startbaudrate --baudrate $baudrate --timeout $timeout --delay $delay --handshake $handshake --databits $databits --stopbits $stopbits --parity $parity --crc $crc $verbose");
+			my @logger_args = ("--device", $device, "--protocol", $protocol);
+			&add_option(\@logger_args, "--startbaudrate", $startbaudrate);
+			&add_option(\@logger_args, "--baudrate", $baudrate);
+			&add_option(\@logger_args, "--timeout", $timeout);
+			&add_option(\@logger_args, "--delay", $delay);
+			&add_option(\@logger_args, "--handshake", $handshake);
+			&add_option(\@logger_args, "--databits", $databits);
+			&add_option(\@logger_args, "--stopbits", $stopbits);
+			&add_option(\@logger_args, "--parity", $parity);
+			&add_option(\@logger_args, "--crc", $crc);
+			push(@logger_args, "--verbose") if ($verbose);
+			&run_sm_logger(@logger_args);
         } else {
 			# If set to  a meter, use standard settings for this meter
 			&LOG ("$serial: Presetting: $meter.", "INFO");
-			system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --protocol $meter $verbose");
-			#system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --parse 01304DD6 --protocol $meter $verbose");
+			my @logger_args = ("--device", $device, "--protocol", $meter);
+			push(@logger_args, "--verbose") if ($verbose);
+			&run_sm_logger(@logger_args);
             }
 
 		# Send data by UDP to all configured miniservers
@@ -180,10 +200,10 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 		  $udpstring = "";
 
 		  # Read Data file
-		  if ( !-e "/var/run/shm/$psubfolder/$serial\.data" ) {
+		  if ( !-e "$runtime_dir/$serial\.data" ) {
 			$udpstring = "$serial: No data found";
  		  } else {
-			open(F,"</var/run/shm/$psubfolder/$serial\.data");
+			open(F,"<$runtime_dir/$serial\.data");
 				@lines = <F>;
 			close(F);
 
@@ -201,7 +221,11 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 
 		    if ( $cfg->param("MINISERVER$i.USECLOUDDNS") ) {
 		      my $miniservermac = $cfg->param("MINISERVER$i.CLOUDURL");
-		      my $dns_info = `$home/webfrontend/cgi/system/tools/showclouddns.pl $miniservermac`;
+		      my $dns_info = "";
+		      if (open(my $dns_fh, "-|", "$home/webfrontend/cgi/system/tools/showclouddns.pl", $miniservermac)) {
+		        $dns_info = do { local $/; <$dns_fh> };
+		        close($dns_fh);
+		      }
 		      my @dns_info_pieces = split /:/, $dns_info;
 		      if ($dns_info_pieces[0]) {
 		        $dns_info_pieces[0] =~ s/^\s+|\s+$//g;
@@ -240,10 +264,10 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 
 		# Publish the same meter values by MQTT.
 		if ($sendmqtt) {
-			if ( !-e "/var/run/shm/$psubfolder/$serial\.data" ) {
+			if ( !-e "$runtime_dir/$serial\.data" ) {
 				&LOG("$serial: No data found for MQTT publish.", "WARN");
 			} else {
-				open(F,"</var/run/shm/$psubfolder/$serial\.data");
+				open(F,"<$runtime_dir/$serial\.data");
 					@lines = <F>;
 				close(F);
 				&publish_mqtt_data($serial, @lines);
@@ -255,9 +279,27 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 }
 if ($plugin_cfg->param("MAIN.CRON") eq "M" && !$force) {
 	&LOG("$serial: Cronjob is MINIMUM - RERUN", "OK");	
+	sleep(5);
 	goto RERUN;
 	}
 exit;
+
+sub add_option
+{
+	my ($args, $name, $value) = @_;
+	return if (!defined($value) || $value eq "");
+	push(@$args, $name, $value);
+}
+
+sub run_sm_logger
+{
+	my @args = @_;
+	my $logger = "$installfolder/bin/plugins/$psubfolder/sm_logger.pl";
+	system($^X, $logger, @args);
+	if ($? != 0) {
+		&LOG("sm_logger.pl failed with exit code " . ($? >> 8) . ".", "FAIL");
+	}
+}
 
 ################################
 ### SUB: Log
@@ -283,7 +325,7 @@ sub LOG
         $sec = sprintf("%02d", $sec);
 
         # Logfile
-        open(F,">>/var/run/shm/$psubfolder/fetch.log");
+        open(F,">>$runtime_dir/fetch.log");
                 print F "$year-$mon-$mday $hour:$min:$sec <$type> $message\n";
         close (F);
 

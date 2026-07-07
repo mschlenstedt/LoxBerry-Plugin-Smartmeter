@@ -113,7 +113,7 @@ class SML_PARSER {
          */
         $cp = $this->hex2bin($part);
         for ($i=0 ; $i<strlen($cp) ; $i++) {
-            $char = ord($cp{$i});
+            $char = ord($cp[$i]);
             $this->crc16_message = ($this->crc16_message >> 8) ^ ($this->crctab[($this->crc16_message ^ $char) & 0xff]);
             if(!$global) continue;
             $this->crc16_global  = ($this->crc16_global >> 8)  ^ ($this->crctab[($this->crc16_global  ^ $char) & 0xff]);

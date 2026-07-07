@@ -24,6 +24,7 @@ use CGI qw/:standard/;
 use Config::Simple;
 use File::HomeDir;
 use Cwd 'abs_path';
+use File::Path qw(make_path);
 use warnings;
 use strict;
 no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
@@ -65,17 +66,19 @@ $lang		= $cfg->param("BASE.LANG");
 ##########################################################################
 
 # Create temp folder if not already exist
-if (!-d "/var/run/shm/$psubfolder") {
-	system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
+my $runtime_dir = "/var/run/shm/$psubfolder";
+if (!-d $runtime_dir) {
+	make_path($runtime_dir);
 }
 # Check for temporary log folder
 if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
-	system("ln -s /var/run/shm/$psubfolder  $installfolder/log/plugins/$psubfolder/shm > /dev/null 2>&1");
+	symlink($runtime_dir, "$installfolder/log/plugins/$psubfolder/shm");
 }
 # Create Logfile
-$logfile = "/var/run/shm/$psubfolder/fetch_manually.log";
-system("rm /var/run/shm/$psubfolder/$logfile");
-system("touch /var/run/shm/$psubfolder/$logfile");
+$logfile = "$runtime_dir/fetch_manually.log";
+unlink($logfile) if (-e $logfile);
+open(my $log_fh, ">", $logfile) or die "Could not create $logfile: $!";
+close($log_fh);
 
 # Redirect to Logviewer
 print redirect(-url=>"/admin/system/tools/logfile.cgi?logfile=plugins/$psubfolder/shm/fetch_manually.log&header=html&format=template");
@@ -95,7 +98,7 @@ if ($pid == 0) {
   open STDERR, ">/dev/null";
 
   # Trigger fetch
-  system("$installfolder/bin/plugins/$psubfolder/fetch.pl --verbose --force");
+  system($^X, "$installfolder/bin/plugins/$psubfolder/fetch.pl", "--verbose", "--force");
 }
 
 exit;

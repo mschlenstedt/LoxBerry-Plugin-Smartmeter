@@ -20,6 +20,7 @@
 use Device::SerialPort;
 use Getopt::Long;
 use LoxBerry::System;
+use File::Path qw(make_path);
 #use File::HomeDir;
 #use Cwd 'abs_path';
 use DateTime;
@@ -97,20 +98,21 @@ if ( !$parse ) {
 our $home = $lbhomedir;
 our $installfolder = $lbhomedir;
 our $psubfolder = $lbpplugindir;
+our $runtime_dir = "/var/run/shm/$psubfolder";
 
 # Create temp folder if not already exist
-if (!-d "/var/run/shm/$psubfolder") {
-	system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
+if (!-d $runtime_dir) {
+	make_path($runtime_dir);
 }
 # Check for temporary log folder
 if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
-	system("ln -s /var/run/shm/$psubfolder  $installfolder/log/plugins/$psubfolder/shm > /dev/null 2>&1");
+	symlink($runtime_dir, "$installfolder/log/plugins/$psubfolder/shm");
 }
 
 # Clear Log
-system("rm /var/run/shm/$psubfolder/$serial\.log > /dev/null 2>&1");
+unlink("$runtime_dir/$serial.log");
 if ( !$parse ) {
-	system("rm /var/run/shm/$psubfolder/$serial\.dump > /dev/null 2>&1");
+	unlink("$runtime_dir/$serial.dump");
 }
 
 ################################
@@ -532,7 +534,7 @@ else {
 ### Output
 ################################
 
-&LOG("All data written to /var/run/shm/$psubfolder/$serial.xxxx");
+	&LOG("All data written to $runtime_dir/$serial.xxxx");
 
 exit;
 
@@ -897,18 +899,19 @@ sub READ_SERIAL
 	$port->close;
 
 	# Save output to file and convert line endings
-	&LOG ("Save raw buffer to /var/run/shm/$psubfolder/$serial\.dump", "INFO");
+	&LOG ("Save raw buffer to $runtime_dir/$serial\.dump", "INFO");
 	if ($hex eq "HEX"){
 		$bufferx = uc(unpack('H*',$buffer)); # nach hex wandeln
+	} else {
+		$buffer =~ s/\r\n?/\n/g;
 	}
-	open(F,">>/var/run/shm/$psubfolder/$serial\.dump");
+	open(F,">>$runtime_dir/$serial\.dump");
 		if ($hex eq "HEX"){
 			print F $bufferx;
 		} else {
 			print F $buffer;
 		}
 	close (F);
-	system("/usr/bin/dos2unix -f /var/run/shm/$psubfolder/$serial\.dump > /dev/null 2>&1");
 
 	if ($hex eq "HEX"){
 		return($bufferx);
@@ -928,12 +931,14 @@ sub PARSE_DUMP
 	our $proto = shift;
 	our $type = shift; # http://wiki.selfhtml.org/wiki/Perl/Subroutinen
 	if ($proto eq "SML") {
-		&LOG ("Parse /var/run/shm/$psubfolder/$serial\.dump as SML-Protocol.", "INFO");
-		our $dumpbuffer = `php $home/bin/plugins/$psubfolder/sml_parser.php /var/run/shm/$psubfolder/$serial\.dump $crc`;
+		&LOG ("Parse $runtime_dir/$serial\.dump as SML-Protocol.", "INFO");
+		open(my $php_fh, "-|", "php", "$home/bin/plugins/$psubfolder/sml_parser.php", "$runtime_dir/$serial.dump", $crc) or die "Could not start SML parser: $!";
+		our $dumpbuffer = do { local $/; <$php_fh> };
+		close($php_fh);
 		print "Buffer: $dumpbuffer\n";
 	} else {
-		&LOG ("Parse /var/run/shm/$psubfolder/$serial\.dump as D0-Protocol.", "INFO");
-		open(F,"</var/run/shm/$psubfolder/$serial\.dump");
+		&LOG ("Parse $runtime_dir/$serial\.dump as D0-Protocol.", "INFO");
+		open(F,"<$runtime_dir/$serial\.dump");
 			our $dumpbuffer = do { local $/; <F> };
 		close (F);
 	}
@@ -1103,11 +1108,11 @@ sub PARSE_DUMP
 #	print "Offset: $offset\n";
 
 	### Save to data file
-	&LOG ("Save Meter data to /var/run/shm/$psubfolder/$serial\.data.", "INFO");
+	&LOG ("Save Meter data to $runtime_dir/$serial\.data.", "INFO");
 
 	if ( $type eq "HEAT" ) {
 
-		open(F,">/var/run/shm/$psubfolder/$serial\.data");
+		&open_data_file();
 		print F "$serial:Last_Update:$datereadable\n";
 		print F "$serial:Last_UpdateLoxEpoche:$epoche_time_lox\n";
 		print F "$serial:Consumption_Total_OBIS_6.8.0:$readingconsT0\n"             if ( $readingconsT0 ne "" );
@@ -1129,12 +1134,12 @@ sub PARSE_DUMP
 		print F "$serial:Flow_OBIS_6.33.0:$flow1\n"                                 if ( $flow1 ne "" );
 		print F "$serial:Heating_Flow_OBIS_9.4:$heating_flow\n"                     if ( $heating_flow ne "" );
 		print F "$serial:Heating_Return_OBIS_9.4:$heating_return\n"                 if ( $heating_return ne "" );
-		close (F);
+		&close_data_file();
 
 	}
 	elsif ( $type eq "FLANDERS" ) {
 	
-		open(F,">/var/run/shm/$psubfolder/$serial\.data");
+		&open_data_file();
 		print F "$serial:Last_Update:$datereadable\n";
 		print F "$serial:Last_UpdateLoxEpoche:$epoche_time_lox\n";
 		print F "$serial:Consumption_Total_OBIS_1.8.0:$readingconsT0\n"             if ( $readingconsT0 ne "" );
@@ -1178,11 +1183,11 @@ sub PARSE_DUMP
 		print F "$serial:Breaker_State_Electricity_96.1.4:$breakerstate\n"          if ( $breakerstate ne "" );
 		print F "$serial:Text_Message_96.13.0:$messagetext\n"                       if ( $messagetext ne "" );
 		print F "$serial:Message_Code_96.13.1:$messagecode\n"                       if ( $messagecode ne "" );
-		close (F);
+		&close_data_file();
 
 	}	else {
 
-		open(F,">/var/run/shm/$psubfolder/$serial\.data");
+		&open_data_file();
 		print F "$serial:Last_Update:$datereadable\n";
 		print F "$serial:Last_UpdateLoxEpoche:$epoche_time_lox\n";
 		print F "$serial:Manufacturer_ID_OBIS_96.50.1:$manufacturerid\n"            if ( $manufacturerid ne "" );
@@ -1220,12 +1225,27 @@ sub PARSE_DUMP
 		print F "$serial:Total_Power_OBIS_15.7.0:$power3\n"                         if ( $power3 ne "" );
 		print F "$serial:Total_Power_OBIS_16.7.0:$power4\n"                         if ( $power4 ne "" );
         print F "$serial:Delivery_Consumption_OBIS_C.5.0:$del_cons\n"               if ( $del_cons ne "" );
-		close (F);
+		&close_data_file();
 
 	}
 
 	return();
 
+}
+
+sub open_data_file
+{
+	our $data_file = "$runtime_dir/$serial.data";
+	our $data_tmpfile = "$data_file.$$";
+	open(F, ">", $data_tmpfile) or die "Could not open temporary data file $data_tmpfile: $!";
+}
+
+sub close_data_file
+{
+	our $data_file;
+	our $data_tmpfile;
+	close(F);
+	rename($data_tmpfile, $data_file) or die "Could not replace data file $data_file: $!";
 }
 
 ################################
@@ -1237,7 +1257,7 @@ sub CALCULATE_POWER
 
 	our $reading = shift;
 	our $direction = lc shift;
-	our $statefile = "/var/run/shm/$psubfolder/$serial\.last$direction";
+	our $statefile = "$runtime_dir/$serial\.last$direction";
 	&LOG ("Calculate average power for $direction.", "INFO");
 
 	$reading = sprintf("%.3f", $reading);
@@ -1348,7 +1368,7 @@ sub LOG
 	$sec = sprintf("%02d", $sec);
 
 	# Logfile
-	open(F,">>/var/run/shm/$psubfolder/$serial\.log");
+	open(F,">>$runtime_dir/$serial\.log");
 		print F "$year-$mon-$mday $hour:$min:$sec <$type> $message\n";
 	close (F);
 

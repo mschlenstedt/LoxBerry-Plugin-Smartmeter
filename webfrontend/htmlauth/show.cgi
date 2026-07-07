@@ -24,6 +24,7 @@ use CGI qw/:standard/;
 use Config::Simple;
 use File::HomeDir;
 use Cwd 'abs_path';
+use File::Path qw(make_path);
 use warnings;
 use strict;
 no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
@@ -41,6 +42,7 @@ my  $psubfolder;
 my  $pname;
 my  $serial;
 my  @lines;
+my  $runtime_dir;
 
 ##########################################################################
 # Read Settings
@@ -67,22 +69,25 @@ $installfolder	= $cfg->param("BASE.INSTALLFOLDER");
 # Read plugin config
 $plugin_cfg 	= new Config::Simple("$installfolder/config/plugins/$psubfolder/smartmeter.cfg") or die $plugin_cfg->error();
 $pname          = $plugin_cfg->param("MAIN.SCRIPTNAME");
+$runtime_dir = "/var/run/shm/$psubfolder";
 
 # Set parameters coming in - get over post
 if ( $cgi->url_param('serial') ) {
-	$serial = quotemeta( $cgi->url_param('serial') );
+	$serial = $cgi->url_param('serial');
 }
 elsif ( $cgi->param('serial') ) {
-	$serial = quotemeta( $cgi->param('serial') );
+	$serial = $cgi->param('serial');
 }
+$serial = "" if (!defined($serial));
+$serial =~ s/[^A-Za-z0-9_.:-]//g;
 
 # Create temp folder if not already exist
-if (!-d "/var/run/shm/$psubfolder") {
-	system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
+if (!-d $runtime_dir) {
+	make_path($runtime_dir);
 }
 # Check for temporary log folder
 if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
-	system("ln -s /var/run/shm/$psubfolder  $installfolder/log/plugins/$psubfolder/shm > /dev/null 2>&1");
+	symlink($runtime_dir, "$installfolder/log/plugins/$psubfolder/shm");
 }
 
 ##########################################################################
@@ -99,7 +104,7 @@ if ( !$serial ) {
 }
 
 # If no data exist, give dummy file
-if ( !-e "/var/run/shm/$psubfolder/$serial\.data" ) {
+if ( !-e "$runtime_dir/$serial\.data" ) {
 
 	print "$serial:Last_Update:01.01.2009 00:00:00\n";
 	print "$serial:Last_UpdateLoxEpoche:1230764400\n";
@@ -135,7 +140,7 @@ if ( !-e "/var/run/shm/$psubfolder/$serial\.data" ) {
 }
 
 # Read data file
-open(F,"</var/run/shm/$psubfolder/$serial\.data");
+open(F,"<$runtime_dir/$serial\.data");
 	@lines = <F>;
 close(F);
 

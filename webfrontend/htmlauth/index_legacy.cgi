@@ -29,6 +29,7 @@ use File::HomeDir;
 use String::Escape qw( unquotemeta );
 use Cwd 'abs_path';
 use HTML::Template;
+use File::Path qw(make_path);
 #use warnings;
 #use strict;
 #no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
@@ -65,6 +66,7 @@ my  $name;
 my  $device;
 my  $serial;
 my  $crontabtmp = "$lbplogdir/crontab.temp";
+my  $runtime_dir;
 
 ##########################################################################
 # Read crontab
@@ -97,6 +99,7 @@ print "Content-type: text/html\n\n";
 $cfg	 	= new Config::Simple("$home/config/system/general.cfg") or die $cfg->error();
 $installfolder	= $cfg->param("BASE.INSTALLFOLDER");
 $lang		= $cfg->param("BASE.LANG");
+$runtime_dir = "/var/run/shm/$psubfolder";
 
 # Read plugin config
 $plugin_cfg 	= new Config::Simple("$installfolder/config/plugins/$psubfolder/smartmeter.cfg") or die $plugin_cfg->error();
@@ -105,16 +108,16 @@ $plugin_cfg->param("MAIN.SENDMQTT", "0") if (!defined $plugin_cfg->param("MAIN.S
 $plugin_cfg->param("MAIN.MQTTTOPIC", "smartmeter") if (!$plugin_cfg->param("MAIN.MQTTTOPIC"));
 
 # Create temp folder if not already exist
-if (!-d "/var/run/shm/$psubfolder") {
-	system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
+if (!-d $runtime_dir) {
+	make_path($runtime_dir);
 }
 # Check for temporary log folder
 if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
-	system("ln -s /var/run/shm/$psubfolder $installfolder/log/plugins/$psubfolder/shm > /dev/null 2>&1");
+	symlink($runtime_dir, "$installfolder/log/plugins/$psubfolder/shm");
 }
 
 # Detect which IR Heads are connected
-my @heads = split(/\n/,`ls /dev/serial/smartmeter/*`);
+my @heads = glob("/dev/serial/smartmeter/*");
 
 # Save a config set if it not already exists
 foreach (@heads) {
@@ -236,7 +239,10 @@ sub form
 
 	# Clear Cache
 	if ( $clearcache ) {
-		system("rm /var/run/shm/$psubfolder/* > /dev/null 2>&1");
+		foreach my $cache_file (glob("$runtime_dir/*")) {
+			next if ($cache_file =~ /\/fetch\.lock\z/);
+			unlink($cache_file);
+		}
 	}
 
 	# If the form was saved, update config file
@@ -251,18 +257,18 @@ sub form
 			$serial = $_;
 			$serial =~ s%/dev/serial/smartmeter/%%g;
 			$plugin_cfg->param("$serial.NAME", $cgi->param("$serial\_name") );
-			$plugin_cfg->param("$serial.METER", $cgi->param("$serial\_meter") );
+			$plugin_cfg->param("$serial.METER", &clean_config_value($cgi->param("$serial\_meter"), qr/\A[A-Za-z0-9_.:-]+\z/, "0") );
 			if ( $cgi->param("$serial\_meter") eq "manual" ) {
-				$plugin_cfg->param("$serial.PROTOCOL", $cgi->param("$serial\_protocol") );
-				$plugin_cfg->param("$serial.STARTBAUDRATE", $cgi->param("$serial\_startbaudrate") );
-				$plugin_cfg->param("$serial.BAUDRATE", $cgi->param("$serial\_baudrate") );
-				$plugin_cfg->param("$serial.TIMEOUT", $cgi->param("$serial\_timeout") );
-				$plugin_cfg->param("$serial.DELAY", $cgi->param("$serial\_delay") );
-				$plugin_cfg->param("$serial.HANDSHAKE", $cgi->param("$serial\_handshake") );
-				$plugin_cfg->param("$serial.DATABITS", $cgi->param("$serial\_databits") );
-				$plugin_cfg->param("$serial.STOPBITS", $cgi->param("$serial\_stopbits") );
-				$plugin_cfg->param("$serial.PARITY", $cgi->param("$serial\_parity") );
-				$plugin_cfg->param("$serial.CRC", $cgi->param("$serial\_crc") );
+				$plugin_cfg->param("$serial.PROTOCOL", &clean_config_value($cgi->param("$serial\_protocol"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
+				$plugin_cfg->param("$serial.STARTBAUDRATE", &clean_config_value($cgi->param("$serial\_startbaudrate"), qr/\A\d*\z/, "") );
+				$plugin_cfg->param("$serial.BAUDRATE", &clean_config_value($cgi->param("$serial\_baudrate"), qr/\A\d*\z/, "") );
+				$plugin_cfg->param("$serial.TIMEOUT", &clean_config_value($cgi->param("$serial\_timeout"), qr/\A\d*\z/, "") );
+				$plugin_cfg->param("$serial.DELAY", &clean_config_value($cgi->param("$serial\_delay"), qr/\A\d*\z/, "") );
+				$plugin_cfg->param("$serial.HANDSHAKE", &clean_config_value($cgi->param("$serial\_handshake"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
+				$plugin_cfg->param("$serial.DATABITS", &clean_config_value($cgi->param("$serial\_databits"), qr/\A\d*\z/, "") );
+				$plugin_cfg->param("$serial.STOPBITS", &clean_config_value($cgi->param("$serial\_stopbits"), qr/\A\d*\z/, "") );
+				$plugin_cfg->param("$serial.PARITY", &clean_config_value($cgi->param("$serial\_parity"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
+				$plugin_cfg->param("$serial.CRC", &clean_config_value($cgi->param("$serial\_crc"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
 			} else {
 				$plugin_cfg->param("$serial.PROTOCOL", "");
 				$plugin_cfg->param("$serial.STARTBAUDRATE", "");
@@ -285,9 +291,21 @@ sub form
 			if ($cgi->param('cron') eq "M") 
 			{
 				# Check if Script already running?
-				if (!scalar(grep{/sm_logger.pl/} `ps aux`))
+				my $logger_running = 0;
+				if (open(my $ps_fh, "-|", "ps", "aux")) {
+					$logger_running = scalar(grep{/sm_logger.pl/} <$ps_fh>);
+					close($ps_fh);
+				}
+				if (!$logger_running)
 				{	
-					system ("perl $installfolder/bin/plugins/$psubfolder/fetch.pl >/dev/null 2>&1 &");
+					my $pid = fork();
+					if (defined $pid && $pid == 0) {
+						open STDIN, "</dev/null";
+						open STDOUT, ">/dev/null";
+						open STDERR, ">/dev/null";
+						exec($^X, "$installfolder/bin/plugins/$psubfolder/fetch.pl");
+						exit;
+					}
 				}
 				&create_cronjob("cron.reboot", "reboot_cron_runner.sh");
 			}
@@ -419,6 +437,14 @@ sub create_cronjob
 
 	unlink ($target);
 	symlink ($source, $target);
+}
+
+sub clean_config_value
+{
+	my ($value, $pattern, $default) = @_;
+	return $default if (!defined($value));
+	return $value if ($value =~ $pattern);
+	return $default;
 }
 
 #####################################################
