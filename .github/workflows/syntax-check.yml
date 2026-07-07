@@ -53,6 +53,7 @@ jobs:
 
           our $lbhomedir = '/opt/loxberry';
           our $lbpplugindir = 'smartmeter';
+          our $lbpbindir = '/opt/loxberry/bin/plugins/smartmeter';
           our $lbpconfigdir = '/opt/loxberry/config/plugins/smartmeter';
           our $lbptemplatedir = '/opt/loxberry/templates/plugins/smartmeter';
           our $lbplogdir = '/opt/loxberry/log/plugins/smartmeter';
@@ -62,6 +63,7 @@ jobs:
               no strict 'refs';
               *{"${caller}::lbhomedir"} = \$lbhomedir;
               *{"${caller}::lbpplugindir"} = \$lbpplugindir;
+              *{"${caller}::lbpbindir"} = \$lbpbindir;
               *{"${caller}::lbpconfigdir"} = \$lbpconfigdir;
               *{"${caller}::lbptemplatedir"} = \$lbptemplatedir;
               *{"${caller}::lbplogdir"} = \$lbplogdir;
@@ -87,6 +89,7 @@ jobs:
 
           our $lbhomedir = '/opt/loxberry';
           our $lbpplugindir = 'smartmeter';
+          our $lbpbindir = '/opt/loxberry/bin/plugins/smartmeter';
           our $lbpconfigdir = '/opt/loxberry/config/plugins/smartmeter';
           our $lbptemplatedir = '/opt/loxberry/templates/plugins/smartmeter';
           our $lbplogdir = '/opt/loxberry/log/plugins/smartmeter';
@@ -96,6 +99,7 @@ jobs:
               no strict 'refs';
               *{"${caller}::lbhomedir"} = \$lbhomedir;
               *{"${caller}::lbpplugindir"} = \$lbpplugindir;
+              *{"${caller}::lbpbindir"} = \$lbpbindir;
               *{"${caller}::lbpconfigdir"} = \$lbpconfigdir;
               *{"${caller}::lbptemplatedir"} = \$lbptemplatedir;
               *{"${caller}::lbplogdir"} = \$lbplogdir;
