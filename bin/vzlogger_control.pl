@@ -363,7 +363,8 @@ sub print_runtime_cache
 {
 	my ($fh) = @_;
 	print_section($fh, "Runtime cache files");
-	if (!opendir(my $dir, $runtime_dir)) {
+	my $dir;
+	if (!opendir($dir, $runtime_dir)) {
 		print $fh "Could not open $runtime_dir: $!\n";
 		return;
 	}
