@@ -6,7 +6,7 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ### Added
 
-- Nothing yet.
+- Added GitHub Actions syntax checks for Perl and PHP files.
 
 ### Changed
 
