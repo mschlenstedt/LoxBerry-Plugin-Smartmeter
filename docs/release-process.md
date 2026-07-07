@@ -44,23 +44,24 @@ Smartmeter-V2.0.0.10
    - `php -l` for changed PHP files;
    - shell syntax checks where available;
    - inspect changed release metadata with `git diff`.
-7. Run a plugin install or upgrade smoke test on LoxBerry when the release changes installation, upgrade, dependencies, services, cron jobs, or core runtime behavior.
-8. Commit the release changes.
-9. Push the branch.
-10. Create an annotated tag on the pushed release commit:
+7. Ensure the required GitHub Actions `Perl and PHP syntax` check passes on the release pull request before merging to `master`.
+8. Run a plugin install or upgrade smoke test on LoxBerry when the release changes installation, upgrade, dependencies, services, cron jobs, or core runtime behavior.
+9. Commit the release changes.
+10. Push the branch.
+11. Create an annotated tag on the pushed release commit:
 
 ```powershell
 git tag -a Smartmeter-V<version> -m "Smartmeter V<version>"
 git push origin Smartmeter-V<version>
 ```
 
-11. Create the GitHub Release for the tag:
+12. Create the GitHub Release for the tag:
    - title: `Smartmeter V<version>`;
    - stable releases must not be marked as prerelease;
    - prereleases must be marked as prerelease;
    - paste the matching `CHANGELOG.md` version entry as release notes.
-12. Verify the GitHub Release page and the tag ZIP URL referenced by `release.cfg`.
-13. If a release is broken after publishing, create a new patch release instead of rewriting or deleting the published tag.
+13. Verify the GitHub Release page and the tag ZIP URL referenced by `release.cfg`.
+14. If a release is broken after publishing, create a new patch release instead of rewriting or deleting the published tag.
 
 ## Token-Efficient Codex Guidance
 
