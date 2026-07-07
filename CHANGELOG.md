@@ -15,7 +15,9 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ### Fixed
 
-- Nothing yet.
+- Added the missing `language.ini` keys for the vzLogger configuration page.
+- Redirected the unused log form path to the existing log file view.
+- Avoided restarting vzLogger after a failed privileged config copy.
 
 ### Upgrade Notes
 

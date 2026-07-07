@@ -96,8 +96,8 @@ sub run_perl
 sub start_bridge
 {
 	if (service_installed($bridge_service)) {
-		system("systemctl", "restart", $bridge_service);
-		print "Restarted $bridge_service service.\n";
+		my $rc = run_privileged("restart $bridge_service", "systemctl", "restart", $bridge_service);
+		print "Restarted $bridge_service service.\n" if ($rc == 0);
 		return;
 	}
 
@@ -118,8 +118,8 @@ sub start_bridge
 sub stop_bridge
 {
 	if (service_installed($bridge_service)) {
-		system("systemctl", "stop", $bridge_service);
-		print "Stopped $bridge_service service.\n";
+		my $rc = run_privileged("stop $bridge_service", "systemctl", "stop", $bridge_service);
+		print "Stopped $bridge_service service.\n" if ($rc == 0);
 		return;
 	}
 
@@ -134,19 +134,23 @@ sub restart_vzlogger
 	}
 
 	if (-e $config_file) {
-		my $copy_rc = system("cp", $config_file, "/etc/vzlogger.conf");
+		my $copy_rc = run_privileged("copy $config_file to /etc/vzlogger.conf", "cp", $config_file, "/etc/vzlogger.conf");
 		print "Copied config to /etc/vzlogger.conf.\n" if ($copy_rc == 0);
-		print "Could not copy config to /etc/vzlogger.conf. Run as root or copy it manually.\n" if ($copy_rc != 0);
+		if ($copy_rc != 0) {
+			print "Could not copy config to /etc/vzlogger.conf. Run as root or copy it manually.\n";
+			print "Skipped vzlogger restart to avoid running with an outdated config.\n";
+			return;
+		}
 	}
 
-	system("systemctl", "restart", "vzlogger");
-	print "Restarted vzlogger service.\n";
+	my $restart_rc = run_privileged("restart vzlogger", "systemctl", "restart", "vzlogger");
+	print "Restarted vzlogger service.\n" if ($restart_rc == 0);
 }
 
 sub stop_vzlogger
 {
 	return if (!command_exists("systemctl"));
-	system("systemctl", "stop", "vzlogger");
+	run_privileged("stop vzlogger", "systemctl", "stop", "vzlogger");
 }
 
 sub read_enabled
@@ -462,6 +466,23 @@ sub shell_quote
 	my ($value) = @_;
 	$value =~ s/'/'"'"'/g;
 	return "'$value'";
+}
+
+sub run_privileged
+{
+	my ($label, @command) = @_;
+	if ($> == 0) {
+		system(@command);
+		return $? >> 8;
+	}
+	if (command_exists("sudo")) {
+		system("sudo", "-n", @command);
+		my $exit = $? >> 8;
+		print "Could not $label via sudo non-interactively.\n" if ($exit != 0);
+		return $exit;
+	}
+	print "Root privileges are required to $label.\n";
+	return 2;
 }
 
 sub message_exit

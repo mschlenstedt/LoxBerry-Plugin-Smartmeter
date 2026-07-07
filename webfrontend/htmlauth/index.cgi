@@ -258,6 +258,12 @@ sub clean_config_value
 	return $default;
 }
 
+sub form_log
+{
+	print $cgi->redirect(-url => "./logfiles.cgi");
+	exit;
+}
+
 
 ##########################################################################
 # Print Form
