@@ -1,0 +1,131 @@
+name: Syntax check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  syntax-check:
+    name: Perl and PHP syntax
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install syntax check dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libconfig-crontab-perl \
+            libconfig-simple-perl \
+            libcgi-pm-perl \
+            libdatetime-perl \
+            libdevice-serialport-perl \
+            libfile-homedir-perl \
+            libhtml-template-perl \
+            libjson-perl \
+            libstring-escape-perl \
+            php-cli
+
+      - name: Prepare LoxBerry Perl stubs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p .github/ci/perl-lib/LoxBerry
+
+          cat > .github/ci/perl-lib/LoxBerry/System.pm <<'PERL'
+          package LoxBerry::System;
+          use strict;
+          use warnings;
+
+          sub import {
+              my $caller = caller;
+              no strict 'refs';
+              ${"${caller}::lbhomedir"} = '/opt/loxberry';
+              ${"${caller}::lbpplugindir"} = 'smartmeter';
+              ${"${caller}::lbpconfigdir"} = '/opt/loxberry/config/plugins/smartmeter';
+              ${"${caller}::lbptemplatedir"} = '/opt/loxberry/templates/plugins/smartmeter';
+              ${"${caller}::lbplogdir"} = '/opt/loxberry/log/plugins/smartmeter';
+          }
+
+          sub pluginversion { return '0.0.0'; }
+          sub readlanguage { return (); }
+
+          1;
+          PERL
+
+          cat > .github/ci/perl-lib/LoxBerry/JSON.pm <<'PERL'
+          package LoxBerry::JSON;
+          use strict;
+          use warnings;
+          1;
+          PERL
+
+          cat > .github/ci/perl-lib/LoxBerry/Log.pm <<'PERL'
+          package LoxBerry::Log;
+          use strict;
+          use warnings;
+
+          sub import {
+              my $caller = caller;
+              no strict 'refs';
+              ${"${caller}::lbhomedir"} = '/opt/loxberry';
+              ${"${caller}::lbpplugindir"} = 'smartmeter';
+              ${"${caller}::lbpconfigdir"} = '/opt/loxberry/config/plugins/smartmeter';
+              ${"${caller}::lbptemplatedir"} = '/opt/loxberry/templates/plugins/smartmeter';
+              ${"${caller}::lbplogdir"} = '/opt/loxberry/log/plugins/smartmeter';
+          }
+
+          1;
+          PERL
+
+          cat > .github/ci/perl-lib/LoxBerry/Web.pm <<'PERL'
+          package LoxBerry::Web;
+          use strict;
+          use warnings;
+
+          sub lbheader { return; }
+          sub lbfooter { return; }
+
+          1;
+          PERL
+
+      - name: Check Perl syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          found=0
+          while IFS= read -r -d '' file; do
+            found=1
+            perl -I.github/ci/perl-lib -c "$file"
+          done < <(find . -type f \( -name '*.pl' -o -name '*.pm' -o -name '*.cgi' \) -print0)
+
+          if [ "$found" -eq 0 ]; then
+            echo "No Perl files found."
+          fi
+
+      - name: Check PHP syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          found=0
+          while IFS= read -r -d '' file; do
+            found=1
+            php -l "$file"
+          done < <(find . -type f -name '*.php' -print0)
+
+          if [ "$found" -eq 0 ]; then
+            echo "No PHP files found."
+          fi
