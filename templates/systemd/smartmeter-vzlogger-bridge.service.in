@@ -1,0 +1,16 @@
+[Unit]
+Description=SmartMeter v2 vzLogger MQTT bridge
+After=network-online.target mosquitto.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=loxberry
+Group=loxberry
+ExecStart=/usr/bin/perl __LBHOMEDIR__/bin/plugins/__PLUGINFOLDER__/vzlogger_mqtt_bridge.pl --foreground
+ExecStop=/usr/bin/perl __LBHOMEDIR__/bin/plugins/__PLUGINFOLDER__/vzlogger_mqtt_bridge.pl --stop
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

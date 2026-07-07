@@ -4,6 +4,22 @@
 # Remove only the UDEV rule created by this plugin's daemon.
 
 UDEV_RULE="/etc/udev/rules.d/99-smartmeter.rules"
+BRIDGE_SERVICE="smartmeter-v2-vzlogger-bridge.service"
+BRIDGE_UNIT="/etc/systemd/system/$BRIDGE_SERVICE"
+
+if [ -f "$BRIDGE_UNIT" ]; then
+    echo "<INFO> Removing Smartmeter vzLogger bridge service"
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl stop "$BRIDGE_SERVICE" >/dev/null 2>&1 || true
+        systemctl disable "$BRIDGE_SERVICE" >/dev/null 2>&1 || true
+    fi
+    rm -f "$BRIDGE_UNIT"
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl daemon-reload >/dev/null 2>&1 || true
+    fi
+else
+    echo "<INFO> Smartmeter vzLogger bridge service not found"
+fi
 
 if [ -f "$UDEV_RULE" ] && grep -q "LoxBerry SML-eMon Plugin device rule file" "$UDEV_RULE"; then
     echo "<INFO> Removing Smartmeter UDEV rule"

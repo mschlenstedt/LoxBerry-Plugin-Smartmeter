@@ -88,6 +88,35 @@ migrate_config()
 		sed -i '/^SENDMQTT=/a MQTTTOPIC=smartmeter' "$configfile"
 		echo "<INFO> Added default MQTT topic"
 	fi
+
+	if ! grep -q '^\[VZLOGGER\]' "$configfile"; then
+		cat >> "$configfile" <<'EOF'
+
+[VZLOGGER]
+LOCALPORT=18080
+VERBOSITY=5
+UDPINTERVAL=5
+DEBUG=0
+EOF
+		echo "<INFO> Added default vzLogger settings"
+	else
+		if ! grep -q '^LOCALPORT=' "$configfile"; then
+			sed -i '/^\[VZLOGGER\]/a LOCALPORT=18080' "$configfile"
+			echo "<INFO> Added default vzLogger local HTTP port"
+		fi
+		if ! grep -q '^VERBOSITY=' "$configfile"; then
+			sed -i '/^\[VZLOGGER\]/a VERBOSITY=5' "$configfile"
+			echo "<INFO> Added default vzLogger verbosity"
+		fi
+		if ! grep -q '^UDPINTERVAL=' "$configfile"; then
+			sed -i '/^\[VZLOGGER\]/a UDPINTERVAL=5' "$configfile"
+			echo "<INFO> Added default vzLogger UDP interval"
+		fi
+		if ! grep -q '^DEBUG=' "$configfile"; then
+			sed -i '/^\[VZLOGGER\]/a DEBUG=0' "$configfile"
+			echo "<INFO> Added default vzLogger debug setting"
+		fi
+	fi
 }
 
 echo "<INFO> Copy back existing config files"
@@ -95,6 +124,14 @@ cp -v -r "/tmp/$ARGV1"_upgrade/config/"$ARGV3"/* "$ARGV5/config/plugins/$ARGV3/"
 
 echo "<INFO> Migrate config files"
 migrate_config
+
+echo "<INFO> Ensure executable permissions for vzLogger helper scripts"
+chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_config.pl" 2>/dev/null || true
+chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_validate.pl" 2>/dev/null || true
+chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_control.pl" 2>/dev/null || true
+chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_mqtt_bridge.pl" 2>/dev/null || true
+chmod +x "$ARGV5/bin/plugins/$ARGV3/install_vzlogger_package.sh" 2>/dev/null || true
+chmod +x "$ARGV5/bin/plugins/$ARGV3/install_vzlogger_bridge_service.sh" 2>/dev/null || true
 
 echo "<INFO> Copy back existing log files"
 if [ -d "/tmp/$ARGV1"_upgrade/log/"$ARGV3" ]; then

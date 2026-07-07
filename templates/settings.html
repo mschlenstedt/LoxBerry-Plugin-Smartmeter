@@ -47,11 +47,221 @@
 <!-- ****************************************************************************************** -->
 
 <TMPL_IF FORM_VZLOGGER>
+	<form method="post" data-ajax="false" name="vzlogger_form" id="vzlogger_form" action="./index.cgi">
+	<input type="hidden" name="saveformdata" value="1">
+
+	<TMPL_IF VZLOGGER_MESSAGE>
+		<pre style="background-color: rgba(255,255,200,0.4); border: 1px solid #888; padding: 10px;"><TMPL_VAR VZLOGGER_MESSAGE></pre>
+	</TMPL_IF>
+
+	<table border=0 width="100%" cellpadding="10">
+	<tr>
+		<td colspan=4><h2><TMPL_VAR NAME=T::VZLOGGER.GENERAL_SETTINGS></h2></td>
+	</tr>
+	<tr>
+		<td width="20%"><label for="read"><TMPL_VAR NAME=T::VZLOGGER.READ_METERS></label></td>
+		<td width="55%">
+			<select onChange="disable_cron();" id="read" name="read" data-role="flipswitch">
+				<option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option>
+				<option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option>
+			</select>
+		</td>
+		<td width="5%">&nbsp;</td>
+		<td width="20%"><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.READ_METERS_HELP></font></td>
+	</tr>
+	<tr>
+		<td><label for="cron"><TMPL_VAR NAME=T::VZLOGGER.UPDATE_CYCLE></label></td>
+		<td>
+			<select id="cron" name="cron" data-mini="true" data-native-menu="true">
+				<option value="M"><TMPL_VAR NAME=T::FORMTABLE.MINIMAL></option>
+				<option value="1"><TMPL_VAR NAME=T::FORMTABLE.1MINUTE></option>
+				<option value="3"><TMPL_VAR NAME=T::FORMTABLE.3MINUTE></option>
+				<option value="5"><TMPL_VAR NAME=T::FORMTABLE.5MINUTE></option>
+				<option value="10"><TMPL_VAR NAME=T::FORMTABLE.10MINUTE></option>
+				<option value="15"><TMPL_VAR NAME=T::FORMTABLE.15MINUTE></option>
+				<option value="30"><TMPL_VAR NAME=T::FORMTABLE.30MINUTE></option>
+				<option value="60"><TMPL_VAR NAME=T::FORMTABLE.60MINUTE></option>
+			</select>
+		</td>
+		<td>&nbsp;</td>
+		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.UPDATE_CYCLE_HELP></font></td>
+	</tr>
+	<tr>
+		<td><label for="mqtttopic"><TMPL_VAR NAME=T::VZLOGGER.MQTT_BASE_TOPIC></label></td>
+		<td>
+			<input id="mqtttopic" name="mqtttopic" type="text" class="textfield" value="<TMPL_VAR MQTTTOPIC>"
+				data-validation="custom" data-validation-regexp="^[^#+]+$">
+		</td>
+		<td>&nbsp;</td>
+		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_BASE_TOPIC_HELP></font></td>
+	</tr>
+	<tr>
+		<td><label for="sendudp"><TMPL_VAR NAME=T::VZLOGGER.SEND_UDP></label></td>
+		<td>
+			<select onChange="disable_udp();" id="sendudp" name="sendudp" data-role="flipswitch">
+				<option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option>
+				<option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option>
+			</select>
+			<label id="labeludpport" for="udpport"><TMPL_VAR NAME=T::VZLOGGER.PORT></label>
+			<input id="udpport" name="udpport" type="text" data-validation="number" value="<TMPL_VAR UDPPORT>"
+				data-validation-allowing="range[1;65000]">
+			<label for="vzlogger_udpinterval"><TMPL_VAR NAME=T::VZLOGGER.CYCLE_SECONDS></label>
+			<input id="vzlogger_udpinterval" name="vzlogger_udpinterval" type="text" data-validation="number" value="<TMPL_VAR VZLOGGER_UDPINTERVAL>"
+				data-validation-allowing="range[1;86400]">
+		</td>
+		<td>&nbsp;</td>
+		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.SEND_UDP_HELP></font></td>
+	</tr>
+	<tr>
+		<td><label for="vzlogger_localport"><TMPL_VAR NAME=T::VZLOGGER.HTTP_PORT></label></td>
+		<td>
+			<input id="vzlogger_localport" name="vzlogger_localport" type="text" data-validation="number" value="<TMPL_VAR VZLOGGER_LOCALPORT>"
+				data-validation-allowing="range[1024;65000]">
+			<label for="vzlogger_verbosity"><TMPL_VAR NAME=T::VZLOGGER.VERBOSITY></label>
+			<input id="vzlogger_verbosity" name="vzlogger_verbosity" type="text" data-validation="number" value="<TMPL_VAR VZLOGGER_VERBOSITY>"
+				data-validation-allowing="range[0;15]">
+		</td>
+		<td>&nbsp;</td>
+		<td><font size="-1"><a href="<TMPL_VAR VZLOGGER_LIVEURL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_LIVE_READINGS></a></font></td>
+	</tr>
+	<tr>
+		<td><label for="vzlogger_debug"><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG></label></td>
+		<td>
+			<select id="vzlogger_debug" name="vzlogger_debug" data-role="flipswitch">
+				<option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option>
+				<option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option>
+			</select>
+		</td>
+		<td>&nbsp;</td>
+		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG_HELP></font></td>
+	</tr>
+	<tr>
+		<td colspan=4><h2><TMPL_VAR NAME=T::VZLOGGER.IR_HEADS></h2></td>
+	</tr>
+	<TMPL_LOOP NAME=ROWS>
+	<tr>
+		<td colspan=4><h3><TMPL_VAR NAME=SERIAL></h3></td>
+	</tr>
+	<tr>
+		<td><label for="<TMPL_VAR NAME=SERIAL>_name"><TMPL_VAR NAME=T::FORMTABLEROWS.NAME></label></td>
+		<td><input id="<TMPL_VAR NAME=SERIAL>_name" name="<TMPL_VAR NAME=SERIAL>_name" type="text" value="<TMPL_VAR NAME=NAME>"></td>
+		<td>&nbsp;</td>
+		<td><font size="-1"><TMPL_VAR NAME=DEVICE></font></td>
+	</tr>
+	<tr>
+		<td><label for="<TMPL_VAR NAME=SERIAL>_meter"><TMPL_VAR NAME=T::FORMTABLEROWS.METER></label></td>
+		<td>
+			<select id="<TMPL_VAR NAME=SERIAL>_meter" name="<TMPL_VAR NAME=SERIAL>_meter" data-mini="true" data-native-menu="true">
+				<option value="0"><TMPL_VAR NAME=T::FORMTABLEROWS.PLEASESELECT></option>
+				<option value="manual"><TMPL_VAR NAME=T::FORMTABLEROWS.MANUAL></option>
+				<option value="genericd0">Generic D0-Protocol</option>
+				<option value="genericsml">Generic SML-Protocol</option>
+				<option value="emhed300sml">EMH ED300(S) (SML-Protocol)</option>
+				<option value="emhehzksml">EMH eHZ-K / eHZ-IW8E2A (SML-Protocol)</option>
+				<option value="iskra173d0">Iskra MT173 (D0-Protocol)</option>
+				<option value="iskra173sml">Iskra MT173 (SML-Protocol)</option>
+				<option value="iskra174d0">Iskra MT174 (D0-Protocol)</option>
+				<option value="iskra174sml">Iskra MT174 (SML-Protocol)</option>
+				<option value="iskra175d0">Iskra MT175 (D0-Protocol)</option>
+				<option value="iskra175sml">Iskra MT175 (SML-Protocol)</option>
+				<option value="iskra382d0">Iskra MT382 (D0-Protocol)</option>
+				<option value="iskra631sml">Iskra MT631 (SML-Protocol)</option>
+				<option value="iskra681sml">Iskra MT681 (SML-Protocol)</option>
+				<option value="iskra691sml">Iskra MT691 (SML-Protocol)</option>
+				<option value="itronace3000type260d0">Itron ACE3000 Type 260 (D0-Protocol)</option>
+				<option value="landisgyre320d0">Landis &amp; Gyre E320 (D0-Protocol)</option>
+				<option value="landisgyre350d0">Landis &amp; Gyre E350 (D0-Protocol)</option>
+				<option value="landisgyret550d0">Landis &amp; Gyre T550 (D0-Protocol)</option>
+				<option value="pafal20ec3grd0">Pafal 20ec3gr (D0-Protocol)</option>
+				<option value="siemenstd3511d0">Siemens TD-3511 (D0-Protocol)</option>
+				<option value="siemensuh50do">Siemens UH50 (D0-Protocol)</option>
+				<option value="sagemcomt211d0f">Sagemcom S211/T211 Flanders (D0-Protocol)</option>
+				<option value="sagemcomt211d0">Sagemcom S211/T211 (D0-Protocol)</option>
+			</select>
+		</td>
+		<td>&nbsp;</td>
+		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.METER_PRESET_HELP></font></td>
+	</tr>
+	<tr>
+		<td><label for="<TMPL_VAR NAME=SERIAL>_protocol"><TMPL_VAR NAME=T::VZLOGGER.MANUAL_PROTOCOL></label></td>
+		<td>
+			<select id="<TMPL_VAR NAME=SERIAL>_protocol" name="<TMPL_VAR NAME=SERIAL>_protocol" data-mini="true" data-native-menu="true">
+				<option value=""><TMPL_VAR NAME=T::VZLOGGER.PRESET_DEFAULT></option>
+				<option value="genericsml">SML</option>
+				<option value="genericd0">D0</option>
+			</select>
+			<input name="<TMPL_VAR NAME=SERIAL>_startbaudrate" type="text" placeholder="<TMPL_VAR NAME=T::FORMTABLEROWS.STARTBAUDRATE>" value="<TMPL_VAR NAME=STARTBAUDRATE>">
+			<input name="<TMPL_VAR NAME=SERIAL>_baudrate" type="text" placeholder="<TMPL_VAR NAME=T::FORMTABLEROWS.BAUDRATE>" value="<TMPL_VAR NAME=BAUDRATE>">
+			<input name="<TMPL_VAR NAME=SERIAL>_timeout" type="text" placeholder="<TMPL_VAR NAME=T::FORMTABLEROWS.TIMEOUT>" value="<TMPL_VAR NAME=TIMEOUT>">
+			<input name="<TMPL_VAR NAME=SERIAL>_databits" type="text" placeholder="<TMPL_VAR NAME=T::FORMTABLEROWS.DATABITS>" value="<TMPL_VAR NAME=DATABITS>">
+			<input name="<TMPL_VAR NAME=SERIAL>_stopbits" type="text" placeholder="<TMPL_VAR NAME=T::FORMTABLEROWS.STOPBITS>" value="<TMPL_VAR NAME=STOPBITS>">
+			<select name="<TMPL_VAR NAME=SERIAL>_parity" data-mini="true" data-native-menu="true">
+				<option value=""><TMPL_VAR NAME=T::VZLOGGER.PARITY_DEFAULT></option>
+				<option value="none"><TMPL_VAR NAME=T::VZLOGGER.PARITY_NONE></option>
+				<option value="even"><TMPL_VAR NAME=T::VZLOGGER.PARITY_EVEN></option>
+				<option value="odd"><TMPL_VAR NAME=T::VZLOGGER.PARITY_ODD></option>
+			</select>
+		</td>
+		<td>&nbsp;</td>
+		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MANUAL_VALUES_HELP></font></td>
+	</tr>
+	<script>
+		$("#<TMPL_VAR NAME=SERIAL>_meter").val("<TMPL_VAR NAME=METER>");
+		$("#<TMPL_VAR NAME=SERIAL>_protocol").val("<TMPL_VAR NAME=PROTOCOL>");
+		$("select[name='<TMPL_VAR NAME=SERIAL>_parity']").val("<TMPL_VAR NAME=PARITY>");
+	</script>
+	</TMPL_LOOP>
+	<tr>
+		<td colspan=4><h2><TMPL_VAR NAME=T::VZLOGGER.STATUS></h2></td>
+	</tr>
+	<tr>
+		<td><TMPL_VAR NAME=T::VZLOGGER.GENERATED_CONFIG></td>
+		<td colspan=3><code><TMPL_VAR VZLOGGER_CONFIG></code></td>
+	</tr>
+	<tr>
+		<td><TMPL_VAR NAME=T::VZLOGGER.STATUS></td>
+		<td colspan=3><pre><TMPL_VAR VZLOGGER_STATUS></pre></td>
+	</tr>
+	</table>
+
 	<center>
-	<div style="background-color: rgba(255, 255, 200, 0.4); border-radius: 11px; border: 1px solid black; border-spacing: 15px; padding:10px; display:table; margin:0 auto;">
-		<i><TMPL_VAR MENU.HINT_VZLOGGER></i>
-	</div>
+		<button type="submit" name="submitaction" value="install-vzlogger" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="arrow-d"><TMPL_VAR NAME=T::VZLOGGER.INSTALL_PACKAGE></button>
+		<button type="submit" name="submitaction" value="install-bridge-service" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="power"><TMPL_VAR NAME=T::VZLOGGER.INSTALL_BRIDGE_SERVICE></button>
+		<button type="submit" name="submitaction" value="generate" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="check"><TMPL_VAR NAME=T::VZLOGGER.SAVE_GENERATE></button>
+		<button type="submit" name="submitaction" value="validate" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="alert"><TMPL_VAR NAME=T::VZLOGGER.VALIDATE_CONFIG></button>
+		<button type="submit" name="submitaction" value="debug-log" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search"><TMPL_VAR NAME=T::VZLOGGER.CREATE_DEBUG_LOG></button>
+		<button type="submit" name="submitaction" value="apply" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="gear"><TMPL_VAR NAME=T::VZLOGGER.SAVE_APPLY></button>
 	</center>
+	</form>
+
+	<script>
+		$("#read").val("<TMPL_VAR READ>");
+		$("#cron").val("<TMPL_VAR CRON>");
+		$("#sendudp").val("<TMPL_VAR SENDUDP>");
+		$("#vzlogger_debug").val("<TMPL_VAR VZLOGGER_DEBUG>");
+		disable_cron();
+		disable_udp();
+
+		function disable_cron() {
+			if ($("#read").val() == "0") {
+				$("#cron").addClass("ui-disabled");
+			} else {
+				$("#cron").removeClass("ui-disabled");
+			}
+		}
+
+		function disable_udp() {
+			if ($("#sendudp").val() == "0") {
+				$("#udpport").addClass("ui-disabled");
+				$("#vzlogger_udpinterval").addClass("ui-disabled");
+				$("#labeludpport").addClass("ui-disabled");
+			} else {
+				$("#udpport").removeClass("ui-disabled");
+				$("#vzlogger_udpinterval").removeClass("ui-disabled");
+				$("#labeludpport").removeClass("ui-disabled");
+			}
+		}
+	</script>
 </TMPL_IF>
 
 <!-- ****************************************************************************************** -->
