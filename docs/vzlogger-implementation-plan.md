@@ -104,7 +104,7 @@ Implemented files:
 - `[x]` Send UDP cyclically from cached values to configured Miniservers.
 - `[~]` Parse plausible vzLogger MQTT payloads and UUID-in-topic formats.
 - `[x]` Add debug logging for raw MQTT messages, parser decisions, mapped cache names, and ignored messages.
-- `[x]` Add a diagnostic debug-log action to capture status, config, mapping, logs, cache files, and MQTT samples for parser verification.
+- `[x]` Add a diagnostic debug-log action to capture status, config, mapping, control/UI action logs, install/plugin logs, cache files, and MQTT samples for parser verification.
 - `[ ]` Capture real vzLogger MQTT topics/payloads on a target system.
 - `[ ]` Adjust bridge parser to exact real payload format.
 - `[ ]` Add last-value and last-update display to the web UI.

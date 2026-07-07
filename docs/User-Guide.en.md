@@ -81,10 +81,12 @@ Enable **Debug log** before reproducing a problem. This makes the MQTT bridge lo
 Use **Create debug log** to create a diagnostic log in the runtime directory. It includes:
 
 - package, apt source, service, bridge, and validation status
+- recent vzLogger control and web action output
 - `vzlogger --version` output, if available
 - recent `systemctl` and `journalctl` output
 - plugin config, generated `vzlogger.conf`, and `vzlogger_channels.json`
 - bridge log tail
+- available LoxBerry install and plugin log tails
 - current `.data` cache files
 - a bounded MQTT capture from `<base topic>/vzlogger/#`, if `timeout` and `mosquitto_sub` are available
 

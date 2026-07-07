@@ -14,10 +14,12 @@ my $plugin_config_file = "$home/config/plugins/$psubfolder/smartmeter.cfg";
 my $config_file = "$home/config/plugins/$psubfolder/vzlogger.conf";
 my $mapping_file = "$home/config/plugins/$psubfolder/vzlogger_channels.json";
 my $runtime_dir = "/var/run/shm/$psubfolder";
+my $control_log_file = "$runtime_dir/vzlogger_control.log";
 my $bridge_service = "smartmeter-v2-vzlogger-bridge";
 my $action = shift @ARGV || "status";
 
 make_path($runtime_dir) if (!-d $runtime_dir);
+log_control("action=$action user=" . ($ENV{USER} || $ENV{LOGNAME} || "unknown"));
 
 if ($action eq "generate") {
 	my $rc = run_perl("$bindir/vzlogger_config.pl");
@@ -89,8 +91,11 @@ exit 1;
 sub run_perl
 {
 	my @args = @_;
+	log_control("run: $^X " . join(" ", @args));
 	system($^X, @args);
-	return $? >> 8;
+	my $exit = $? >> 8;
+	log_control("exit=$exit: $^X " . join(" ", @args));
+	return $exit;
 }
 
 sub start_bridge
@@ -167,18 +172,22 @@ sub install_vzlogger
 
 	if ($> == 0) {
 		system("sh", $script);
-		return $? >> 8;
+		my $exit = $? >> 8;
+		log_control("exit=$exit: sh $script");
+		return $exit;
 	}
 
 	if (command_exists("sudo")) {
 		system("sudo", "-n", "sh", $script);
 		my $exit = $? >> 8;
+		log_control("exit=$exit: sudo -n sh $script");
 		return $exit if ($exit == 0);
 		print "Could not run sudo non-interactively. Run as root: sh $script\n";
 		return $exit || 1;
 	}
 
 	print "Root privileges are required. Run as root: sh $script\n";
+	log_control("root required: sh $script");
 	return 2;
 }
 
@@ -190,18 +199,22 @@ sub install_bridge_service
 
 	if ($> == 0) {
 		system("sh", $script, $home, $psubfolder, $action);
-		return $? >> 8;
+		my $exit = $? >> 8;
+		log_control("exit=$exit: sh $script $home $psubfolder $action");
+		return $exit;
 	}
 
 	if (command_exists("sudo")) {
 		system("sudo", "-n", "sh", $script, $home, $psubfolder, $action);
 		my $exit = $? >> 8;
+		log_control("exit=$exit: sudo -n sh $script $home $psubfolder $action");
 		return $exit if ($exit == 0);
 		print "Could not run sudo non-interactively. Run as root: sh $script $home $psubfolder $action\n";
 		return $exit || 1;
 	}
 
 	print "Root privileges are required. Run as root: sh $script $home $psubfolder $action\n";
+	log_control("root required: sh $script $home $psubfolder $action");
 	return 2;
 }
 
@@ -286,7 +299,9 @@ sub create_debug_log
 	print_file($fh, "Plugin config", $plugin_config_file, 0);
 	print_file($fh, "Generated vzLogger config", $config_file, 1);
 	print_file($fh, "Channel mapping", $mapping_file, 0);
+	print_file($fh, "Control action log", $control_log_file, 0, 200);
 	print_file($fh, "Bridge log tail", "$runtime_dir/vzlogger_mqtt_bridge.log", 0, 200);
+	print_loxberry_logs($fh);
 	print_runtime_cache($fh);
 	print_mqtt_capture($fh);
 
@@ -360,6 +375,32 @@ sub print_runtime_cache
 	}
 	foreach my $file (@files) {
 		print_file($fh, "Cache file $file", "$runtime_dir/$file", 0);
+	}
+}
+
+sub print_loxberry_logs
+{
+	my ($fh) = @_;
+	print_section($fh, "LoxBerry install and plugin logs");
+	my @candidates = (
+		"$home/log/plugins/$psubfolder/*.log",
+		"$home/log/system/plugininstall*.log",
+		"$home/log/system_tmpfs/plugininstall*.log",
+		"$home/log/system_tmpfs/*.log",
+		"/opt/loxberry/log/system/plugininstall*.log",
+		"/opt/loxberry/log/system_tmpfs/plugininstall*.log",
+	);
+	my %seen;
+	my @files;
+	foreach my $pattern (@candidates) {
+		push @files, grep { !$seen{$_}++ && -f $_ } glob($pattern);
+	}
+	if (!@files) {
+		print $fh "No matching LoxBerry install or plugin log files found.\n";
+		return;
+	}
+	foreach my $file (sort @files) {
+		print_file($fh, "Log tail $file", $file, 1, 120);
 	}
 }
 
@@ -471,18 +512,31 @@ sub shell_quote
 sub run_privileged
 {
 	my ($label, @command) = @_;
+	log_control("privileged: $label");
 	if ($> == 0) {
 		system(@command);
-		return $? >> 8;
+		my $exit = $? >> 8;
+		log_control("exit=$exit: " . join(" ", @command));
+		return $exit;
 	}
 	if (command_exists("sudo")) {
 		system("sudo", "-n", @command);
 		my $exit = $? >> 8;
 		print "Could not $label via sudo non-interactively.\n" if ($exit != 0);
+		log_control("exit=$exit: sudo -n " . join(" ", @command));
 		return $exit;
 	}
 	print "Root privileges are required to $label.\n";
+	log_control("root required: " . join(" ", @command));
 	return 2;
+}
+
+sub log_control
+{
+	my ($message) = @_;
+	open(my $fh, ">>", $control_log_file) or return;
+	print $fh timestamp() . " $message\n";
+	close($fh);
 }
 
 sub message_exit

@@ -81,10 +81,12 @@ Aktiviere **Debug-Log**, bevor ein Problem reproduziert wird. Dadurch protokolli
 Mit **Debug-Log erstellen** wird ein Diagnose-Log im Laufzeitverzeichnis erzeugt. Es enthält:
 
 - Paket-, apt-Source-, Service-, Bridge- und Validierungsstatus
+- letzte vzLogger-Control- und Web-Aktionsausgaben
 - Ausgabe von `vzlogger --version`, falls verfügbar
 - aktuelle `systemctl`- und `journalctl`-Auszüge
 - Plugin-Konfiguration, generierte `vzlogger.conf` und `vzlogger_channels.json`
 - Ende des Bridge-Logs
+- verfügbare LoxBerry-Installations- und Plugin-Logauszüge
 - aktuelle `.data`-Cachedateien
 - begrenzten MQTT-Mitschnitt von `<Basis-Topic>/vzlogger/#`, wenn `timeout` und `mosquitto_sub` verfügbar sind
 

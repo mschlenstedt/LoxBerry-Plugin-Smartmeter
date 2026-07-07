@@ -247,7 +247,27 @@ sub run_control
 	my $script = "$lbpbindir/vzlogger_control.pl";
 	return "Control script not found: $script" if (!-e $script);
 	my $output = `$^X "$script" "$action" 2>&1`;
-	return $output || "No output.";
+	$output ||= "No output.";
+	write_control_log($action, $output);
+	return $output;
+}
+
+sub write_control_log
+{
+	my ($action, $output) = @_;
+	my $runtime_dir = "/var/run/shm/$lbpplugindir";
+	make_path($runtime_dir) if (!-d $runtime_dir);
+	open(my $fh, ">>", "$runtime_dir/vzlogger_control.log") or return;
+	print $fh timestamp() . " web-action=$action\n";
+	print $fh $output;
+	print $fh "\n" if ($output !~ /\n\z/);
+	close($fh);
+}
+
+sub timestamp
+{
+	my ($sec, $min, $hour, $mday, $mon, $year) = localtime();
+	return sprintf("%04d%02d%02d-%02d%02d%02d", $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
 }
 
 sub clean_config_value

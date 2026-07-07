@@ -18,6 +18,7 @@ All notable user-visible changes should be documented in this file. Use the late
 - Added the missing `language.ini` keys for the vzLogger configuration page.
 - Redirected the unused log form path to the existing log file view.
 - Avoided restarting vzLogger after a failed privileged config copy.
+- Added persistent vzLogger control/UI action logging and included available LoxBerry install/plugin log tails in the debug log.
 
 ### Upgrade Notes
 
