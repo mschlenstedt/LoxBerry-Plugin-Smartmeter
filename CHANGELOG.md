@@ -6,6 +6,24 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ### Added
 
+- Nothing yet.
+
+### Changed
+
+- Nothing yet.
+
+### Fixed
+
+- Nothing yet.
+
+### Upgrade Notes
+
+- Nothing yet.
+
+## 2.0.0.11 - 2026-07-07
+
+### Added
+
 - Added vzLogger debug logging and a diagnostic log action for service status, generated config, channel mapping, bridge logs, cache files, and MQTT parser evidence.
 
 ### Changed
@@ -22,7 +40,7 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ### Upgrade Notes
 
-- Nothing yet.
+- This is a prerelease for LoxBerry target-system validation of the vzLogger migration MVP.
 
 ## 2.0.0.10 - 2026-07-07
 
