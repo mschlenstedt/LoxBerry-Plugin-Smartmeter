@@ -11,6 +11,7 @@ The legacy reader remains available for existing installations and meter setups 
 - [English user guide](docs/User-Guide.en.md)
 - [Deutsche Benutzerdokumentation](docs/User-Guide.de.md)
 - [Documentation index](docs/Readme.md)
+- [Known issues](KNOWN-ISSUES.md)
 - [Release process](docs/release-process.md)
 
 ## Main Features
