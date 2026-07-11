@@ -62,12 +62,10 @@ git tag -a Smartmeter-V<version> -m "Smartmeter V<version>"
 git push origin Smartmeter-V<version>
 ```
 
-12. Create the GitHub Release for the tag:
-   - title: `Smartmeter V<version>`;
-   - stable releases must not be marked as prerelease;
-   - prereleases must be marked as prerelease;
-   - paste the matching `CHANGELOG.md` version entry as release notes.
-13. Wait for the `Release asset` GitHub Actions workflow to finish. It builds `Smartmeter-V<version>.zip` from the tag with `git archive --worktree-attributes`, verifies `plugin.cfg`, and uploads the ZIP as a release asset with `gh release upload --clobber`.
+12. Wait for the `Release asset` GitHub Actions workflow to finish. It builds `Smartmeter-V<version>.zip` from the tag with `git archive --worktree-attributes`, verifies `plugin.cfg`, creates a draft GitHub Release with the generated ZIP asset, and publishes it as a prerelease.
+   - The workflow uploads the ZIP while the release is still a draft because published GitHub Releases can be immutable.
+   - If the tag workflow did not run, dispatch `Release asset` manually with the same tag.
+13. Verify the GitHub Release title, prerelease flag, release notes, and uploaded `Smartmeter-V<version>.zip` asset.
 14. Verify the GitHub Release page and the ZIP URL referenced by `release.cfg` or `prerelease.cfg`.
 15. If a release is broken after publishing, create a new patch release instead of rewriting or deleting the published tag.
 

@@ -1,9 +1,9 @@
 name: Release asset
 
 on:
-  release:
-    types:
-      - published
+  push:
+    tags:
+      - "Smartmeter-V*"
   workflow_dispatch:
     inputs:
       tag:
@@ -29,7 +29,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             tag="${{ inputs.tag }}"
           else
-            tag="${{ github.event.release.tag_name }}"
+            tag="${GITHUB_REF_NAME}"
           fi
 
           case "$tag" in
@@ -65,7 +65,25 @@ jobs:
           unzip -t "$zip"
           unzip -p "$zip" "${prefix}plugin.cfg" | tr -d '\r' | grep -Fx "VERSION=$version"
 
-      - name: Upload plugin ZIP to release
+      - name: Prepare release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="${{ steps.release.outputs.version }}"
+          notes="dist/release-notes.md"
+
+          awk -v version="$version" '
+            index($0, "## " version) == 1 { in_section = 1; next }
+            in_section && /^## / { exit }
+            in_section { print }
+          ' CHANGELOG.md > "$notes"
+
+          if ! grep -q '[^[:space:]]' "$notes"; then
+            printf 'Smartmeter V%s\n' "$version" > "$notes"
+          fi
+
+      - name: Create release with plugin ZIP
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -75,5 +93,18 @@ jobs:
           tag="${{ steps.release.outputs.tag }}"
           version="${{ steps.release.outputs.version }}"
           zip="dist/Smartmeter-V$version.zip"
+          notes="dist/release-notes.md"
 
-          gh release upload "$tag" "$zip" --clobber
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists. Refusing to modify an existing release." >&2
+            exit 1
+          fi
+
+          gh release create "$tag" "$zip" \
+            --draft \
+            --prerelease \
+            --verify-tag \
+            --title "Smartmeter V$version" \
+            --notes-file "$notes"
+
+          gh release edit "$tag" --draft=false --prerelease

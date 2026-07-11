@@ -4,6 +4,12 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
+## 2.0.0.23 - 2026-07-11
+
+- Publish the GitHub-built plugin ZIP through a draft-release flow so immutable GitHub Releases already contain `Smartmeter-V<version>.zip` when they become public.
+- Automate GitHub Release plugin ZIP asset creation and point prerelease update metadata at the uploaded release asset instead of GitHub's automatic source archive.
+- Fix fresh installs where `preroot.sh` created the plugin config directory as root before LoxBerry copied `smartmeter.cfg`, causing the config install step to fail with `Permission denied`.
+
 ## 2.0.0.22 - 2026-07-11
 
 - Automate GitHub Release plugin ZIP asset creation and point prerelease update metadata at the uploaded release asset instead of GitHub's automatic source archive.
