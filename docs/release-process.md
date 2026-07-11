@@ -10,7 +10,8 @@ A release means:
 - plugin versions and update metadata are bumped;
 - release notes are prepared in `CHANGELOG.md`;
 - a Git tag is created and pushed;
-- a GitHub Release is created with the release notes.
+- a GitHub Release is created with the release notes;
+- the GitHub Release contains the generated plugin ZIP asset.
 
 ## Version Locations
 
@@ -37,6 +38,12 @@ Smartmeter-V2.0.0.10
 1. Confirm target version and whether this is a stable release or prerelease.
 2. Check `git status --short`; do not include unrelated local changes.
 3. Update version metadata in the files listed above.
+   - Use the release asset URL for `ARCHIVEURL`, not the automatic GitHub source archive:
+
+```text
+https://github.com/Miraculix2050/LoxBerry-Plugin-Smartmeter-v2/releases/download/Smartmeter-V<version>/Smartmeter-V<version>.zip
+```
+
 4. Confirm user documentation is current for changed behavior, setup, configuration, dependencies, and upgrade steps. Check `docs/Readme.md`, `docs/User-Guide.de.md`, and `docs/User-Guide.en.md` when user-facing behavior changed.
 5. Move the relevant `CHANGELOG.md` entries from `Unreleased` to the target version and date.
 6. Run cheap validation:
@@ -60,8 +67,9 @@ git push origin Smartmeter-V<version>
    - stable releases must not be marked as prerelease;
    - prereleases must be marked as prerelease;
    - paste the matching `CHANGELOG.md` version entry as release notes.
-13. Verify the GitHub Release page and the tag ZIP URL referenced by `release.cfg`.
-14. If a release is broken after publishing, create a new patch release instead of rewriting or deleting the published tag.
+13. Wait for the `Release asset` GitHub Actions workflow to finish. It builds `Smartmeter-V<version>.zip` from the tag with `git archive --worktree-attributes`, verifies `plugin.cfg`, and uploads the ZIP as a release asset with `gh release upload --clobber`.
+14. Verify the GitHub Release page and the ZIP URL referenced by `release.cfg` or `prerelease.cfg`.
+15. If a release is broken after publishing, create a new patch release instead of rewriting or deleting the published tag.
 
 ## Token-Efficient Codex Guidance
 

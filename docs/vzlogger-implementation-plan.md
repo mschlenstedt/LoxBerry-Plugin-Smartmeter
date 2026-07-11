@@ -21,7 +21,7 @@ This plan tracks the migration from the legacy SmartMeter reader to a vzLogger-b
 - `[x]` Remove the explicit `Install vzLogger package` UI button.
 - `[x]` Stop and disable the vzLogger service in `postroot.sh` unless vzLogger mode and meter reading are explicitly enabled.
 - `[x]` Preserve an active vzLogger service across plugin upgrades by recording the pre-upgrade state in `preroot.sh` and applying the generated configuration from `postroot.sh`.
-- `[ ]` Verify `preroot.sh` repository setup on the target LoxBerry versions as root.
+- `[~]` Verify `preroot.sh` repository setup on the target LoxBerry versions as root.
 - `[ ]` Confirm supported Debian/Raspberry Pi OS codenames and architecture behavior.
 
 Decision notes:
@@ -29,6 +29,7 @@ Decision notes:
 - The plugin no longer ships a stale ARM binary. This avoids architecture drift and security/maintenance issues.
 - The repository setup uses explicit keyring and source-list setup instead of a blind `curl | bash`.
 - The normal plugin dependency file installs `vzlogger` and `mosquitto-clients`; apt can update an already installed `vzlogger` package to the current candidate version.
+- Target test 2.0.0.21 confirmed repository setup and package installation on Debian trixie, but also showed that the root hook must hand the plugin config directory back to the `loxberry` user before the normal config copy step.
 
 Implemented files:
 

@@ -35,6 +35,11 @@ else
 	echo "<INFO> Marked vzLogger for plugin-managed installation."
 fi
 
+if id loxberry >/dev/null 2>&1; then
+	chown -R loxberry.loxberry "$MARKER_DIR"
+	chmod u+rwX,go+rX "$MARKER_DIR"
+fi
+
 if [ -r /etc/os-release ]; then
 	. /etc/os-release
 else

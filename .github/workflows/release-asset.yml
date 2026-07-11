@@ -1,0 +1,79 @@
+name: Release asset
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, for example Smartmeter-V2.0.0.21"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-release-asset:
+    name: Build and upload plugin ZIP
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Determine release tag
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${{ github.event.release.tag_name }}"
+          fi
+
+          case "$tag" in
+            Smartmeter-V*) ;;
+            *)
+              echo "Unsupported tag format: $tag" >&2
+              exit 1
+              ;;
+          esac
+
+          version="${tag#Smartmeter-V}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Check out release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+
+      - name: Build plugin ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag="${{ steps.release.outputs.tag }}"
+          version="${{ steps.release.outputs.version }}"
+          prefix="LoxBerry-Plugin-Smartmeter-v2-$tag/"
+          zip="dist/Smartmeter-V$version.zip"
+
+          mkdir -p dist
+          git archive --format=zip --worktree-attributes --prefix="$prefix" -o "$zip" "$tag"
+
+          unzip -t "$zip"
+          unzip -p "$zip" "${prefix}plugin.cfg" | tr -d '\r' | grep -Fx "VERSION=$version"
+
+      - name: Upload plugin ZIP to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          tag="${{ steps.release.outputs.tag }}"
+          version="${{ steps.release.outputs.version }}"
+          zip="dist/Smartmeter-V$version.zip"
+
+          gh release upload "$tag" "$zip" --clobber
