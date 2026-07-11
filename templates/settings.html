@@ -80,7 +80,7 @@
 	<tr>
 		<td width="20%"><label for="implementation"><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_MODE></label></td>
 		<td width="55%">
-			<select id="implementation" name="implementation" data-role="flipswitch">
+			<select id="implementation" name="implementation" data-role="flipswitch" onChange="update_vzlogger_controls();">
 				<option value="legacy"><TMPL_VAR NAME=T::GENERIC.OFF></option>
 				<option value="vzlogger"><TMPL_VAR NAME=T::GENERIC.ON></option>
 			</select>
@@ -337,9 +337,16 @@
 		disable_udp();
 
 		function disable_cron() {
-			var disabled = $("#read").val() == "0";
-			$("#vzlogger_udpinterval, #sendudp, #udpport, #vzlogger_localport, #vzlogger_debug, #vzlogger_service_debug, #vzlogger_loglevel").toggleClass("ui-disabled", disabled);
-			$("#vzlogger_udpinterval, #sendudp, #udpport, #vzlogger_localport, #vzlogger_debug, #vzlogger_service_debug, #vzlogger_loglevel").prop("disabled", disabled);
+			update_vzlogger_controls();
+		}
+
+		function update_vzlogger_controls() {
+			var vzlogger_disabled = $("#implementation").val() != "vzlogger";
+			var bridge_disabled = $("#read").val() == "0";
+			$("#vzlogger_localport, #vzlogger_service_debug, #vzlogger_loglevel").toggleClass("ui-disabled", vzlogger_disabled);
+			$("#vzlogger_localport, #vzlogger_service_debug, #vzlogger_loglevel").prop("disabled", vzlogger_disabled);
+			$("#vzlogger_udpinterval, #sendudp, #udpport, #vzlogger_debug").toggleClass("ui-disabled", bridge_disabled);
+			$("#vzlogger_udpinterval, #sendudp, #udpport, #vzlogger_debug").prop("disabled", bridge_disabled);
 			disable_udp();
 		}
 
