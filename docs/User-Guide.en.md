@@ -29,9 +29,9 @@ After installation, the plugin stops and disables the `vzlogger` service again w
 
 ### Meter Setup
 
-Enable **Bridge service enabled** to let vzLogger and the MQTT bridge provide live values. The **Update cycle** controls how often vzLogger publishes meter values by MQTT; the selection ranges from 5 seconds to 60 minutes. The bridge subscribes to those MQTT values and uses the same cycle for UDP sends. The MQTT base topic is a shared setting and remains configurable independently of the service switch.
+Enable **Read meters** to let vzLogger and the MQTT bridge provide live values. The **Update cycle** controls how often vzLogger publishes meter values by MQTT; the selection ranges from 5 seconds to 60 minutes. The bridge subscribes to those MQTT values and uses the same cycle for UDP sends. The MQTT base topic is a shared setting and remains configurable independently of the service buttons.
 
-Connect an I/R head and select **Rescan for I/R heads**. Then select the detected head and choose a meter preset. The current generator maps presets to the vzLogger protocols `sml` or `d0`. For D0 meters, manual serial settings can be set if the preset defaults are not sufficient.
+Connect an I/R head and select **Rescan for I/R heads**. Then select the detected head and choose a meter preset. A detected I/R head without a meter preset is not enough; validation fails because vzLogger would otherwise start without any configured meter. The current generator maps presets to the vzLogger protocols `sml` or `d0`. For D0 meters, manual serial settings can be set if the preset defaults are not sufficient.
 
 The plugin generates:
 
@@ -50,7 +50,7 @@ If meter reading is disabled, applying the configuration stops vzLogger and the 
 
 ### Service Control
 
-The vzLogger page shows the status of `vzlogger` and the MQTT bridge with service state and PID. The **Restart**, **Start**, and **Stop** buttons are intended only for troubleshooting during operation and are disabled while the vzLogger implementation or **Read meters** is inactive. **Open live data (JSON)** opens vzLogger's integrated HTTP service; `/` returns all configured channels because the index is enabled, while `/<UUID>` returns one channel.
+The vzLogger page shows the status of `vzlogger` and the MQTT bridge with service state and PID. The **Restart**, **Start**, and **Stop** buttons are intended only for troubleshooting during operation and are disabled while the vzLogger implementation or **Read meters** is inactive. Start and Restart actions regenerate and validate the saved configuration before starting services. **Open live data (JSON)** opens vzLogger's integrated HTTP service; `/` returns all configured channels because the index is enabled, while `/<UUID>` returns one channel.
 
 In addition to raw JSON, an automatically refreshed generic web page renders the response every two seconds. The generated OBIS channel configuration determines which channels appear; `vzlogger_channels.json` contains the UUID mapping.
 

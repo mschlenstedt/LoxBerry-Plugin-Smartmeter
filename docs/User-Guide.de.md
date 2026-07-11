@@ -29,9 +29,9 @@ Nach der Installation stoppt und deaktiviert das Plugin den `vzlogger`-Dienst wi
 
 ### Zählereinrichtung
 
-Aktiviere **Bridge-Service aktiv**, damit vzLogger und die MQTT-Bridge Live-Werte bereitstellen. Das **Aktualisierungsintervall** steuert, wie oft vzLogger Zaehlerwerte per MQTT veroeffentlicht; die Auswahl reicht von 5 Sekunden bis 60 Minuten. Die Bridge abonniert diese MQTT-Werte und verwendet denselben Takt fuer UDP-Sendungen. Das MQTT-Basis-Topic ist eine übergreifende Einstellung und bleibt unabhängig vom Dienstschalter konfigurierbar.
+Aktiviere **Zaehler lesen**, damit vzLogger und die MQTT-Bridge Live-Werte bereitstellen. Das **Aktualisierungsintervall** steuert, wie oft vzLogger Zaehlerwerte per MQTT veroeffentlicht; die Auswahl reicht von 5 Sekunden bis 60 Minuten. Die Bridge abonniert diese MQTT-Werte und verwendet denselben Takt fuer UDP-Sendungen. Das MQTT-Basis-Topic ist eine uebergreifende Einstellung und bleibt unabhaengig von den Dienstschaltflaechen konfigurierbar.
 
-Schließe einen I/R-Lesekopf an und wähle **Nach I/R Leseköpfen suchen**. Wähle danach den erkannten Lesekopf und eine Zählervorgabe. Der aktuelle Generator bildet Vorgaben auf die vzLogger-Protokolle `sml` oder `d0` ab. Für D0-Zähler können manuelle serielle Einstellungen gesetzt werden, wenn die Vorgaben nicht ausreichen.
+Schließe einen I/R-Lesekopf an und wähle **Nach I/R Leseköpfen suchen**. Wähle danach den erkannten Lesekopf und eine Zählervorgabe. Ein erkannter Lesekopf ohne Zählervorgabe reicht nicht aus; die Validierung bricht ab, weil vzLogger sonst ohne Meter starten würde. Der aktuelle Generator bildet Vorgaben auf die vzLogger-Protokolle `sml` oder `d0` ab. Für D0-Zähler können manuelle serielle Einstellungen gesetzt werden, wenn die Vorgaben nicht ausreichen.
 
 Das Plugin erzeugt:
 
@@ -50,7 +50,7 @@ Wenn das Zählerlesen deaktiviert ist, stoppt das Anwenden vzLogger und die Brid
 
 ### Dienststeuerung
 
-Die vzLogger-Seite zeigt den Status von `vzlogger` und der MQTT-Bridge mit Dienstzustand und PID. Die Schaltflächen **Restart**, **Start** und **Stop** dienen nur der Fehlersuche während des Betriebs und sind deaktiviert, solange die vzLogger-Implementierung oder **Zähler lesen** nicht aktiv ist. **Live-Daten (JSON) öffnen** ruft den integrierten vzLogger-HTTP-Dienst auf; `/` liefert wegen der aktivierten Indexfunktion alle konfigurierten Kanäle, `/<UUID>` einen einzelnen Kanal.
+Die vzLogger-Seite zeigt den Status von `vzlogger` und der MQTT-Bridge mit Dienstzustand und PID. Die Schaltflächen **Restart**, **Start** und **Stop** dienen nur der Fehlersuche während des Betriebs und sind deaktiviert, solange die vzLogger-Implementierung oder **Zähler lesen** nicht aktiv ist. Start- und Restart-Aktionen erzeugen und pruefen die gespeicherte Konfiguration vor dem Dienststart neu. **Live-Daten (JSON) öffnen** ruft den integrierten vzLogger-HTTP-Dienst auf; `/` liefert wegen der aktivierten Indexfunktion alle konfigurierten Kanäle, `/<UUID>` einen einzelnen Kanal.
 
 Neben den rohen JSON-Daten gibt es eine generisch gerenderte Webseite, die sich alle zwei Sekunden aktualisiert. Die angezeigten Kanäle werden durch die erzeugte OBIS-Kanalkonfiguration bestimmt; die UUID-Zuordnung steht in `vzlogger_channels.json`.
 

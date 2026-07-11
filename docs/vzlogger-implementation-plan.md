@@ -197,8 +197,9 @@ Implemented files:
 
 - `[x]` Add `vzlogger_control.pl` as central command wrapper.
 - `[x]` `generate`: generate config and validate.
-- `[x]` `validate`: validate generated config and mapping.
+- `[x]` `validate`: regenerate the saved config, then validate generated config and mapping.
 - `[x]` `apply`: generate, validate, stop if disabled, otherwise restart vzLogger and bridge.
+- `[x]` `start`/`restart` service actions: regenerate and validate before starting services so form changes do not reuse stale generated config.
 - `[x]` `status`: report package, apt source, config, validation, vzLogger service, bridge service/process.
 - `[x]` `debug-log`: create a diagnostic log for troubleshooting and MQTT parser verification.
 - `[~]` Copy generated config to `/etc/vzlogger.conf` during apply.
@@ -211,6 +212,7 @@ Decision notes:
 
 - Current apply behavior uses `/etc/vzlogger.conf`, because the packaged vzLogger service is expected to use that path.
 - If permission fails, the control script reports that root/manual copy is required.
+- Meter reading with no selected meter preset is invalid. A detected I/R head alone is not enough to start vzLogger because the generated config would contain an empty `meters` list.
 
 Implemented files:
 
@@ -272,6 +274,7 @@ Implemented files:
 - `[x]` Subscribe to generated MQTT topic and capture real messages.
 - `[x]` Confirm `.data` cache updates from the real 2.0.0.17 `chnN/id`, `chnN/uuid`, and `chnN/raw` MQTT sequence using the current bridge parser logic.
 - `[x]` Fix the 2.0.0.19 regression where `chnN/uuid` was received but stored under an empty channel name, so later `chnN/raw` values were ignored.
+- `[x]` Diagnose 2.0.0.24 fresh-install target logs: package install and udev trigger succeed, `/dev/serial/smartmeter/A106Q3RX` is present, but `METER=0` generates an empty `meters` list and vzLogger exits after start.
 - `[ ]` Confirm `.data` files are written below `/var/run/shm/<plugin>/` on the target LoxBerry, including calculated power values when counter channels are present.
 - `[ ]` Confirm plugin HTTP endpoint returns cached values on the target LoxBerry.
 - `[ ]` Confirm UDP messages reach all configured Miniservers.

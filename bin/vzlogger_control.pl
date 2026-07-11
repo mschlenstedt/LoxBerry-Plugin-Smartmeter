@@ -25,15 +25,11 @@ make_path($plugin_log_dir) if (!-d $plugin_log_dir);
 log_control("action=$action user=" . ($ENV{USER} || $ENV{LOGNAME} || "unknown"));
 
 if ($action eq "generate") {
-	my $rc = run_perl("$bindir/vzlogger_config.pl");
-	exit $rc if ($rc != 0);
-	exit run_perl("$bindir/vzlogger_validate.pl");
+	exit generate_and_validate();
 }
 
 if ($action eq "apply") {
-	my $rc = run_perl("$bindir/vzlogger_config.pl");
-	exit $rc if ($rc != 0);
-	$rc = run_perl("$bindir/vzlogger_validate.pl");
+	my $rc = generate_and_validate();
 	exit $rc if ($rc != 0);
 	if (!vzlogger_enabled()) {
 		stop_bridge();
@@ -47,11 +43,23 @@ if ($action eq "apply") {
 }
 
 if ($action eq "restart-vzlogger") {
+	my $rc = generate_and_validate();
+	exit $rc if ($rc != 0);
+	if (!vzlogger_enabled()) {
+		print "vzLogger meter reading is disabled. Did not restart vzLogger.\n";
+		exit 0;
+	}
 	restart_vzlogger();
 	exit 0;
 }
 
 if ($action eq "start-vzlogger") {
+	my $rc = generate_and_validate();
+	exit $rc if ($rc != 0);
+	if (!vzlogger_enabled()) {
+		print "vzLogger meter reading is disabled. Did not start vzLogger.\n";
+		exit 0;
+	}
 	start_vzlogger();
 	exit 0;
 }
@@ -62,15 +70,27 @@ if ($action eq "stop-vzlogger") {
 }
 
 if ($action eq "restart-bridge") {
+	my $rc = generate_and_validate();
+	exit $rc if ($rc != 0);
+	if (!vzlogger_enabled()) {
+		print "vzLogger meter reading is disabled. Did not restart the MQTT bridge.\n";
+		exit 0;
+	}
 	restart_bridge();
 	exit 0;
 }
 
 if ($action eq "validate") {
-	exit run_perl("$bindir/vzlogger_validate.pl");
+	exit generate_and_validate();
 }
 
 if ($action eq "start-bridge") {
+	my $rc = generate_and_validate();
+	exit $rc if ($rc != 0);
+	if (!vzlogger_enabled()) {
+		print "vzLogger meter reading is disabled. Did not start the MQTT bridge.\n";
+		exit 0;
+	}
 	start_bridge();
 	exit 0;
 }
@@ -115,6 +135,13 @@ sub run_perl
 	my $exit = $? >> 8;
 	log_control("exit=$exit: $^X " . join(" ", @args));
 	return $exit;
+}
+
+sub generate_and_validate
+{
+	my $rc = run_perl("$bindir/vzlogger_config.pl");
+	return $rc if ($rc != 0);
+	return run_perl("$bindir/vzlogger_validate.pl");
 }
 
 sub start_bridge

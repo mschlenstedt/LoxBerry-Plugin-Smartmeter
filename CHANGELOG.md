@@ -4,6 +4,11 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
+## 2.0.0.25 - 2026-07-11
+
+- Regenerate and validate the saved vzLogger configuration before manual service Start/Restart actions, so service controls no longer reuse a stale `/etc/vzlogger.conf`.
+- Fail vzLogger validation when meter reading is enabled but no detected I/R head has a meter preset selected, instead of attempting to start `vzlogger` with an empty `meters` list.
+
 ## 2.0.0.24 - 2026-07-11
 
 - Fix fresh installs so the SmartMeter I/R head udev rule is installed and triggered from the root hook immediately, making `/dev/serial/smartmeter/*` readers available before the first reboot.

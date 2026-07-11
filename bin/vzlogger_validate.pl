@@ -3,11 +3,13 @@
 use strict;
 use warnings;
 
+use Config::Simple;
 use JSON::PP;
 use LoxBerry::System;
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
+my $plugin_config_file = "$home/config/plugins/$psubfolder/smartmeter.cfg";
 my $config_file = "$home/config/plugins/$psubfolder/vzlogger.conf";
 my $mapping_file = "$home/config/plugins/$psubfolder/vzlogger_channels.json";
 
@@ -76,7 +78,13 @@ sub validate_config
 	push @errors, "meters section must be an array." if (ref($config->{meters}) ne "ARRAY");
 	return if (ref($config->{meters}) ne "ARRAY");
 
-	push @warnings, "No meters are configured. vzLogger can start, but no data will be read." if (!@{$config->{meters}});
+	if (!@{$config->{meters}}) {
+		if (vzlogger_meter_reading_enabled()) {
+			push @errors, "No meter preset is configured. Select a meter for at least one detected I/R head before starting vzLogger.";
+		} else {
+			push @warnings, "No meters are configured because vzLogger meter reading is disabled.";
+		}
+	}
 
 	if (ref($config->{mqtt}) eq "HASH") {
 		push @errors, "mqtt.host is missing." if (!defined($config->{mqtt}->{host}) || $config->{mqtt}->{host} eq "");
@@ -145,4 +153,13 @@ sub is_port
 {
 	my ($value) = @_;
 	return defined($value) && $value =~ /\A\d+\z/ && $value > 0 && $value <= 65535;
+}
+
+sub vzlogger_meter_reading_enabled
+{
+	my %plugin_config;
+	return 0 if (!-e $plugin_config_file);
+	Config::Simple->import_from($plugin_config_file, \%plugin_config);
+	return 0 if (($plugin_config{"MAIN.IMPLEMENTATION"} || "") ne "vzlogger");
+	return (($plugin_config{"MAIN.READ"} || "0") eq "1") ? 1 : 0;
 }
