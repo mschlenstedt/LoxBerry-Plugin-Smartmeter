@@ -39,86 +39,6 @@ jobs:
             libstring-escape-perl \
             php-cli
 
-      - name: Prepare LoxBerry Perl stubs
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          mkdir -p .github/ci/perl-lib/LoxBerry
-
-          cat > .github/ci/perl-lib/LoxBerry/System.pm <<'PERL'
-          package LoxBerry::System;
-          use strict;
-          use warnings;
-
-          our $lbhomedir = '/opt/loxberry';
-          our $lbpplugindir = 'smartmeter';
-          our $lbpbindir = '/opt/loxberry/bin/plugins/smartmeter';
-          our $lbpconfigdir = '/opt/loxberry/config/plugins/smartmeter';
-          our $lbptemplatedir = '/opt/loxberry/templates/plugins/smartmeter';
-          our $lbplogdir = '/opt/loxberry/log/plugins/smartmeter';
-
-          sub import {
-              my $caller = caller;
-              no strict 'refs';
-              *{"${caller}::lbhomedir"} = \$lbhomedir;
-              *{"${caller}::lbpplugindir"} = \$lbpplugindir;
-              *{"${caller}::lbpbindir"} = \$lbpbindir;
-              *{"${caller}::lbpconfigdir"} = \$lbpconfigdir;
-              *{"${caller}::lbptemplatedir"} = \$lbptemplatedir;
-              *{"${caller}::lbplogdir"} = \$lbplogdir;
-          }
-
-          sub pluginversion { return '0.0.0'; }
-          sub readlanguage { return (); }
-
-          1;
-          PERL
-
-          cat > .github/ci/perl-lib/LoxBerry/JSON.pm <<'PERL'
-          package LoxBerry::JSON;
-          use strict;
-          use warnings;
-          1;
-          PERL
-
-          cat > .github/ci/perl-lib/LoxBerry/Log.pm <<'PERL'
-          package LoxBerry::Log;
-          use strict;
-          use warnings;
-
-          our $lbhomedir = '/opt/loxberry';
-          our $lbpplugindir = 'smartmeter';
-          our $lbpbindir = '/opt/loxberry/bin/plugins/smartmeter';
-          our $lbpconfigdir = '/opt/loxberry/config/plugins/smartmeter';
-          our $lbptemplatedir = '/opt/loxberry/templates/plugins/smartmeter';
-          our $lbplogdir = '/opt/loxberry/log/plugins/smartmeter';
-
-          sub import {
-              my $caller = caller;
-              no strict 'refs';
-              *{"${caller}::lbhomedir"} = \$lbhomedir;
-              *{"${caller}::lbpplugindir"} = \$lbpplugindir;
-              *{"${caller}::lbpbindir"} = \$lbpbindir;
-              *{"${caller}::lbpconfigdir"} = \$lbpconfigdir;
-              *{"${caller}::lbptemplatedir"} = \$lbptemplatedir;
-              *{"${caller}::lbplogdir"} = \$lbplogdir;
-          }
-
-          1;
-          PERL
-
-          cat > .github/ci/perl-lib/LoxBerry/Web.pm <<'PERL'
-          package LoxBerry::Web;
-          use strict;
-          use warnings;
-
-          sub lbheader { return; }
-          sub lbfooter { return; }
-
-          1;
-          PERL
-
       - name: Check Perl syntax
         shell: bash
         run: |
@@ -127,7 +47,7 @@ jobs:
           found=0
           while IFS= read -r -d '' file; do
             found=1
-            perl -I.github/ci/perl-lib -c "$file"
+            perl -I .github/ci/perl-lib -c "$file"
           done < <(find . -type f \( -name '*.pl' -o -name '*.pm' -o -name '*.cgi' \) -print0)
 
           if [ "$found" -eq 0 ]; then

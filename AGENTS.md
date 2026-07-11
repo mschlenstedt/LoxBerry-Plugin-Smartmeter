@@ -21,7 +21,7 @@ This repository contains the LoxBerry SmartMeter v2 plugin. Keep changes small, 
 
 ## Verification
 
-- After script changes, run syntax checks where possible, for example `perl -c` for Perl files and `php -l` for PHP files.
+- After Perl script changes on Windows, run `tools/check-perl-syntax.ps1 <file>` so the checked-in LoxBerry stubs in `.github/ci/perl-lib` are on `@INC`. Use `perl -c` directly only on a LoxBerry system with the real LoxBerry Perl modules available. For PHP files, run `php -l`.
 - For install or upgrade behavior, validate against the relevant install log rather than relying only on static review.
 - Before committing, check `git status --short` and avoid reverting unrelated local changes.
 
