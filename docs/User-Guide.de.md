@@ -29,7 +29,7 @@ Nach der Installation stoppt und deaktiviert das Plugin den `vzlogger`-Dienst wi
 
 ### Zählereinrichtung
 
-Aktiviere **Bridge-Service aktiv**, wenn die MQTT-Bridge die vzLogger-MQTT-Werte in den Plugin-HTTP-Cache und optional per UDP weitergeben soll. Der `vzlogger`-Dienst selbst bleibt im vzLogger-Modus unabhaengig von der Bridge startbar. Das **Aktualisierungsintervall** steuert, wie oft vzLogger Zaehlerwerte per MQTT veroeffentlicht; die Bridge verwendet denselben Takt fuer UDP-Sendungen. Das MQTT-Basis-Topic ist eine uebergreifende Einstellung und bleibt unabhaengig von den Dienstschaltflaechen konfigurierbar.
+Aktiviere **Bridge-Service aktiv**, wenn die MQTT-Bridge die vzLogger-MQTT-Werte in den Plugin-HTTP-Cache und optional per UDP weitergeben soll. Der `vzlogger`-Dienst selbst bleibt im vzLogger-Modus unabhaengig von der Bridge startbar. Das **Aktualisierungsintervall** steuert, wie oft vzLogger Zaehlerwerte per MQTT veroeffentlicht; die Bridge verwendet denselben Takt fuer HTTP-Cache-Schreibungen und UDP-Sendungen. Das MQTT-Basis-Topic ist eine uebergreifende Einstellung und bleibt unabhaengig von den Dienstschaltflaechen konfigurierbar.
 
 Schließe einen I/R-Lesekopf an und wähle **Nach I/R Leseköpfen suchen**. Wähle danach den erkannten Lesekopf und eine Zählervorgabe. Ein erkannter Lesekopf ohne Zählervorgabe reicht nicht aus; die Validierung bricht ab, weil vzLogger sonst ohne Meter starten würde. Der aktuelle Generator bildet Vorgaben auf die vzLogger-Protokolle `sml` oder `d0` ab. Für D0-Zähler können manuelle serielle Einstellungen gesetzt werden, wenn die Vorgaben nicht ausreichen.
 
@@ -80,13 +80,13 @@ Die MQTT-Bridge abonniert:
 <Basis-Topic>/vzlogger/#
 ```
 
-Die Bridge wandelt erkannte vzLogger-Nachrichten in Legacy-kompatible `.data`-Cachedateien um:
+Die Bridge sammelt erkannte vzLogger-Nachrichten im Arbeitsspeicher und schreibt sie im Aktualisierungsintervall als Legacy-kompatible `.data`-Cachedateien:
 
 ```text
 /var/run/shm/<Plugin-Ordner>/
 ```
 
-Der bestehende HTTP-Endpunkt liefert weiterhin Werte aus diesen Cachedateien. Die vzLogger-Seite zeigt im Bereich **HTTP-Cache** den Cache-Status, die letzte Aktualisierung und einen direkten Link zum Cache-Endpunkt. Wenn UDP aktiviert ist, sendet die Bridge die gecachten Werte im konfigurierten Aktualisierungsintervall an alle konfigurierten Miniservers.
+Der bestehende HTTP-Endpunkt liefert weiterhin Werte aus diesen Cachedateien. Die vzLogger-Seite zeigt im Bereich **HTTP-Cache** den Cache-Status, die letzte Aktualisierung und einen direkten Link zum Cache-Endpunkt. Wenn UDP aktiviert ist, sendet die Bridge die gecachten Werte im selben Aktualisierungsintervall an alle konfigurierten Miniservers.
 
 ## Debug-Log
 

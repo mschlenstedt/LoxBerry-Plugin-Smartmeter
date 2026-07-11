@@ -53,7 +53,7 @@ my $plugin_cfg = Config::Simple->new($config_file) or die "Could not read $confi
 my $mapping = read_json($mapping_file) || {};
 my $base_topic = sanitize_topic($plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter");
 my $subscribe_topic = "$base_topic/vzlogger/#";
-my $udp_interval = clean_number($plugin_cfg->param("VZLOGGER.UDPINTERVAL"), 5);
+my $update_interval = clean_number($plugin_cfg->param("VZLOGGER.UDPINTERVAL"), 5);
 my $send_udp = $plugin_cfg->param("MAIN.SENDUDP") ? 1 : 0;
 my $debug_enabled = ($plugin_cfg->param("VZLOGGER.DEBUG") || "0") eq "1";
 my $udp_port = clean_number($plugin_cfg->param("MAIN.UDPPORT"), 7000);
@@ -78,7 +78,8 @@ push @command, ("-P", $mqtt->{pass}) if ($mqtt->{pass});
 open(my $mqtt_fh, "-|", @command) or die "Could not start mosquitto_sub: $!\n";
 
 my %values_by_serial;
-my $last_udp = 0;
+my %dirty_serials;
+my $last_update_cycle = 0;
 
 while (my $line = <$mqtt_fh>) {
 	chomp($line);
@@ -116,11 +117,12 @@ while (my $line = <$mqtt_fh>) {
 	update_timestamp($reading, $values_by_serial{$reading->{serial}});
 	$values_by_serial{$reading->{serial}}->{$reading->{name}} = normalize_cache_value($reading);
 	update_calculated_power($reading, $values_by_serial{$reading->{serial}});
-	write_cache($reading->{serial}, $values_by_serial{$reading->{serial}});
+	$dirty_serials{$reading->{serial}} = 1;
 
-	if ($send_udp && time() - $last_udp >= $udp_interval) {
-		send_udp(\%values_by_serial, $udp_port);
-		$last_udp = time();
+	if (time() - $last_update_cycle >= $update_interval) {
+		flush_cache(\%values_by_serial, \%dirty_serials);
+		send_udp(\%values_by_serial, $udp_port) if ($send_udp);
+		$last_update_cycle = time();
 	}
 }
 
@@ -199,6 +201,16 @@ sub write_cache
 	}
 	close($fh);
 	rename($tmp, $target) or log_line("Could not replace $target: $!");
+}
+
+sub flush_cache
+{
+	my ($values_by_serial, $dirty_serials) = @_;
+	foreach my $serial (sort keys %$dirty_serials) {
+		next if (!exists($values_by_serial->{$serial}));
+		write_cache($serial, $values_by_serial->{$serial});
+	}
+	%$dirty_serials = ();
 }
 
 sub channel_mapping

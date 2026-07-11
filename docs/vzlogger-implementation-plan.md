@@ -113,7 +113,7 @@ Implemented files:
 - `[x]` Calculate legacy-compatible consumption and delivery power values from counter deltas.
 - `[x]` Capture real vzLogger MQTT topics/payloads on a target system (2.0.0.15).
 - `[x]` Adjust bridge parser to the exact real payload format.
-- `[~]` Add last-value and last-update display to the web UI. The HTTP cache section now shows cache presence, last update, and the cache endpoint link; a full last-values table remains open.
+- `[X]` Add last-value and last-update display to the web UI. The HTTP cache section now shows cache presence, last update, and the cache endpoint link.
 
 Decision notes:
 

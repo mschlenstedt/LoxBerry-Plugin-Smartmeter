@@ -4,6 +4,8 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
+- Write vzLogger MQTT bridge HTTP cache files only on the configured update cycle instead of after every received MQTT reading, reducing SD-card writes and system load.
+
 ## 2.0.0.27 - 2026-07-11
 
 - Keep the vzLogger service debug switch, log level, and local HTTP port editable in vzLogger mode even when the MQTT bridge is disabled.

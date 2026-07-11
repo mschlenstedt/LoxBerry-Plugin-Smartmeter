@@ -29,7 +29,7 @@ After installation, the plugin stops and disables the `vzlogger` service again w
 
 ### Meter Setup
 
-Enable **Bridge service enabled** when the MQTT bridge should forward vzLogger MQTT values to the plugin HTTP cache and optional UDP output. The `vzlogger` service itself remains startable in vzLogger mode independently of the bridge. The **Update cycle** controls how often vzLogger publishes meter values by MQTT; the bridge uses the same cycle for UDP sends. The MQTT base topic is a shared setting and remains configurable independently of the service buttons.
+Enable **Bridge service enabled** when the MQTT bridge should forward vzLogger MQTT values to the plugin HTTP cache and optional UDP output. The `vzlogger` service itself remains startable in vzLogger mode independently of the bridge. The **Update cycle** controls how often vzLogger publishes meter values by MQTT; the bridge uses the same cycle for HTTP cache writes and UDP sends. The MQTT base topic is a shared setting and remains configurable independently of the service buttons.
 
 Connect an I/R head and select **Rescan for I/R heads**. Then select the detected head and choose a meter preset. A detected I/R head without a meter preset is not enough; validation fails because vzLogger would otherwise start without any configured meter. The current generator maps presets to the vzLogger protocols `sml` or `d0`. For D0 meters, manual serial settings can be set if the preset defaults are not sufficient.
 
@@ -80,13 +80,13 @@ The MQTT bridge subscribes to:
 <base topic>/vzlogger/#
 ```
 
-The bridge converts recognized vzLogger messages into legacy-compatible `.data` cache files below:
+The bridge keeps recognized vzLogger messages in memory and writes them on the update cycle as legacy-compatible `.data` cache files below:
 
 ```text
 /var/run/shm/<plugin folder>/
 ```
 
-The existing HTTP endpoint continues to serve values from these cache files. The vzLogger page shows cache status, the last update, and a direct link to the cache endpoint in the **HTTP cache** section. If UDP is enabled, the bridge sends the cached values to all configured Miniservers on the configured update cycle.
+The existing HTTP endpoint continues to serve values from these cache files. The vzLogger page shows cache status, the last update, and a direct link to the cache endpoint in the **HTTP cache** section. If UDP is enabled, the bridge sends the cached values to all configured Miniservers on the same update cycle.
 
 ## Debug Log
 
