@@ -4,6 +4,8 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
+- Allow the `vzlogger` service to start and run in vzLogger mode even when the MQTT bridge is disabled; applying the configuration now stops only the bridge when the bridge switch is off.
+
 ## 2.0.0.25 - 2026-07-11
 
 - Regenerate and validate the saved vzLogger configuration before manual service Start/Restart actions, so service controls no longer reuse a stale `/etc/vzlogger.conf`.

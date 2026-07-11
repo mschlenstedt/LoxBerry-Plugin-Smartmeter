@@ -22,10 +22,8 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 implementation=""
-read_enabled=""
 if [ -f "$CONFIG_FILE" ]; then
 	implementation=$(sed -n 's/^IMPLEMENTATION=//p' "$CONFIG_FILE" | tail -n 1)
-	read_enabled=$(sed -n 's/^READ=//p' "$CONFIG_FILE" | tail -n 1)
 fi
 
 install_ir_head_udev_rule()
@@ -64,10 +62,18 @@ refresh_bridge_service()
 	fi
 }
 
+has_configured_vzlogger_meter()
+{
+	if [ ! -f "$CONFIG_FILE" ]; then
+		return 1
+	fi
+
+	grep -q '^METER=[^0][^[:space:]]*' "$CONFIG_FILE"
+}
+
 install_ir_head_udev_rule
 
-if [ "$implementation" = "vzlogger" ] && [ "$read_enabled" = "1" ]; then
-	refresh_bridge_service
+if [ "$implementation" = "vzlogger" ] && has_configured_vzlogger_meter; then
 	was_active_before_upgrade=0
 	if [ -f "$PREUPGRADE_ACTIVE_FILE" ]; then
 		was_active_before_upgrade=1
@@ -75,9 +81,9 @@ if [ "$implementation" = "vzlogger" ] && [ "$read_enabled" = "1" ]; then
 	rm -f "$PREUPGRADE_ACTIVE_FILE"
 	if [ -x "$VZLOGGER_CONTROL" ]; then
 		if [ "$was_active_before_upgrade" = "1" ]; then
-			echo "<INFO> vzLogger was active before upgrade. Applying configuration and restarting services."
+			echo "<INFO> vzLogger was active before upgrade. Applying configuration and restarting configured services."
 		else
-			echo "<INFO> vzLogger mode is active. Applying configuration and restarting services."
+			echo "<INFO> vzLogger mode is active. Applying configuration and restarting configured services."
 		fi
 		if "$VZLOGGER_CONTROL" apply; then
 			echo "<INFO> Applied active vzLogger configuration after install or upgrade."
@@ -98,7 +104,11 @@ if command -v systemctl >/dev/null 2>&1; then
 	fi
 
 	if systemctl list-unit-files vzlogger.service >/dev/null 2>&1; then
-		echo "<INFO> Legacy mode or meter reading disabled. Stopping and disabling vzLogger service."
+		if [ "$implementation" = "vzlogger" ]; then
+			echo "<INFO> vzLogger mode is active but no meter is configured. Stopping and disabling vzLogger service."
+		else
+			echo "<INFO> Legacy mode is active. Stopping and disabling vzLogger service."
+		fi
 		systemctl stop vzlogger.service >/dev/null 2>&1 || true
 		systemctl disable vzlogger.service >/dev/null 2>&1 || true
 		systemctl reset-failed vzlogger.service >/dev/null 2>&1 || true
@@ -106,7 +116,11 @@ if command -v systemctl >/dev/null 2>&1; then
 		echo "<INFO> vzLogger service is not installed."
 	fi
 	if systemctl list-unit-files "$BRIDGE_SERVICE" >/dev/null 2>&1; then
-		echo "<INFO> Stopping MQTT bridge because vzLogger meter reading is disabled."
+		if [ "$implementation" = "vzlogger" ]; then
+			echo "<INFO> Stopping MQTT bridge because no vzLogger meter is configured."
+		else
+			echo "<INFO> Stopping MQTT bridge because vzLogger mode is disabled."
+		fi
 		systemctl stop "$BRIDGE_SERVICE" >/dev/null 2>&1 || true
 		systemctl reset-failed "$BRIDGE_SERVICE" >/dev/null 2>&1 || true
 	fi

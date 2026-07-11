@@ -176,17 +176,18 @@ sub form_vzlogger
 
 sub add_service_template_params
 {
-	my $services_expected_active = implementation_mode() eq "vzlogger"
+	my $vzlogger_expected_active = implementation_mode() eq "vzlogger";
+	my $bridge_expected_active = $vzlogger_expected_active
 		&& (($plugin_cfg->param("MAIN.READ") || "0") eq "1");
 	my $vzlogger_state = service_state("vzlogger");
 	my $bridge_state = service_state("smartmeter-v2-vzlogger-bridge");
 
-	$template->param("VZLOGGER_SERVICE_CONTROL_DISABLED" => ($services_expected_active ? "" : "disabled"));
-	$template->param("BRIDGE_SERVICE_CONTROL_DISABLED" => ($services_expected_active ? "" : "disabled"));
+	$template->param("VZLOGGER_SERVICE_CONTROL_DISABLED" => ($vzlogger_expected_active ? "" : "disabled"));
+	$template->param("BRIDGE_SERVICE_CONTROL_DISABLED" => ($bridge_expected_active ? "" : "disabled"));
 	$template->param("VZLOGGER_SERVICE_STATUS" => service_summary("vzlogger"));
 	$template->param("BRIDGE_SERVICE_STATUS" => service_summary("smartmeter-v2-vzlogger-bridge"));
-	$template->param("VZLOGGER_SERVICE_STATUS_CLASS" => service_status_class($vzlogger_state, $services_expected_active));
-	$template->param("BRIDGE_SERVICE_STATUS_CLASS" => service_status_class($bridge_state, $services_expected_active));
+	$template->param("VZLOGGER_SERVICE_STATUS_CLASS" => service_status_class($vzlogger_state, $vzlogger_expected_active));
+	$template->param("BRIDGE_SERVICE_STATUS_CLASS" => service_status_class($bridge_state, $bridge_expected_active));
 	$template->param("VZLOGGER_SERVICE_RUNNING" => $vzlogger_state eq "active");
 	$template->param("BRIDGE_SERVICE_RUNNING" => $bridge_state eq "active");
 	$template->param("VZLOGGER_LIVE_DISABLED" => ($vzlogger_state eq "active" ? "" : "ui-disabled"));

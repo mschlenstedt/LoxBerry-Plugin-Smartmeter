@@ -25,11 +25,11 @@ Wähle oben bei **Implementierung** den Modus **vzLogger**. Beim Speichern entfe
 
 Das Plugin richtet während der Installation bzw. beim Upgrade die Volkszaehler/Cloudsmith apt-Quelle ein. LoxBerry installiert danach `vzlogger` und `mosquitto-clients` über die normale `dpkg/apt`-Paketliste des Plugins. Wenn `vzlogger` bereits installiert ist, bleibt die bestehende Paketinstallation erhalten und wird durch apt auf die verfügbare aktuelle Version gebracht.
 
-Nach der Installation stoppt und deaktiviert das Plugin den `vzlogger`-Dienst wieder, solange Legacy aktiv ist oder **Zähler lesen** deaktiviert ist. vzLogger wird erst mit **Speichern und anwenden** im vzLogger-Modus gestartet.
+Nach der Installation stoppt und deaktiviert das Plugin den `vzlogger`-Dienst wieder, solange Legacy aktiv ist. vzLogger wird mit **Speichern und anwenden** im vzLogger-Modus gestartet; die MQTT-Bridge kann unabhaengig davon deaktiviert bleiben.
 
 ### Zählereinrichtung
 
-Aktiviere **Zaehler lesen**, damit vzLogger und die MQTT-Bridge Live-Werte bereitstellen. Das **Aktualisierungsintervall** steuert, wie oft vzLogger Zaehlerwerte per MQTT veroeffentlicht; die Auswahl reicht von 5 Sekunden bis 60 Minuten. Die Bridge abonniert diese MQTT-Werte und verwendet denselben Takt fuer UDP-Sendungen. Das MQTT-Basis-Topic ist eine uebergreifende Einstellung und bleibt unabhaengig von den Dienstschaltflaechen konfigurierbar.
+Aktiviere **Bridge-Service aktiv**, wenn die MQTT-Bridge die vzLogger-MQTT-Werte in den Plugin-HTTP-Cache und optional per UDP weitergeben soll. Der `vzlogger`-Dienst selbst bleibt im vzLogger-Modus unabhaengig von der Bridge startbar. Das **Aktualisierungsintervall** steuert, wie oft vzLogger Zaehlerwerte per MQTT veroeffentlicht; die Bridge verwendet denselben Takt fuer UDP-Sendungen. Das MQTT-Basis-Topic ist eine uebergreifende Einstellung und bleibt unabhaengig von den Dienstschaltflaechen konfigurierbar.
 
 Schließe einen I/R-Lesekopf an und wähle **Nach I/R Leseköpfen suchen**. Wähle danach den erkannten Lesekopf und eine Zählervorgabe. Ein erkannter Lesekopf ohne Zählervorgabe reicht nicht aus; die Validierung bricht ab, weil vzLogger sonst ohne Meter starten würde. Der aktuelle Generator bildet Vorgaben auf die vzLogger-Protokolle `sml` oder `d0` ab. Für D0-Zähler können manuelle serielle Einstellungen gesetzt werden, wenn die Vorgaben nicht ausreichen.
 
@@ -44,13 +44,13 @@ Pro Lesekopf koennen bekannte OBIS-Kanaele ausgewaehlt und weitere zaehlerspezif
 
 ### Anwenden
 
-Mit **Speichern und anwenden** wird die Konfiguration erzeugt und geprüft, nach `/etc/vzlogger.conf` kopiert, der `vzlogger`-Dienst für den Start nach einem LoxBerry-Neustart aktiviert, `vzlogger` neu gestartet und die MQTT-Bridge als systemd-Service installiert und gestartet, falls sie noch nicht eingerichtet ist.
+Mit **Speichern und anwenden** wird die Konfiguration erzeugt und geprüft, nach `/etc/vzlogger.conf` kopiert, der `vzlogger`-Dienst für den Start nach einem LoxBerry-Neustart aktiviert und `vzlogger` neu gestartet. Wenn **Bridge-Service aktiv** eingeschaltet ist, wird zusätzlich die MQTT-Bridge als systemd-Service installiert und gestartet; andernfalls wird nur die Bridge gestoppt.
 
-Wenn das Zählerlesen deaktiviert ist, stoppt das Anwenden vzLogger und die Bridge.
+Wenn der Legacy-Modus aktiv ist, stoppt das Anwenden vzLogger und die Bridge.
 
 ### Dienststeuerung
 
-Die vzLogger-Seite zeigt den Status von `vzlogger` und der MQTT-Bridge mit Dienstzustand und PID. Die Schaltflächen **Restart**, **Start** und **Stop** dienen nur der Fehlersuche während des Betriebs und sind deaktiviert, solange die vzLogger-Implementierung oder **Zähler lesen** nicht aktiv ist. Start- und Restart-Aktionen erzeugen und pruefen die gespeicherte Konfiguration vor dem Dienststart neu. **Live-Daten (JSON) öffnen** ruft den integrierten vzLogger-HTTP-Dienst auf; `/` liefert wegen der aktivierten Indexfunktion alle konfigurierten Kanäle, `/<UUID>` einen einzelnen Kanal.
+Die vzLogger-Seite zeigt den Status von `vzlogger` und der MQTT-Bridge mit Dienstzustand und PID. Die `vzlogger`-Schaltflächen **Restart**, **Start** und **Stop** sind im vzLogger-Modus auch dann verfügbar, wenn die Bridge deaktiviert ist. Die Bridge-Schaltflächen sind nur verfügbar, wenn **Bridge-Service aktiv** eingeschaltet ist. Start- und Restart-Aktionen erzeugen und pruefen die gespeicherte Konfiguration vor dem Dienststart neu. **Live-Daten (JSON) öffnen** ruft den integrierten vzLogger-HTTP-Dienst auf; `/` liefert wegen der aktivierten Indexfunktion alle konfigurierten Kanäle, `/<UUID>` einen einzelnen Kanal.
 
 Neben den rohen JSON-Daten gibt es eine generisch gerenderte Webseite, die sich alle zwei Sekunden aktualisiert. Die angezeigten Kanäle werden durch die erzeugte OBIS-Kanalkonfiguration bestimmt; die UUID-Zuordnung steht in `vzlogger_channels.json`.
 

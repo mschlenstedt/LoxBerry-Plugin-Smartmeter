@@ -25,7 +25,7 @@ Config::Simple->import_from($config_file, \%flat_config);
 my $mqtt = read_mqtt_settings();
 my $base_topic = sanitize_topic($plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter");
 my $local_port = clean_number($plugin_cfg->param("VZLOGGER.LOCALPORT"), 18080);
-my $read_enabled = ($plugin_cfg->param("MAIN.READ") || "0") eq "1";
+my $vzlogger_mode = ($plugin_cfg->param("MAIN.IMPLEMENTATION") || "") eq "vzlogger";
 
 my @meters;
 my %channel_mapping;
@@ -45,7 +45,7 @@ foreach my $config_key (sort keys %flat_config) {
 
 	my $serial = $plugin_cfg->param("$section.SERIAL") || $section;
 	my $meter_config = {
-		enabled => $read_enabled ? JSON::PP::true : JSON::PP::false,
+		enabled => $vzlogger_mode ? JSON::PP::true : JSON::PP::false,
 		allowskip => JSON::PP::true,
 		aggtime => -1,
 		protocol => $protocol,

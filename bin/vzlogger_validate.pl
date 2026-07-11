@@ -79,10 +79,10 @@ sub validate_config
 	return if (ref($config->{meters}) ne "ARRAY");
 
 	if (!@{$config->{meters}}) {
-		if (vzlogger_meter_reading_enabled()) {
+		if (vzlogger_mode_enabled()) {
 			push @errors, "No meter preset is configured. Select a meter for at least one detected I/R head before starting vzLogger.";
 		} else {
-			push @warnings, "No meters are configured because vzLogger meter reading is disabled.";
+			push @warnings, "No meters are configured because the vzLogger implementation is disabled.";
 		}
 	}
 
@@ -155,11 +155,10 @@ sub is_port
 	return defined($value) && $value =~ /\A\d+\z/ && $value > 0 && $value <= 65535;
 }
 
-sub vzlogger_meter_reading_enabled
+sub vzlogger_mode_enabled
 {
 	my %plugin_config;
 	return 0 if (!-e $plugin_config_file);
 	Config::Simple->import_from($plugin_config_file, \%plugin_config);
-	return 0 if (($plugin_config{"MAIN.IMPLEMENTATION"} || "") ne "vzlogger");
-	return (($plugin_config{"MAIN.READ"} || "0") eq "1") ? 1 : 0;
+	return (($plugin_config{"MAIN.IMPLEMENTATION"} || "") eq "vzlogger") ? 1 : 0;
 }

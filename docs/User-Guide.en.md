@@ -25,11 +25,11 @@ Select **vzLogger** as the **Implementation** mode at the top of the page. When 
 
 During installation or upgrade, the plugin configures the Volkszaehler/Cloudsmith apt repository. LoxBerry then installs `vzlogger` and `mosquitto-clients` through the plugin's normal `dpkg/apt` package list. If `vzlogger` is already installed, the existing package ownership is preserved and apt updates it to the available current version.
 
-After installation, the plugin stops and disables the `vzlogger` service again while Legacy is active or **Read meters** is disabled. vzLogger starts only when **Save and apply** is used in vzLogger mode.
+After installation, the plugin stops and disables the `vzlogger` service again while Legacy is active. vzLogger starts when **Save and apply** is used in vzLogger mode; the MQTT bridge can remain disabled independently.
 
 ### Meter Setup
 
-Enable **Read meters** to let vzLogger and the MQTT bridge provide live values. The **Update cycle** controls how often vzLogger publishes meter values by MQTT; the selection ranges from 5 seconds to 60 minutes. The bridge subscribes to those MQTT values and uses the same cycle for UDP sends. The MQTT base topic is a shared setting and remains configurable independently of the service buttons.
+Enable **Bridge service enabled** when the MQTT bridge should forward vzLogger MQTT values to the plugin HTTP cache and optional UDP output. The `vzlogger` service itself remains startable in vzLogger mode independently of the bridge. The **Update cycle** controls how often vzLogger publishes meter values by MQTT; the bridge uses the same cycle for UDP sends. The MQTT base topic is a shared setting and remains configurable independently of the service buttons.
 
 Connect an I/R head and select **Rescan for I/R heads**. Then select the detected head and choose a meter preset. A detected I/R head without a meter preset is not enough; validation fails because vzLogger would otherwise start without any configured meter. The current generator maps presets to the vzLogger protocols `sml` or `d0`. For D0 meters, manual serial settings can be set if the preset defaults are not sufficient.
 
@@ -44,13 +44,13 @@ For each reader, known OBIS channels can be selected and additional meter-specif
 
 ### Apply Flow
 
-Use **Save and apply** to generate and validate the config, copy it to `/etc/vzlogger.conf`, enable the `vzlogger` service for LoxBerry reboot startup, restart `vzlogger`, and install and start the MQTT bridge as a systemd service if it is not already installed.
+Use **Save and apply** to generate and validate the config, copy it to `/etc/vzlogger.conf`, enable the `vzlogger` service for LoxBerry reboot startup, and restart `vzlogger`. If **Bridge service enabled** is on, the plugin also installs and starts the MQTT bridge as a systemd service; otherwise it only stops the bridge.
 
-If meter reading is disabled, applying the configuration stops vzLogger and the bridge.
+If Legacy mode is active, applying the configuration stops vzLogger and the bridge.
 
 ### Service Control
 
-The vzLogger page shows the status of `vzlogger` and the MQTT bridge with service state and PID. The **Restart**, **Start**, and **Stop** buttons are intended only for troubleshooting during operation and are disabled while the vzLogger implementation or **Read meters** is inactive. Start and Restart actions regenerate and validate the saved configuration before starting services. **Open live data (JSON)** opens vzLogger's integrated HTTP service; `/` returns all configured channels because the index is enabled, while `/<UUID>` returns one channel.
+The vzLogger page shows the status of `vzlogger` and the MQTT bridge with service state and PID. The `vzlogger` **Restart**, **Start**, and **Stop** buttons are available in vzLogger mode even when the bridge is disabled. The bridge buttons are available only while **Bridge service enabled** is on. Start and Restart actions regenerate and validate the saved configuration before starting services. **Open live data (JSON)** opens vzLogger's integrated HTTP service; `/` returns all configured channels because the index is enabled, while `/<UUID>` returns one channel.
 
 In addition to raw JSON, an automatically refreshed generic web page renders the response every two seconds. The generated OBIS channel configuration determines which channels appear; `vzlogger_channels.json` contains the UUID mapping.
 

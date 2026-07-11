@@ -31,22 +31,27 @@ if ($action eq "generate") {
 if ($action eq "apply") {
 	my $rc = generate_and_validate();
 	exit $rc if ($rc != 0);
-	if (!vzlogger_enabled()) {
+	if (!vzlogger_mode_enabled()) {
 		stop_bridge();
 		stop_vzlogger(1);
-		print "vzLogger meter reading is disabled. Stopped vzLogger and bridge.\n";
+		print "vzLogger mode is disabled. Stopped vzLogger and bridge.\n";
 		exit 0;
 	}
 	restart_vzlogger();
-	restart_bridge();
+	if (bridge_enabled()) {
+		restart_bridge();
+	} else {
+		stop_bridge();
+		print "MQTT bridge is disabled. Stopped bridge and left vzLogger running.\n";
+	}
 	exit 0;
 }
 
 if ($action eq "restart-vzlogger") {
 	my $rc = generate_and_validate();
 	exit $rc if ($rc != 0);
-	if (!vzlogger_enabled()) {
-		print "vzLogger meter reading is disabled. Did not restart vzLogger.\n";
+	if (!vzlogger_mode_enabled()) {
+		print "vzLogger mode is disabled. Did not restart vzLogger.\n";
 		exit 0;
 	}
 	restart_vzlogger();
@@ -56,8 +61,8 @@ if ($action eq "restart-vzlogger") {
 if ($action eq "start-vzlogger") {
 	my $rc = generate_and_validate();
 	exit $rc if ($rc != 0);
-	if (!vzlogger_enabled()) {
-		print "vzLogger meter reading is disabled. Did not start vzLogger.\n";
+	if (!vzlogger_mode_enabled()) {
+		print "vzLogger mode is disabled. Did not start vzLogger.\n";
 		exit 0;
 	}
 	start_vzlogger();
@@ -72,8 +77,8 @@ if ($action eq "stop-vzlogger") {
 if ($action eq "restart-bridge") {
 	my $rc = generate_and_validate();
 	exit $rc if ($rc != 0);
-	if (!vzlogger_enabled()) {
-		print "vzLogger meter reading is disabled. Did not restart the MQTT bridge.\n";
+	if (!bridge_enabled()) {
+		print "MQTT bridge is disabled. Did not restart the MQTT bridge.\n";
 		exit 0;
 	}
 	restart_bridge();
@@ -87,8 +92,8 @@ if ($action eq "validate") {
 if ($action eq "start-bridge") {
 	my $rc = generate_and_validate();
 	exit $rc if ($rc != 0);
-	if (!vzlogger_enabled()) {
-		print "vzLogger meter reading is disabled. Did not start the MQTT bridge.\n";
+	if (!bridge_enabled()) {
+		print "MQTT bridge is disabled. Did not start the MQTT bridge.\n";
 		exit 0;
 	}
 	start_bridge();
@@ -317,9 +322,14 @@ sub implementation_mode
 	return read_enabled() ? "legacy" : "vzlogger";
 }
 
-sub vzlogger_enabled
+sub vzlogger_mode_enabled
 {
-	return implementation_mode() eq "vzlogger" && read_enabled();
+	return implementation_mode() eq "vzlogger";
+}
+
+sub bridge_enabled
+{
+	return vzlogger_mode_enabled() && read_enabled();
 }
 
 sub install_bridge_service
