@@ -114,7 +114,7 @@ LOCALPORT=18080
 UDPINTERVAL=5
 DEBUG=0
 VZLOGGERDEBUG=0
-LOGLEVEL=5
+LOGLEVEL=0
 EOF
 		echo "<INFO> Added default vzLogger settings"
 	else
@@ -135,7 +135,7 @@ EOF
 			echo "<INFO> Added default vzLogger service debug setting"
 		fi
 		if ! grep -q '^LOGLEVEL=' "$configfile"; then
-			sed -i '/^\[VZLOGGER\]/a LOGLEVEL=5' "$configfile"
+			sed -i '/^\[VZLOGGER\]/a LOGLEVEL=0' "$configfile"
 			echo "<INFO> Added default vzLogger service log level"
 		fi
 	fi

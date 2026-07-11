@@ -4,6 +4,12 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
+- Add known vzLogger OBIS channel selections for manufacturer ID (`1-0:96.50.1`) and server ID (`1-0:96.1.0`) so they map to the legacy-compatible cache names.
+- Write legacy-compatible `Last_Update` and `Last_UpdateLoxEpoche` fields from vzLogger MQTT timestamps and scale vzLogger energy counter readings from Wh to kWh in the bridge cache.
+- Parse additional vzLogger OBIS channels saved with escaped `\n` separators so all configured custom channels are generated into `vzlogger.conf`.
+- Preserve unchecked vzLogger OBIS channel selections instead of restoring all default channels after saving.
+- Set the default vzLogger service log level to `0` while keeping the debug-log switch unchanged.
+- Document the MQTT bridge as optional and off by default on fresh installs.
 - Allow the `vzlogger` service to start and run in vzLogger mode even when the MQTT bridge is disabled; applying the configuration now stops only the bridge when the bridge switch is off.
 
 ## 2.0.0.25 - 2026-07-11

@@ -40,7 +40,9 @@ The plugin generates:
 
 Use **Save and apply** for the normal workflow; it writes, validates, and applies the configuration. **Validate config** is retained to validate a saved or manually edited configuration without applying it.
 
-For each reader, known OBIS channels can be selected and additional meter-specific OBIS channels can be added line by line. An optional `*255` suffix is removed when saving, because the generated vzLogger config uses identifiers without that suffix.
+The bridge service for HTTP cache and UDP is optional and is switched off by default on fresh installs.
+
+For each reader, known OBIS channels can be selected and additional meter-specific OBIS channels can be added line by line. An optional `*255` suffix is removed when saving, because the generated vzLogger config uses identifiers without that suffix. The known channels also include manufacturer ID (`1-0:96.50.1`) and server ID (`1-0:96.1.0`) when the meter provides those values.
 
 ### Apply Flow
 

@@ -113,7 +113,8 @@ while (my $line = <$mqtt_fh>) {
 	}
 	debug_line("MQTT parsed serial=$reading->{serial} name=$reading->{name} uuid=$reading->{uuid} value=$reading->{value}");
 
-	$values_by_serial{$reading->{serial}}->{$reading->{name}} = $reading->{value};
+	update_timestamp($reading, $values_by_serial{$reading->{serial}});
+	$values_by_serial{$reading->{serial}}->{$reading->{name}} = normalize_cache_value($reading);
 	update_calculated_power($reading, $values_by_serial{$reading->{serial}});
 	write_cache($reading->{serial}, $values_by_serial{$reading->{serial}});
 
@@ -133,10 +134,11 @@ sub parse_reading
 	my $json = eval { JSON::PP->new->utf8->decode($payload) };
 
 	my $uuid = "";
-	my $value;
+	my ($value, $timestamp);
 	if (!$@ && ref($json)) {
 		$uuid = $json->{uuid} || $json->{channel} || "";
 		$value = defined($json->{value}) ? $json->{value} : $json->{data};
+		$timestamp = $json->{timestamp} if (defined($json->{timestamp}));
 	}
 
 	if ($uuid && !exists($mapping->{$uuid}) && $uuid_by_channel->{$uuid}) {
@@ -175,8 +177,10 @@ sub parse_reading
 	return {
 		serial => $mapping->{$uuid}->{serial},
 		name => $mapping->{$uuid}->{name},
+		identifier => $mapping->{$uuid}->{identifier} || "",
 		uuid => $uuid,
 		value => $value,
+		timestamp => $timestamp,
 	};
 }
 
@@ -235,6 +239,54 @@ sub clean_scalar_payload
 	$payload =~ s/\A\s+|\s+\z//g;
 	$payload =~ s/\*\d+\z// if ($payload =~ /\A\d+-\d+:\d+\.\d+\.\d+\*\d+\z/);
 	return $payload;
+}
+
+sub update_timestamp
+{
+	my ($reading, $values) = @_;
+	my $epoch = timestamp_epoch($reading->{timestamp});
+	$epoch = time() if (!defined($epoch));
+
+	my ($sec, $min, $hour, $mday, $mon, $year) = localtime($epoch);
+	$values->{Last_Update} = sprintf("%04d-%02d-%02d %02d:%02d:%02d", $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
+	$values->{Last_UpdateLoxEpoche} = $epoch - 1230764400;
+}
+
+sub timestamp_epoch
+{
+	my ($timestamp) = @_;
+	return undef if (!defined($timestamp) || $timestamp !~ /\A\d+(?:\.\d+)?\z/);
+	$timestamp = int($timestamp);
+	$timestamp = int($timestamp / 1000) if ($timestamp > 9999999999);
+	return $timestamp;
+}
+
+sub normalize_cache_value
+{
+	my ($reading) = @_;
+	my $value = $reading->{value};
+	return $value if (!defined($value) || $value !~ /\A-?\d+(?:\.\d+)?\z/);
+
+	if (is_energy_counter($reading->{identifier})) {
+		return format_number($value / 1000);
+	}
+	return format_number($value);
+}
+
+sub is_energy_counter
+{
+	my ($identifier) = @_;
+	return defined($identifier) && $identifier =~ /\A1-0:(?:1|2)\.8\.\d+\z/;
+}
+
+sub format_number
+{
+	my ($value) = @_;
+	return int($value) if ($value == int($value));
+	$value = sprintf("%.6f", $value);
+	$value =~ s/0+\z//;
+	$value =~ s/\.\z//;
+	return $value;
 }
 
 sub update_calculated_power

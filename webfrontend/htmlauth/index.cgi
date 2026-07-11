@@ -164,7 +164,7 @@ sub form_vzlogger
 	$template->param("VZLOGGER_UDPINTERVAL_OPTIONS" => udp_interval_options($udp_interval));
 	$template->param("VZLOGGER_DEBUG" => $plugin_cfg->param("VZLOGGER.DEBUG") || 0);
 	$template->param("VZLOGGER_SERVICE_DEBUG" => $plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || 0);
-	$template->param("VZLOGGER_LOGLEVEL" => clean_log_level($plugin_cfg->param("VZLOGGER.LOGLEVEL"), "5"));
+	$template->param("VZLOGGER_LOGLEVEL" => clean_log_level($plugin_cfg->param("VZLOGGER.LOGLEVEL"), "0"));
 	add_service_template_params();
 	$template->param("VZLOGGER_CONFIG" => "$lbpconfigdir/vzlogger.conf");
 	$template->param("VZLOGGER_LIVEURL" => "http://$ENV{HTTP_HOST}:$local_port/");
@@ -348,7 +348,7 @@ sub ensure_vzlogger_defaults
 	$plugin_cfg->param("VZLOGGER.UDPINTERVAL", "5") if (!defined $plugin_cfg->param("VZLOGGER.UDPINTERVAL"));
 	$plugin_cfg->param("VZLOGGER.DEBUG", "0") if (!defined $plugin_cfg->param("VZLOGGER.DEBUG"));
 	$plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG", "0") if (!defined $plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG"));
-	$plugin_cfg->param("VZLOGGER.LOGLEVEL", "5") if (!defined $plugin_cfg->param("VZLOGGER.LOGLEVEL"));
+	$plugin_cfg->param("VZLOGGER.LOGLEVEL", "0") if (!defined $plugin_cfg->param("VZLOGGER.LOGLEVEL"));
 	$plugin_cfg->save;
 }
 
@@ -404,7 +404,7 @@ sub save_vzlogger_form
 	$plugin_cfg->param("VZLOGGER.UDPINTERVAL", clean_udp_interval($q->{vzlogger_udpinterval}, $plugin_cfg->param("VZLOGGER.UDPINTERVAL") || "5"));
 	$plugin_cfg->param("VZLOGGER.DEBUG", clean_config_value($q->{vzlogger_debug}, qr/\A[01]\z/, $plugin_cfg->param("VZLOGGER.DEBUG") || "0"));
 	$plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG", clean_config_value($q->{vzlogger_service_debug}, qr/\A[01]\z/, $plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0"));
-	$plugin_cfg->param("VZLOGGER.LOGLEVEL", clean_log_level($q->{vzlogger_loglevel}, $plugin_cfg->param("VZLOGGER.LOGLEVEL") || "5"));
+	$plugin_cfg->param("VZLOGGER.LOGLEVEL", clean_log_level($q->{vzlogger_loglevel}, $plugin_cfg->param("VZLOGGER.LOGLEVEL") || "0"));
 
 	foreach my $device (@heads) {
 		my $serial = $device;
@@ -419,7 +419,6 @@ sub save_vzlogger_form
 		$plugin_cfg->param("$serial.STOPBITS", clean_config_value($q->{"$serial\_stopbits"}, qr/\A\d*\z/, ""));
 		$plugin_cfg->param("$serial.PARITY", clean_config_value($q->{"$serial\_parity"}, qr/\A[A-Za-z0-9_.:-]*\z/, ""));
 		my @selected_obis = grep { defined($_) && $_ =~ /\A\d-\d:\d+\.\d+\.\d+\z/ } $cgi->multi_param("$serial\_obis");
-		@selected_obis = map { $_->{identifier} } default_obis_channels() if (!@selected_obis);
 		$plugin_cfg->param("$serial.OBISCHANNELS", join(",", @selected_obis));
 		$plugin_cfg->param("$serial.OBISCUSTOM", clean_multiline_obis($q->{"$serial\_obis_custom"}));
 	}
@@ -528,8 +527,8 @@ sub build_head_rows
 sub enabled_obis_channels
 {
 	my ($serial) = @_;
+	return map { $_->{identifier} => 1 } default_obis_channels() if (!defined($plugin_cfg->param("$serial.OBISCHANNELS")));
 	my %enabled = map { $_ => 1 } config_list_values("$serial.OBISCHANNELS");
-	return map { $_->{identifier} => 1 } default_obis_channels() if (!%enabled);
 	return %enabled;
 }
 
@@ -558,6 +557,8 @@ sub default_obis_channels
 		{ identifier => "1-0:2.7.0", name => "Delivery_Power_OBIS_2.7.0" },
 		{ identifier => "1-0:15.7.0", name => "Total_Power_OBIS_15.7.0" },
 		{ identifier => "1-0:16.7.0", name => "Total_Power_OBIS_16.7.0" },
+		{ identifier => "1-0:96.50.1", name => "Manufacturer_ID_OBIS_96.50.1" },
+		{ identifier => "1-0:96.1.0", name => "Server_ID_OBIS_96.1.0" },
 	);
 }
 
@@ -566,7 +567,7 @@ sub clean_multiline_obis
 	my ($value) = @_;
 	return "" if (!defined($value));
 	my @clean;
-	foreach my $line (split(/\r?\n|,|;/, $value)) {
+	foreach my $line (split(/\\n|\r?\n|,|;/, $value)) {
 		my $identifier = normalize_obis_identifier($line);
 		push @clean, $identifier if ($identifier);
 	}

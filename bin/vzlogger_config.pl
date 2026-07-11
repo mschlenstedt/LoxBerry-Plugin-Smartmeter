@@ -16,7 +16,7 @@ my $target_file = "$home/config/plugins/$psubfolder/vzlogger.conf";
 my $mapping_file = "$home/config/plugins/$psubfolder/vzlogger_channels.json";
 my $plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file\n";
 my $debug_enabled = ($plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0") eq "1";
-my $log_level = int(clean_log_level($plugin_cfg->param("VZLOGGER.LOGLEVEL"), 5));
+my $log_level = int(clean_log_level($plugin_cfg->param("VZLOGGER.LOGLEVEL"), 0));
 my $log_file = $debug_enabled ? "$home/log/plugins/$psubfolder/vzlogger.log" : "/dev/null";
 
 my %flat_config;
@@ -253,6 +253,8 @@ sub default_channels
 		{ identifier => "1-0:2.7.0", name => "Delivery_Power_OBIS_2.7.0" },
 		{ identifier => "1-0:15.7.0", name => "Total_Power_OBIS_15.7.0" },
 		{ identifier => "1-0:16.7.0", name => "Total_Power_OBIS_16.7.0" },
+		{ identifier => "1-0:96.50.1", name => "Manufacturer_ID_OBIS_96.50.1" },
+		{ identifier => "1-0:96.1.0", name => "Server_ID_OBIS_96.1.0" },
 	);
 }
 
@@ -266,11 +268,12 @@ sub clean_log_level
 sub configured_channels
 {
 	my ($section) = @_;
+	my $has_configured_channels = defined($plugin_cfg->param("$section.OBISCHANNELS"));
 	my %enabled = map { $_ => 1 } config_list_values("$section.OBISCHANNELS");
 
 	my @channels;
 	foreach my $channel (default_channels()) {
-		push @channels, $channel if (!%enabled || $enabled{$channel->{identifier}});
+		push @channels, $channel if (!$has_configured_channels || $enabled{$channel->{identifier}});
 	}
 
 	my %seen = map { $_->{identifier} => 1 } @channels;
@@ -282,7 +285,7 @@ sub configured_channels
 		};
 		$seen{$identifier} = 1;
 	}
-	return @channels ? @channels : default_channels();
+	return @channels;
 }
 
 sub config_list_values
@@ -299,7 +302,7 @@ sub custom_channels
 	my ($section) = @_;
 	my $value = $plugin_cfg->param("$section.OBISCUSTOM") || "";
 	my @channels;
-	foreach my $line (split(/\r?\n|,|;/, $value)) {
+	foreach my $line (split(/\\n|\r?\n|,|;/, $value)) {
 		my $identifier = normalize_obis_identifier($line);
 		push @channels, $identifier if ($identifier);
 	}
@@ -319,6 +322,9 @@ sub normalize_obis_identifier
 sub obis_cache_name
 {
 	my ($identifier) = @_;
+	my %known = map { $_->{identifier} => $_->{name} } default_channels();
+	return $known{$identifier} if ($known{$identifier});
+
 	my $name = $identifier;
 	$name =~ s/\A\d+-\d+://;
 	$name =~ s/[^0-9A-Za-z]+/_/g;

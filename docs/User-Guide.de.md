@@ -40,7 +40,9 @@ Das Plugin erzeugt:
 
 Verwende **Speichern und anwenden** fuer den normalen Ablauf; die Aktion schreibt, prueft und aktiviert die Konfiguration. Verwende **Konfiguration pruefen**, um eine gespeicherte oder manuell bearbeitete Konfiguration ohne Anwenden zu pruefen.
 
-Pro Lesekopf koennen bekannte OBIS-Kanaele ausgewaehlt und weitere zaehlerspezifische OBIS-Kanaele zeilenweise ergaenzt werden. Ein optionaler `*255`-Suffix wird beim Speichern entfernt, weil die erzeugte vzLogger-Konfiguration die Identifier ohne Suffix verwendet.
+Der Bridge-Service fuer HTTP-Cache und UDP ist optional und bei Neuinstallationen standardmaessig ausgeschaltet.
+
+Pro Lesekopf koennen bekannte OBIS-Kanaele ausgewaehlt und weitere zaehlerspezifische OBIS-Kanaele zeilenweise ergaenzt werden. Ein optionaler `*255`-Suffix wird beim Speichern entfernt, weil die erzeugte vzLogger-Konfiguration die Identifier ohne Suffix verwendet. Die bekannten Kanaele enthalten auch Hersteller-ID (`1-0:96.50.1`) und Server-ID (`1-0:96.1.0`), wenn der Zaehler diese Werte liefert.
 
 ### Anwenden
 
