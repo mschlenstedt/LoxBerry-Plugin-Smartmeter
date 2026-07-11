@@ -1,50 +1,58 @@
-<div data-role="navbar" class="ui-navbar" role="navigation" style="position: absolute; top: 7px; left: 18px; right: 18px; right: 18px"> 
+<style>
+.implementation-tabs { width: 100%; }
+.implementation-tabs ul { display: flex !important; width: 100% !important; }
+.implementation-tabs li { float: none !important; flex: 1 1 50%; width: 50% !important; }
+.implementation-tabs .ui-btn { min-height: 2.8em; padding: .6em .8em; font-size: 1.08em; line-height: 1.2; text-align: center; white-space: normal; overflow-wrap: anywhere; border-right-width: 1px !important; }
+</style>
+<div data-role="navbar" class="ui-navbar implementation-tabs" role="navigation" style="margin: 0 0 12px 0;">
 
 	<ul> 
 		<li>
-			<div style="position:relative">
-				<div class="notifyBlueNavBar" id="notifyBlueNavBar1" style="display: none">0</div>
-				<div class="notifyRedNavBar" id="notifyRedNavBar1" style="display: none">0</div>
-				<a href="./index.cgi"><TMPL_VAR NAME=T::MENU.VZLOGGER></a>
-			</div>
+			<a href="./index.cgi?form=vzlogger"><TMPL_VAR NAME=T::MENU.VZLOGGER></a>
 		</li> 
 		<li>
-			<div style="position:relative">
-				<div class="notifyBlueNavBar" id="notifyBlueNavBar2" style="display: none">0</div>
-				<div class="notifyRedNavBar" id="notifyRedNavBar2" style="display: none">0</div>
-				<a href="./index_legacy.cgi" class="ui-btn-active"><TMPL_VAR NAME=T::MENU.LEGACY></a>
-			</div>
+			<a href="./index_legacy.cgi?form=legacy" class="ui-btn-active"><TMPL_VAR NAME=T::MENU.LEGACY></a>
 		</li>
 	</ul>
 </div>
-
-<center>
-<div style="background-color: rgba(255, 255, 200, 0.4); border-radius: 11px; border: 1px solid black; border-spacing: 15px; padding:10px; display:table; margin:0 auto;">
-	<i><TMPL_VAR NAME=T::MENU.LEGACY_HINT></i>
-</div>
-<br>
-<table border=0 cellpadding=10>
-<tr>
-	<td>
-	<a id="btnrescan" data-icon="refresh" data-role="button" data-mini="true" href="javascript:location.reload(true)"><TMPL_VAR NAME=T::BUTTON.RESCAN></a>
-	</td>
-	<td>
-	<a  id="btnfetch" data-icon="star" data-role="button" data-mini="true" href="./fetch.cgi" target="_blank"><TMPL_VAR NAME=T::BUTTON.FETCH></a>
-	</td>
-	<td>
-	<a id="btnshowlog" data-icon="search" data-role="button" data-mini="true" href="./logfiles.cgi" target="_blank"><TMPL_VAR NAME=T::BUTTON.SHOWLOGFILE></a>
-	</td>
-	<td>
-	<a  id="btnlog" data-icon="delete" data-role="button" data-mini="true" href="./index_legacy.cgi?clearcache=1"><TMPL_VAR NAME=T::BUTTON.CLEARCACHE></a>
-	</td>
-</tr>
-</table>
-</center>
 
 <form method="post" data-ajax="false" name="main_form" id="main_form" action="./index_legacy.cgi">
 <input type="hidden" name="saveformdata" value="1">
 
 <table border=0 width="100%" cellpadding="10">
+<tr>
+	<td width="20%">
+	<label id="labelimplementation"><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_MODE></label>
+	</td>
+	<td width="55%">
+		<select id="implementation" name="implementation" data-role="flipswitch">
+			<option value="vzlogger"><TMPL_VAR NAME=T::GENERIC.OFF></option>
+			<option value="legacy"><TMPL_VAR NAME=T::GENERIC.ON></option>
+		</select>
+		<script>
+			$( "#implementation").val( "<TMPL_VAR NAME=IMPLEMENTATION>" );
+		</script>
+	</td>
+	<td width="5%">
+	&nbsp;
+	</td>
+	<td width="20%">
+	<font size="-1"><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_MODE_HELP></font>
+	</td>
+</tr>
+<tr>
+	<td colspan=4>
+		<div style="background-color: rgba(255, 255, 200, 0.4); border-radius: 6px; border: 1px solid black; padding:10px; margin:0 auto 10px auto; max-width: 920px; text-align:center;">
+			<i><TMPL_VAR NAME=T::MENU.LEGACY_HINT></i>
+		</div>
+		<center>
+			<a id="btnrescan" data-icon="refresh" data-role="button" data-inline="true" data-mini="true" href="javascript:location.reload(true)"><TMPL_VAR NAME=T::BUTTON.RESCAN></a>
+			<a id="btnfetch" data-icon="star" data-role="button" data-inline="true" data-mini="true" href="./fetch.cgi" target="_blank"><TMPL_VAR NAME=T::BUTTON.FETCH></a>
+			<a id="btnshowlog" data-icon="search" data-role="button" data-inline="true" data-mini="true" href="./logfiles.cgi" target="_blank"><TMPL_VAR NAME=T::BUTTON.SHOWLOGFILE></a>
+			<a id="btnlog" data-icon="delete" data-role="button" data-inline="true" data-mini="true" href="./index_legacy.cgi?clearcache=1"><TMPL_VAR NAME=T::BUTTON.CLEARCACHE></a>
+		</center>
+	</td>
+</tr>
 <tr>
 	<td colspan=4>
 	<h2><TMPL_VAR NAME=T::FORMTABLE.GENERALSETTINGS></h2>

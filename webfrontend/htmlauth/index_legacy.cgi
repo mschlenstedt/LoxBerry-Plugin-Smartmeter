@@ -54,7 +54,7 @@ my  %head;
 my  @rows;
 my  %hash;
 my  $maintemplate;
-my  $template_title;
+our $template_title;
 my  $phrase;
 my  $helplink;
 my  @help;
@@ -81,8 +81,8 @@ $crontab->read( -file => "$lbhomedir/system/cron/cron.d/$lbpplugindir" );
 # Read Settings
 ##########################################################################
 
-# Version of this script
-$version = "2.0.0.5";
+# Version fallback. The installed plugin metadata overrides this below.
+$version = "unknown";
 
 # Figure out in which subfolder we are installed
 $psubfolder = abs_path($0);
@@ -107,6 +107,14 @@ $pname          = $plugin_cfg->param("MAIN.SCRIPTNAME");
 $plugin_cfg->param("MAIN.SENDMQTT", "0") if (!defined $plugin_cfg->param("MAIN.SENDMQTT"));
 $plugin_cfg->param("MAIN.MQTTTOPIC", "smartmeter") if (!$plugin_cfg->param("MAIN.MQTTTOPIC"));
 
+my $installed_plugin_cfg = Config::Simple->new("$installfolder/data/system/install/$psubfolder/plugin.cfg");
+my $plugin_title = "Smartmeter v2";
+if ($installed_plugin_cfg) {
+	$version = $installed_plugin_cfg->param("PLUGIN.VERSION") || $version;
+	$plugin_title = $installed_plugin_cfg->param("PLUGIN.TITLE") || $plugin_title;
+}
+$template_title = "$plugin_title V$version";
+
 # Create temp folder if not already exist
 if (!-d $runtime_dir) {
 	make_path($runtime_dir);
@@ -116,8 +124,14 @@ if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
 	symlink($runtime_dir, "$installfolder/log/plugins/$psubfolder/shm");
 }
 
-# Detect which IR Heads are connected
-my @heads = glob("/dev/serial/smartmeter/*");
+# Detect connected and already configured IR heads.
+my %head_paths = map { $_ => 1 } glob("/dev/serial/smartmeter/*");
+my %plugin_config_hash_for_heads;
+Config::Simple->import_from("$installfolder/config/plugins/$psubfolder/smartmeter.cfg", \%plugin_config_hash_for_heads);
+while (my ($configname, $configvalue) = each %plugin_config_hash_for_heads) {
+	$head_paths{$configvalue} = 1 if ($configname =~ /\.DEVICE\z/ && $configvalue);
+}
+my @heads = sort keys %head_paths;
 
 # Save a config set if it not already exists
 foreach (@heads) {
@@ -247,6 +261,8 @@ sub form
 
 	# If the form was saved, update config file
 	if ( $saveformdata ) {
+		my $implementation = &clean_config_value($cgi->param('implementation'), qr/\A(?:legacy|vzlogger)\z/, &implementation_mode() );
+		$plugin_cfg->param( "MAIN.IMPLEMENTATION", $implementation );
 		$plugin_cfg->param( "MAIN.READ", $cgi->param('read') );
 		$plugin_cfg->param( "MAIN.CRON", $cgi->param('cron') );
 		$plugin_cfg->param( "MAIN.SENDUDP", $cgi->param('sendudp') );
@@ -284,68 +300,14 @@ sub form
 		}
 		$plugin_cfg->save;
 
-		# Create Cronjob
-		if ( $cgi->param('read') eq "1" ) 
-		{
-			&remove_cronjobs;
-			if ($cgi->param('cron') eq "M") 
-			{
-				# Check if Script already running?
-				my $logger_running = 0;
-				if (open(my $ps_fh, "-|", "ps", "aux")) {
-					$logger_running = scalar(grep{/sm_logger.pl/} <$ps_fh>);
-					close($ps_fh);
-				}
-				if (!$logger_running)
-				{	
-					my $pid = fork();
-					if (defined $pid && $pid == 0) {
-						open STDIN, "</dev/null";
-						open STDOUT, ">/dev/null";
-						open STDERR, ">/dev/null";
-						exec($^X, "$installfolder/bin/plugins/$psubfolder/fetch.pl");
-						exit;
-					}
-				}
-				&create_cronjob("cron.reboot", "reboot_cron_runner.sh");
-			}
-			if ($cgi->param('cron') eq "1") 
-			{
-				&create_cronjob("cron.01min", "fetch.pl");
-			}
-			if ($cgi->param('cron') eq "3") 
-			{
-				&create_cronjob("cron.03min", "fetch.pl");
-			}
-			if ($cgi->param('cron') eq "5") 
-			{
-				&create_cronjob("cron.05min", "fetch.pl");
-			}
-			if ($cgi->param('cron') eq "10") 
-			{
-				&create_cronjob("cron.10min", "fetch.pl");
-			}
-			if ($cgi->param('cron') eq "15") 
-			{
-				&create_cronjob("cron.15min", "fetch.pl");
-			}
-			if ($cgi->param('cron') eq "30") 
-			{
-				&create_cronjob("cron.30min", "fetch.pl");
-			}
-			if ($cgi->param('cron') eq "60") 
-			{
-				&create_cronjob("cron.hourly", "fetch.pl");
-			}
-			  
+		if ( $implementation eq "legacy" ) {
+			&apply_legacy_runtime;
+			&run_vzlogger_control("disable-vzlogger");
 		} else {
 			&remove_cronjobs;
+			&run_vzlogger_control("apply");
 		}
-
 	}
-	
-	# The page title read from language file + our name
-	#$template_title = $phrase->param("TXT0000") . ": " . $pname;
 	
 	# Navbar
 	our %navbar;
@@ -383,6 +345,7 @@ sub form
 	$maintemplate->param( UDPPORT 		=> $plugin_cfg->param("MAIN.UDPPORT") );
 	$maintemplate->param( SENDMQTT 		=> $plugin_cfg->param("MAIN.SENDMQTT") );
 	$maintemplate->param( MQTTTOPIC 		=> $plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter" );
+	$maintemplate->param( IMPLEMENTATION 	=> &implementation_mode() );
 
   	# Read the config for all found heads
 	my $i = 0;
@@ -437,6 +400,81 @@ sub create_cronjob
 
 	unlink ($target);
 	symlink ($source, $target);
+}
+
+sub apply_legacy_runtime
+{
+	if ( $plugin_cfg->param("MAIN.READ") eq "1" )
+	{
+		&remove_cronjobs;
+		if ($plugin_cfg->param("MAIN.CRON") eq "M")
+		{
+			# Check if Script already running?
+			my $logger_running = 0;
+			if (open(my $ps_fh, "-|", "ps", "aux")) {
+				$logger_running = scalar(grep{/sm_logger.pl/} <$ps_fh>);
+				close($ps_fh);
+			}
+			if (!$logger_running)
+			{
+				my $pid = fork();
+				if (defined $pid && $pid == 0) {
+					open STDIN, "</dev/null";
+					open STDOUT, ">/dev/null";
+					open STDERR, ">/dev/null";
+					exec($^X, "$installfolder/bin/plugins/$psubfolder/fetch.pl");
+					exit;
+				}
+			}
+			&create_cronjob("cron.reboot", "reboot_cron_runner.sh");
+		}
+		if ($plugin_cfg->param("MAIN.CRON") eq "1")
+		{
+			&create_cronjob("cron.01min", "fetch.pl");
+		}
+		if ($plugin_cfg->param("MAIN.CRON") eq "3")
+		{
+			&create_cronjob("cron.03min", "fetch.pl");
+		}
+		if ($plugin_cfg->param("MAIN.CRON") eq "5")
+		{
+			&create_cronjob("cron.05min", "fetch.pl");
+		}
+		if ($plugin_cfg->param("MAIN.CRON") eq "10")
+		{
+			&create_cronjob("cron.10min", "fetch.pl");
+		}
+		if ($plugin_cfg->param("MAIN.CRON") eq "15")
+		{
+			&create_cronjob("cron.15min", "fetch.pl");
+		}
+		if ($plugin_cfg->param("MAIN.CRON") eq "30")
+		{
+			&create_cronjob("cron.30min", "fetch.pl");
+		}
+		if ($plugin_cfg->param("MAIN.CRON") eq "60")
+		{
+			&create_cronjob("cron.hourly", "fetch.pl");
+		}
+	} else {
+		&remove_cronjobs;
+	}
+}
+
+sub run_vzlogger_control
+{
+	my ($action) = @_;
+	my $script = "$installfolder/bin/plugins/$psubfolder/vzlogger_control.pl";
+	return if (!-e $script);
+	my $output = `$^X "$script" "$action" 2>&1`;
+	return $output;
+}
+
+sub implementation_mode
+{
+	my $mode = $plugin_cfg->param("MAIN.IMPLEMENTATION") || "";
+	return $mode if ($mode =~ /\A(?:legacy|vzlogger)\z/);
+	return (($plugin_cfg->param("MAIN.READ") || "0") eq "1") ? "legacy" : "vzlogger";
 }
 
 sub clean_config_value
