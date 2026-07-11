@@ -14,11 +14,13 @@ my $psubfolder = $lbpplugindir;
 my $config_file = "$home/config/plugins/$psubfolder/smartmeter.cfg";
 my $mapping_file = "$home/config/plugins/$psubfolder/vzlogger_channels.json";
 my $runtime_dir = "/var/run/shm/$psubfolder";
-my $log_file = "$runtime_dir/vzlogger_mqtt_bridge.log";
+my $plugin_log_dir = "$home/log/plugins/$psubfolder";
+my $log_file = "$plugin_log_dir/vzlogger_mqtt_bridge.log";
 my $pid_file = "$runtime_dir/vzlogger_mqtt_bridge.pid";
 my $foreground = grep { $_ eq "--foreground" } @ARGV;
 
 make_path($runtime_dir) if (!-d $runtime_dir);
+make_path($plugin_log_dir) if (!-d $plugin_log_dir);
 
 if (grep { $_ eq "--stop" } @ARGV) {
 	stop_bridge();
@@ -26,7 +28,7 @@ if (grep { $_ eq "--stop" } @ARGV) {
 }
 
 if (grep { $_ eq "--status" } @ARGV) {
-	exit bridge_running() ? 0 : 1;
+	exit(bridge_running() ? 0 : 1);
 }
 
 if (!$foreground && bridge_running()) {
@@ -51,14 +53,17 @@ my $plugin_cfg = Config::Simple->new($config_file) or die "Could not read $confi
 my $mapping = read_json($mapping_file) || {};
 my $base_topic = sanitize_topic($plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter");
 my $subscribe_topic = "$base_topic/vzlogger/#";
-my $udp_interval = cron_to_seconds($plugin_cfg->param("VZLOGGER.UDPINTERVAL") || $plugin_cfg->param("MAIN.CRON") || "5");
+my $udp_interval = clean_number($plugin_cfg->param("VZLOGGER.UDPINTERVAL"), 5);
 my $send_udp = $plugin_cfg->param("MAIN.SENDUDP") ? 1 : 0;
 my $debug_enabled = ($plugin_cfg->param("VZLOGGER.DEBUG") || "0") eq "1";
 my $udp_port = clean_number($plugin_cfg->param("MAIN.UDPPORT"), 7000);
 my $mqtt = read_mqtt_settings();
+my %uuid_by_channel = channel_mapping($mapping);
+my %uuid_by_identifier = identifier_mapping($mapping);
 
 log_line("Starting MQTT bridge. Topic=$subscribe_topic Host=$mqtt->{host}:$mqtt->{port}");
 log_line("Debug logging is enabled.") if ($debug_enabled);
+debug_line("UDP output is disabled in plugin config.") if (!$send_udp);
 
 my @command = (
 	"mosquitto_sub",
@@ -83,7 +88,25 @@ while (my $line = <$mqtt_fh>) {
 	next if (!defined($payload));
 	debug_line("MQTT raw topic=$topic payload=$payload");
 
-	my $reading = parse_reading($topic, $payload, $mapping);
+	if ($topic =~ m{/([^/]+)/uuid\z}) {
+		my $channel = $1;
+		if ($payload =~ /\A[0-9a-fA-F-]{36}\z/) {
+			$uuid_by_channel{$channel} = lc($payload);
+			debug_line("MQTT channel mapping channel=$channel uuid=$payload");
+		}
+		next;
+	}
+	if ($topic =~ m{/([^/]+)/id\z}) {
+		my $channel = $1;
+		my $identifier = clean_scalar_payload($payload);
+		if ($identifier && $uuid_by_identifier{$identifier}) {
+			$uuid_by_channel{$channel} = $uuid_by_identifier{$identifier};
+			debug_line("MQTT channel mapping channel=$channel identifier=$identifier uuid=$uuid_by_identifier{$identifier}");
+		}
+		next;
+	}
+
+	my $reading = parse_reading($topic, $payload, $mapping, \%uuid_by_channel);
 	if (!$reading) {
 		debug_line("MQTT ignored topic=$topic payload=$payload");
 		next;
@@ -91,6 +114,7 @@ while (my $line = <$mqtt_fh>) {
 	debug_line("MQTT parsed serial=$reading->{serial} name=$reading->{name} uuid=$reading->{uuid} value=$reading->{value}");
 
 	$values_by_serial{$reading->{serial}}->{$reading->{name}} = $reading->{value};
+	update_calculated_power($reading, $values_by_serial{$reading->{serial}});
 	write_cache($reading->{serial}, $values_by_serial{$reading->{serial}});
 
 	if ($send_udp && time() - $last_udp >= $udp_interval) {
@@ -105,7 +129,7 @@ exit 0;
 
 sub parse_reading
 {
-	my ($topic, $payload, $mapping) = @_;
+	my ($topic, $payload, $mapping, $uuid_by_channel) = @_;
 	my $json = eval { JSON::PP->new->utf8->decode($payload) };
 
 	my $uuid = "";
@@ -113,6 +137,16 @@ sub parse_reading
 	if (!$@ && ref($json)) {
 		$uuid = $json->{uuid} || $json->{channel} || "";
 		$value = defined($json->{value}) ? $json->{value} : $json->{data};
+	}
+
+	if ($uuid && !exists($mapping->{$uuid}) && $uuid_by_channel->{$uuid}) {
+		$uuid = $uuid_by_channel->{$uuid};
+	}
+
+	if (!$uuid) {
+		if ($topic =~ m{/([^/]+)/raw\z} && $uuid_by_channel->{$1}) {
+			$uuid = $uuid_by_channel->{$1};
+		}
 	}
 
 	if (!$uuid) {
@@ -161,6 +195,106 @@ sub write_cache
 	}
 	close($fh);
 	rename($tmp, $target) or log_line("Could not replace $target: $!");
+}
+
+sub channel_mapping
+{
+	my ($mapping) = @_;
+	my %channels;
+	foreach my $uuid (keys %$mapping) {
+		my $entry = $mapping->{$uuid};
+		next if (!ref($entry));
+		my $channel = $entry->{channel} || "";
+		if (!$channel && defined($entry->{channel_index}) && $entry->{channel_index} =~ /\A\d+\z/) {
+			$channel = "chn$entry->{channel_index}";
+		}
+		$channels{$channel} = lc($uuid) if ($channel =~ /\Achn\d+\z/);
+	}
+	return %channels;
+}
+
+sub identifier_mapping
+{
+	my ($mapping) = @_;
+	my %identifiers;
+	foreach my $uuid (keys %$mapping) {
+		my $entry = $mapping->{$uuid};
+		next if (!ref($entry) || !$entry->{identifier});
+		$identifiers{$entry->{identifier}} = lc($uuid);
+	}
+	return %identifiers;
+}
+
+sub clean_scalar_payload
+{
+	my ($payload) = @_;
+	my $json = eval { JSON::PP->new->utf8->decode($payload) };
+	if (!$@ && defined($json) && !ref($json)) {
+		$payload = $json;
+	}
+	$payload =~ s/\A\s+|\s+\z//g;
+	$payload =~ s/\*\d+\z// if ($payload =~ /\A\d+-\d+:\d+\.\d+\.\d+\*\d+\z/);
+	return $payload;
+}
+
+sub update_calculated_power
+{
+	my ($reading, $values) = @_;
+	my $direction = "";
+	my $target_name = "";
+	if ($reading->{name} eq "Consumption_Total_OBIS_1.8.0") {
+		$direction = "cons";
+		$target_name = "Consumption_CalculatedPower_OBIS_1.99.0";
+	} elsif ($reading->{name} eq "Delivery_Total_OBIS_2.8.0") {
+		$direction = "del";
+		$target_name = "Delivery_CalculatedPower_OBIS_2.99.0";
+	} else {
+		return;
+	}
+
+	my $power = calculate_power($reading->{serial}, $direction, $reading->{value});
+	$values->{$target_name} = $power if (defined($power));
+}
+
+sub calculate_power
+{
+	my ($serial, $direction, $reading) = @_;
+	return undef if (!defined($reading) || $reading !~ /\A-?\d+(?:\.\d+)?\z/);
+
+	my $state_file = "$runtime_dir/$serial.last$direction";
+	my $now = time();
+	my ($last_time, $last_reading);
+	if (-e $state_file && open(my $fh, "<", $state_file)) {
+		my $line = <$fh> || "";
+		close($fh);
+		chomp($line);
+		($last_time, $last_reading) = split(/\|/, $line, 2);
+	}
+
+	if (!defined($last_time) || !defined($last_reading) || $last_time !~ /\A\d+\z/ || $last_reading !~ /\A-?\d+(?:\.\d+)?\z/ || $reading < $last_reading) {
+		write_power_state($state_file, $now, $reading);
+		return 0;
+	}
+
+	return 0 if ($reading == $last_reading);
+	my $hours = ($now - $last_time) / 3600;
+	if ($hours <= 0) {
+		write_power_state($state_file, $now, $reading);
+		return 0;
+	}
+
+	my $power = ($reading - $last_reading) / $hours;
+	write_power_state($state_file, $now, $reading);
+	return sprintf("%.3f", $power);
+}
+
+sub write_power_state
+{
+	my ($state_file, $time, $reading) = @_;
+	if (open(my $fh, ">", $state_file)) {
+		print $fh "$time|$reading\n";
+		close($fh);
+	}
 }
 
 sub send_udp
@@ -219,8 +353,8 @@ sub read_mqtt_settings
 	my $mqtt = $general->{Mqtt};
 	$settings{host} = first_value($mqtt, qw(Host Hostname Broker Brokerhost Server IpAddress Ipaddress)) || $settings{host};
 	$settings{port} = clean_number(first_value($mqtt, qw(Port Brokerport Mqttport)), $settings{port});
-	$settings{user} = first_value($mqtt, qw(User Username Login)) || "";
-	$settings{pass} = first_value($mqtt, qw(Pass Password)) || "";
+	$settings{user} = first_value($mqtt, qw(Brokeruser Brokerusername User Username Login)) || "";
+	$settings{pass} = first_value($mqtt, qw(Brokerpass Brokerpassword Pass Password)) || "";
 	return \%settings;
 }
 
@@ -274,10 +408,19 @@ sub stop_bridge
 sub log_line
 {
 	my ($message) = @_;
+	bound_log_file($log_file, 2 * 1024 * 1024);
 	open(my $fh, ">>", $log_file) or return;
 	my ($sec, $min, $hour, $mday, $mon, $year) = localtime();
 	printf $fh "%04d-%02d-%02d %02d:%02d:%02d %s\n", $year + 1900, $mon + 1, $mday, $hour, $min, $sec, $message;
 	close($fh);
+}
+
+sub bound_log_file
+{
+	my ($file, $max_bytes) = @_;
+	return if (!-e $file || -s $file < $max_bytes);
+	unlink("$file.1") if (-e "$file.1");
+	rename($file, "$file.1");
 }
 
 sub debug_line

@@ -14,11 +14,14 @@ my $plugin_config_file = "$home/config/plugins/$psubfolder/smartmeter.cfg";
 my $config_file = "$home/config/plugins/$psubfolder/vzlogger.conf";
 my $mapping_file = "$home/config/plugins/$psubfolder/vzlogger_channels.json";
 my $runtime_dir = "/var/run/shm/$psubfolder";
-my $control_log_file = "$runtime_dir/vzlogger_control.log";
+my $plugin_log_dir = "$home/log/plugins/$psubfolder";
+my $control_log_file = "$plugin_log_dir/vzlogger_control.log";
+my $vzlogger_log_file = "$plugin_log_dir/vzlogger.log";
 my $bridge_service = "smartmeter-v2-vzlogger-bridge";
 my $action = shift @ARGV || "status";
 
 make_path($runtime_dir) if (!-d $runtime_dir);
+make_path($plugin_log_dir) if (!-d $plugin_log_dir);
 log_control("action=$action user=" . ($ENV{USER} || $ENV{LOGNAME} || "unknown"));
 
 if ($action eq "generate") {
@@ -32,27 +35,35 @@ if ($action eq "apply") {
 	exit $rc if ($rc != 0);
 	$rc = run_perl("$bindir/vzlogger_validate.pl");
 	exit $rc if ($rc != 0);
-	if (!read_enabled()) {
+	if (!vzlogger_enabled()) {
 		stop_bridge();
-		stop_vzlogger();
-		print "Meter reading is disabled. Stopped vzLogger and bridge.\n";
+		stop_vzlogger(1);
+		print "vzLogger mode is disabled. Stopped vzLogger and bridge.\n";
 		exit 0;
 	}
 	restart_vzlogger();
-	start_bridge();
+	restart_bridge();
 	exit 0;
 }
 
-if ($action eq "install-vzlogger") {
-	exit install_vzlogger();
+if ($action eq "restart-vzlogger") {
+	restart_vzlogger();
+	exit 0;
 }
 
-if ($action eq "install-bridge-service") {
-	exit install_bridge_service("install");
+if ($action eq "start-vzlogger") {
+	start_vzlogger();
+	exit 0;
 }
 
-if ($action eq "remove-bridge-service") {
-	exit install_bridge_service("remove");
+if ($action eq "stop-vzlogger") {
+	stop_vzlogger();
+	exit 0;
+}
+
+if ($action eq "restart-bridge") {
+	restart_bridge();
+	exit 0;
 }
 
 if ($action eq "validate") {
@@ -69,14 +80,22 @@ if ($action eq "stop-bridge") {
 	exit 0;
 }
 
+if ($action eq "disable-vzlogger") {
+	stop_bridge();
+	stop_vzlogger(1);
+	print "Stopped vzLogger and bridge.\n";
+	exit 0;
+}
+
 if ($action eq "status") {
+	print "implementation: " . implementation_mode() . "\n";
 	print "vzlogger binary: " . (command_exists("vzlogger") ? "available" : "missing") . "\n";
 	print "vzlogger package: " . package_state("vzlogger") . "\n";
 	print "Volkszaehler apt source: " . (-e "/etc/apt/sources.list.d/volkszaehler-volkszaehler-org-project.list" ? "configured" : "missing") . "\n";
 	print "vzlogger config: " . (-e $config_file ? $config_file : "missing") . "\n";
 	print "config validation: " . validation_state() . "\n";
-	print "vzlogger service: " . service_state("vzlogger") . "\n";
-	print "MQTT bridge service: " . service_state($bridge_service) . "\n";
+	print "vzlogger service: " . service_summary("vzlogger") . "\n";
+	print "MQTT bridge service: " . service_summary($bridge_service) . "\n";
 	print "MQTT bridge process: " . (bridge_running() ? "running" : "stopped") . "\n";
 	exit 0;
 }
@@ -85,7 +104,7 @@ if ($action eq "debug-log") {
 	exit create_debug_log();
 }
 
-print "Usage: $0 generate|validate|apply|install-vzlogger|install-bridge-service|remove-bridge-service|start-bridge|stop-bridge|status|debug-log\n";
+print "Usage: $0 generate|validate|apply|restart-vzlogger|start-vzlogger|stop-vzlogger|restart-bridge|start-bridge|stop-bridge|disable-vzlogger|status|debug-log\n";
 exit 1;
 
 sub run_perl
@@ -100,9 +119,12 @@ sub run_perl
 
 sub start_bridge
 {
+	my $install_rc = install_bridge_service("install");
+	return if ($install_rc != 0);
+
 	if (service_installed($bridge_service)) {
-		my $rc = run_privileged("restart $bridge_service", "systemctl", "restart", $bridge_service);
-		print "Restarted $bridge_service service.\n" if ($rc == 0);
+		my $rc = run_privileged("start $bridge_service", systemctl_command(), "start", $bridge_service);
+		print "Started $bridge_service service.\n" if ($rc == 0);
 		return;
 	}
 
@@ -112,18 +134,34 @@ sub start_bridge
 	die "Could not fork bridge process: $!\n" if (!defined($pid));
 	if ($pid == 0) {
 		open STDIN, "</dev/null";
-		open STDOUT, ">>$runtime_dir/vzlogger_mqtt_bridge.log";
-		open STDERR, ">>$runtime_dir/vzlogger_mqtt_bridge.log";
+		open STDOUT, ">>$home/log/plugins/$psubfolder/vzlogger_mqtt_bridge.log";
+		open STDERR, ">>$home/log/plugins/$psubfolder/vzlogger_mqtt_bridge.log";
 		exec($^X, "$bindir/vzlogger_mqtt_bridge.pl");
 		exit 1;
 	}
 	print "Started bridge process $pid.\n";
 }
 
+sub restart_bridge
+{
+	my $install_rc = install_bridge_service("install");
+	return if ($install_rc != 0);
+
+	if (service_installed($bridge_service)) {
+		my $rc = run_privileged("restart $bridge_service", systemctl_command(), "restart", $bridge_service);
+		print "Restarted $bridge_service service.\n" if ($rc == 0);
+		return;
+	}
+
+	stop_bridge();
+	start_bridge();
+}
+
 sub stop_bridge
 {
 	if (service_installed($bridge_service)) {
-		my $rc = run_privileged("stop $bridge_service", "systemctl", "stop", $bridge_service);
+		my $rc = run_privileged("stop $bridge_service", systemctl_command(), "stop", $bridge_service);
+		run_privileged("reset failed state for $bridge_service", systemctl_command(), "reset-failed", $bridge_service) if ($rc == 0);
 		print "Stopped $bridge_service service.\n" if ($rc == 0);
 		return;
 	}
@@ -138,24 +176,95 @@ sub restart_vzlogger
 		return;
 	}
 
+	if (!-d $runtime_dir) {
+		make_path($runtime_dir);
+	}
+	chmod(0777, $runtime_dir);
+	prepare_vzlogger_log_file();
+
 	if (-e $config_file) {
-		my $copy_rc = run_privileged("copy $config_file to /etc/vzlogger.conf", "cp", $config_file, "/etc/vzlogger.conf");
+		my $copy_rc = run_privileged("copy $config_file to /etc/vzlogger.conf", "/bin/cp", $config_file, "/etc/vzlogger.conf");
 		print "Copied config to /etc/vzlogger.conf.\n" if ($copy_rc == 0);
 		if ($copy_rc != 0) {
 			print "Could not copy config to /etc/vzlogger.conf. Run as root or copy it manually.\n";
 			print "Skipped vzlogger restart to avoid running with an outdated config.\n";
 			return;
 		}
+		run_privileged("mark /etc/vzlogger.conf as Smartmeter-managed", "/usr/bin/touch", "/etc/vzlogger.conf.smartmeter-v2");
 	}
 
-	my $restart_rc = run_privileged("restart vzlogger", "systemctl", "restart", "vzlogger");
+	enable_vzlogger_autostart();
+	my $restart_rc = run_privileged("restart vzlogger", systemctl_command(), "restart", "vzlogger");
 	print "Restarted vzlogger service.\n" if ($restart_rc == 0);
+}
+
+sub prepare_vzlogger_log_file
+{
+	return if (!vzlogger_debug_enabled());
+	make_path($plugin_log_dir) if (!-d $plugin_log_dir);
+
+	if (!-e $vzlogger_log_file) {
+		open(my $fh, ">>", $vzlogger_log_file) or do {
+			print "Could not create $vzlogger_log_file: $!\n";
+			return;
+		};
+		close($fh);
+	}
+
+	if ($> == 0) {
+		my $vzlogger_uid = getpwnam("_vzlogger");
+		my $adm_gid = getgrnam("adm");
+		chown($vzlogger_uid, $adm_gid, $vzlogger_log_file) if (defined($vzlogger_uid) && defined($adm_gid));
+		chmod(0664, $vzlogger_log_file);
+		return;
+	}
+
+	# Web actions run as loxberry and may not have sudo rights for chown/chmod.
+	# Keep the file writable for the _vzlogger service user when root setup is not available.
+	chmod(0666, $vzlogger_log_file);
+}
+
+sub start_vzlogger
+{
+	if (!command_exists("systemctl")) {
+		print "systemctl not available.\n";
+		return;
+	}
+	if (!service_installed("vzlogger")) {
+		print "vzlogger service is not installed.\n";
+		return;
+	}
+	prepare_vzlogger_log_file();
+	enable_vzlogger_autostart();
+	my $start_rc = run_privileged("start vzlogger", systemctl_command(), "start", "vzlogger");
+	print "Started vzlogger service.\n" if ($start_rc == 0);
 }
 
 sub stop_vzlogger
 {
+	my ($disable) = @_;
 	return if (!command_exists("systemctl"));
-	run_privileged("stop vzlogger", "systemctl", "stop", "vzlogger");
+	if (!service_installed("vzlogger")) {
+		print "vzlogger service is not installed.\n";
+		return;
+	}
+	my $rc = run_privileged("stop vzlogger", systemctl_command(), "stop", "vzlogger");
+	if ($disable && $rc == 0) {
+		my $disable_rc = run_privileged("disable vzlogger autostart", systemctl_command(), "disable", "vzlogger");
+		print "Disabled vzlogger autostart.\n" if ($disable_rc == 0);
+	}
+	run_privileged("reset failed state for vzlogger", systemctl_command(), "reset-failed", "vzlogger") if ($rc == 0);
+}
+
+sub enable_vzlogger_autostart
+{
+	return if (!command_exists("systemctl"));
+	if (!service_installed("vzlogger")) {
+		print "vzlogger service is not installed.\n";
+		return;
+	}
+	my $enable_rc = run_privileged("enable vzlogger autostart", systemctl_command(), "enable", "vzlogger");
+	print "Enabled vzlogger autostart.\n" if ($enable_rc == 0);
 }
 
 sub read_enabled
@@ -165,30 +274,25 @@ sub read_enabled
 	return ($cfg->param("MAIN.READ") || "0") eq "1";
 }
 
-sub install_vzlogger
+sub vzlogger_debug_enabled
 {
-	my $script = "$bindir/install_vzlogger_package.sh";
-	return message_exit("Install helper not found: $script", 1) if (!-e $script);
+	my $cfg = Config::Simple->new($plugin_config_file);
+	return 0 if (!$cfg);
+	return ($cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0") eq "1";
+}
 
-	if ($> == 0) {
-		system("sh", $script);
-		my $exit = $? >> 8;
-		log_control("exit=$exit: sh $script");
-		return $exit;
-	}
+sub implementation_mode
+{
+	my $cfg = Config::Simple->new($plugin_config_file);
+	return "legacy" if (!$cfg);
+	my $mode = $cfg->param("MAIN.IMPLEMENTATION") || "";
+	return $mode if ($mode =~ /\A(?:legacy|vzlogger)\z/);
+	return read_enabled() ? "legacy" : "vzlogger";
+}
 
-	if (command_exists("sudo")) {
-		system("sudo", "-n", "sh", $script);
-		my $exit = $? >> 8;
-		log_control("exit=$exit: sudo -n sh $script");
-		return $exit if ($exit == 0);
-		print "Could not run sudo non-interactively. Run as root: sh $script\n";
-		return $exit || 1;
-	}
-
-	print "Root privileges are required. Run as root: sh $script\n";
-	log_control("root required: sh $script");
-	return 2;
+sub vzlogger_enabled
+{
+	return implementation_mode() eq "vzlogger" && read_enabled();
 }
 
 sub install_bridge_service
@@ -205,9 +309,9 @@ sub install_bridge_service
 	}
 
 	if (command_exists("sudo")) {
-		system("sudo", "-n", "sh", $script, $home, $psubfolder, $action);
+		system("sudo", "-n", "/bin/sh", $script, $home, $psubfolder, $action);
 		my $exit = $? >> 8;
-		log_control("exit=$exit: sudo -n sh $script $home $psubfolder $action");
+		log_control("exit=$exit: sudo -n /bin/sh $script $home $psubfolder $action");
 		return $exit if ($exit == 0);
 		print "Could not run sudo non-interactively. Run as root: sh $script $home $psubfolder $action\n";
 		return $exit || 1;
@@ -239,12 +343,37 @@ sub service_state
 	return $state || "inactive";
 }
 
+sub service_summary
+{
+	my ($service) = @_;
+	my $state = service_state($service);
+	my $pid = service_pid($service);
+	my $installed = service_installed($service) ? "installed" : "not installed";
+	return "$state | PID: " . ($pid || "-") . " | Service: $service | $installed";
+}
+
+sub service_pid
+{
+	my ($service) = @_;
+	return "" if (!command_exists("systemctl"));
+	my $pid = `systemctl show -p MainPID --value $service 2>/dev/null`;
+	chomp($pid);
+	return ($pid && $pid ne "0") ? $pid : "";
+}
+
 sub service_installed
 {
 	my ($service) = @_;
 	return 1 if (-e "/etc/systemd/system/$service.service");
 	return 1 if (-e "/lib/systemd/system/$service.service");
 	return 0;
+}
+
+sub systemctl_command
+{
+	return "/bin/systemctl" if (-x "/bin/systemctl");
+	return "/usr/bin/systemctl" if (-x "/usr/bin/systemctl");
+	return "systemctl";
 }
 
 sub package_state
@@ -269,13 +398,14 @@ sub validation_state
 sub create_debug_log
 {
 	my $timestamp = timestamp();
-	my $debug_file = "$runtime_dir/vzlogger_debug_$timestamp.log";
+	my $debug_file = "$plugin_log_dir/vzlogger_debug_$timestamp.log";
 	open(my $fh, ">", $debug_file) or return message_exit("Could not write $debug_file: $!", 1);
 
 	print_section($fh, "SmartMeter vzLogger Debug Log");
 	print $fh "Created: $timestamp\n";
 	print $fh "Plugin: $psubfolder\n";
 	print $fh "Runtime directory: $runtime_dir\n";
+	print $fh "Plugin log directory: $plugin_log_dir\n";
 	print $fh "Config file: $config_file\n";
 	print $fh "Mapping file: $mapping_file\n";
 
@@ -285,8 +415,8 @@ sub create_debug_log
 	print $fh "Volkszaehler apt source: " . (-e "/etc/apt/sources.list.d/volkszaehler-volkszaehler-org-project.list" ? "configured" : "missing") . "\n";
 	print $fh "vzlogger config: " . (-e $config_file ? $config_file : "missing") . "\n";
 	print $fh "config validation: " . validation_state() . "\n";
-	print $fh "vzlogger service: " . service_state("vzlogger") . "\n";
-	print $fh "MQTT bridge service: " . service_state($bridge_service) . "\n";
+	print $fh "vzlogger service: " . service_summary("vzlogger") . "\n";
+	print $fh "MQTT bridge service: " . service_summary($bridge_service) . "\n";
 	print $fh "MQTT bridge process: " . (bridge_running() ? "running" : "stopped") . "\n";
 
 	print_section($fh, "Command Output");
@@ -300,15 +430,25 @@ sub create_debug_log
 	print_file($fh, "Generated vzLogger config", $config_file, 1);
 	print_file($fh, "Channel mapping", $mapping_file, 0);
 	print_file($fh, "Control action log", $control_log_file, 0, 200);
-	print_file($fh, "Bridge log tail", "$runtime_dir/vzlogger_mqtt_bridge.log", 0, 200);
-	print_loxberry_logs($fh);
+	print_file($fh, "Bridge log tail", "$home/log/plugins/$psubfolder/vzlogger_mqtt_bridge.log", 0, 200);
+	print_loxberry_logs($fh, $debug_file);
 	print_runtime_cache($fh);
 	print_mqtt_capture($fh);
 
 	close($fh);
+	cleanup_debug_logs();
 	print "Created debug log: $debug_file\n";
 	print "Attach this file when reporting vzLogger/MQTT bridge issues.\n";
 	return 0;
+}
+
+sub cleanup_debug_logs
+{
+	my @logs = sort glob("$plugin_log_dir/vzlogger_debug_*.log");
+	while (@logs > 5) {
+		my $oldest = shift @logs;
+		unlink($oldest);
+	}
 }
 
 sub print_section
@@ -331,6 +471,7 @@ sub print_command
 		return;
 	}
 	while (my $line = <$cmd_fh>) {
+		redact_sensitive($line);
 		print $fh $line;
 	}
 	close($cmd_fh);
@@ -353,21 +494,26 @@ sub print_file
 	close($in);
 	@lines = @lines > $tail_lines ? @lines[-$tail_lines .. -1] : @lines if ($tail_lines);
 	foreach my $line (@lines) {
-		$line =~ s/("pass"\s*:\s*")[^"]*/$1***REDACTED***/i if ($redact);
-		$line =~ s/(\bpass(?:word)?\s*=\s*).*/$1***REDACTED***/i if ($redact);
+		redact_sensitive($line) if ($redact);
 		print $fh $line;
 	}
+}
+
+sub redact_sensitive
+{
+	$_[0] =~ s/("pass"\s*:\s*")[^"]*/$1***REDACTED***/ig;
+	$_[0] =~ s/(\bpass(?:word)?\s*=\s*).*/$1***REDACTED***/ig;
+	$_[0] =~ s/(\s-P\s+)(?:"[^"]*"|'[^']*'|\S+)/$1***REDACTED***/g;
 }
 
 sub print_runtime_cache
 {
 	my ($fh) = @_;
 	print_section($fh, "Runtime cache files");
-	my $dir;
-	if (!opendir($dir, $runtime_dir)) {
+	opendir(my $dir, $runtime_dir) or do {
 		print $fh "Could not open $runtime_dir: $!\n";
 		return;
-	}
+	};
 	my @files = sort grep { /\.data\z/ } readdir($dir);
 	closedir($dir);
 	if (!@files) {
@@ -381,7 +527,7 @@ sub print_runtime_cache
 
 sub print_loxberry_logs
 {
-	my ($fh) = @_;
+	my ($fh, $exclude_file) = @_;
 	print_section($fh, "LoxBerry install and plugin logs");
 	my @candidates = (
 		"$home/log/plugins/$psubfolder/*.log",
@@ -394,7 +540,7 @@ sub print_loxberry_logs
 	my %seen;
 	my @files;
 	foreach my $pattern (@candidates) {
-		push @files, grep { !$seen{$_}++ && -f $_ } glob($pattern);
+		push @files, grep { $_ ne $exclude_file && !$seen{$_}++ && -f $_ } glob($pattern);
 	}
 	if (!@files) {
 		print $fh "No matching LoxBerry install or plugin log files found.\n";
@@ -466,8 +612,8 @@ sub read_mqtt_settings
 	my $mqtt = $general->{Mqtt};
 	$settings{host} = first_value($mqtt, qw(Host Hostname Broker Brokerhost Server IpAddress Ipaddress)) || $settings{host};
 	$settings{port} = clean_number(first_value($mqtt, qw(Port Brokerport Mqttport)), $settings{port});
-	$settings{user} = first_value($mqtt, qw(User Username Login)) || "";
-	$settings{pass} = first_value($mqtt, qw(Pass Password)) || "";
+	$settings{user} = first_value($mqtt, qw(Brokeruser Brokerusername User Username Login)) || "";
+	$settings{pass} = first_value($mqtt, qw(Brokerpass Brokerpassword Pass Password)) || "";
 	return \%settings;
 }
 
@@ -535,6 +681,10 @@ sub run_privileged
 sub log_control
 {
 	my ($message) = @_;
+	if (-e $control_log_file && -s $control_log_file >= 512 * 1024) {
+		unlink("$control_log_file.1") if (-e "$control_log_file.1");
+		rename($control_log_file, "$control_log_file.1");
+	}
 	open(my $fh, ">>", $control_log_file) or return;
 	print $fh timestamp() . " $message\n";
 	close($fh);

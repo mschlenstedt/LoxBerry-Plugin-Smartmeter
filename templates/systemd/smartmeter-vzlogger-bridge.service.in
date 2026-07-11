@@ -7,6 +7,8 @@ Wants=network-online.target
 Type=simple
 User=loxberry
 Group=loxberry
+Environment=LBHOMEDIR=__LBHOMEDIR__
+Environment=PERL5LIB=__LBHOMEDIR__/libs/perllib
 ExecStart=/usr/bin/perl __LBHOMEDIR__/bin/plugins/__PLUGINFOLDER__/vzlogger_mqtt_bridge.pl --foreground
 ExecStop=/usr/bin/perl __LBHOMEDIR__/bin/plugins/__PLUGINFOLDER__/vzlogger_mqtt_bridge.pl --stop
 Restart=on-failure

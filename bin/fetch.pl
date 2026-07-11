@@ -64,6 +64,7 @@ our $udpport;
 our $sendudp;
 our $sendmqtt;
 our $mqtttopic;
+our $implementation;
 my  $udpstring;
 my  @lines;
 my  $i;
@@ -97,6 +98,7 @@ $udpport        = $plugin_cfg->param("MAIN.UDPPORT");
 $sendudp        = $plugin_cfg->param("MAIN.SENDUDP");
 $sendmqtt       = $plugin_cfg->param("MAIN.SENDMQTT");
 $mqtttopic      = $plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter";
+$implementation = $plugin_cfg->param("MAIN.IMPLEMENTATION") || "legacy";
 $cron		= $plugin_cfg->param("MAIN.CRON");
 
 # Commandline options
@@ -129,6 +131,11 @@ if (-e "$runtime_dir/fetch.log") {
 }
 
 # Check if we should read automatically
+if ( $implementation eq "vzlogger" && !$force ) {
+	&LOG ("Legacy meter polling is disabled because vzLogger mode is active.", "INFO");
+	exit;
+}
+
 if ( !$plugin_cfg->param("MAIN.READ") && !$force ) {
 	&LOG ("Reading serial devices is currently deactivated. Giving up.", "FAIL");
 	exit;
