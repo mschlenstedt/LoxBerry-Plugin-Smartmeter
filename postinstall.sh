@@ -23,17 +23,13 @@ ARGV5=$5 # Fifth argument is Base folder of LoxBerry
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/vzlogger_validate.pl
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/vzlogger_control.pl
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/vzlogger_mqtt_bridge.pl
-/bin/chmod +x $ARGV5/bin/plugins/$ARGV3/install_vzlogger_package.sh
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/install_vzlogger_bridge_service.sh
+/bin/chmod +x $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/vzlogger_live.cgi
 
 echo "<INFO> Rename htaccess to .htaccess"
 mv $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/htaccess $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/.htaccess
 
-if command -v vzlogger >/dev/null 2>&1; then
-	echo "<INFO> vzLogger binary found: $(command -v vzlogger)"
-else
-	echo "<WARNING> vzLogger is not available. Use the vzLogger configuration page to install the official apt package."
-fi
+echo "<INFO> vzLogger package is installed through LoxBerry dpkg/apt dependencies."
 
 if command -v mosquitto_sub >/dev/null 2>&1; then
 	echo "<INFO> mosquitto_sub found for MQTT bridge."

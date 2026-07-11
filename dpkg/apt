@@ -1,3 +1,4 @@
 libstring-escape-perl
 libdevice-serialport-perl 
 mosquitto-clients
+vzlogger

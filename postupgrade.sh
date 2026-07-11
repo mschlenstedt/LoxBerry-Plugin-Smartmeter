@@ -28,8 +28,14 @@ restore_cronjob()
 	configfile="$ARGV5/config/plugins/$ARGV3/smartmeter.cfg"
 	read_enabled=$(sed -n 's/^READ=//p' "$configfile")
 	cron_interval=$(sed -n 's/^CRON=//p' "$configfile")
+	implementation=$(sed -n 's/^IMPLEMENTATION=//p' "$configfile")
 
 	remove_cronjobs
+
+	if [ "$implementation" = "vzlogger" ]; then
+		echo "<INFO> vzLogger mode is active. No legacy cronjob restored."
+		return
+	fi
 
 	if [ "$read_enabled" != "1" ]; then
 		echo "<INFO> Automatic meter polling is disabled. No cronjob restored."
@@ -89,14 +95,26 @@ migrate_config()
 		echo "<INFO> Added default MQTT topic"
 	fi
 
+	if ! grep -q '^IMPLEMENTATION=' "$configfile"; then
+		read_enabled=$(sed -n 's/^READ=//p' "$configfile")
+		if [ "$read_enabled" = "1" ]; then
+			sed -i '/^READ=/a IMPLEMENTATION=legacy' "$configfile"
+			echo "<INFO> Added default implementation mode: legacy"
+		else
+			sed -i '/^READ=/a IMPLEMENTATION=vzlogger' "$configfile"
+			echo "<INFO> Added default implementation mode: vzlogger"
+		fi
+	fi
+
 	if ! grep -q '^\[VZLOGGER\]' "$configfile"; then
 		cat >> "$configfile" <<'EOF'
 
 [VZLOGGER]
 LOCALPORT=18080
-VERBOSITY=5
 UDPINTERVAL=5
 DEBUG=0
+VZLOGGERDEBUG=0
+LOGLEVEL=5
 EOF
 		echo "<INFO> Added default vzLogger settings"
 	else
@@ -104,17 +122,21 @@ EOF
 			sed -i '/^\[VZLOGGER\]/a LOCALPORT=18080' "$configfile"
 			echo "<INFO> Added default vzLogger local HTTP port"
 		fi
-		if ! grep -q '^VERBOSITY=' "$configfile"; then
-			sed -i '/^\[VZLOGGER\]/a VERBOSITY=5' "$configfile"
-			echo "<INFO> Added default vzLogger verbosity"
-		fi
 		if ! grep -q '^UDPINTERVAL=' "$configfile"; then
 			sed -i '/^\[VZLOGGER\]/a UDPINTERVAL=5' "$configfile"
-			echo "<INFO> Added default vzLogger UDP interval"
+			echo "<INFO> Added default bridge update interval"
 		fi
 		if ! grep -q '^DEBUG=' "$configfile"; then
 			sed -i '/^\[VZLOGGER\]/a DEBUG=0' "$configfile"
 			echo "<INFO> Added default vzLogger debug setting"
+		fi
+		if ! grep -q '^VZLOGGERDEBUG=' "$configfile"; then
+			sed -i '/^\[VZLOGGER\]/a VZLOGGERDEBUG=0' "$configfile"
+			echo "<INFO> Added default vzLogger service debug setting"
+		fi
+		if ! grep -q '^LOGLEVEL=' "$configfile"; then
+			sed -i '/^\[VZLOGGER\]/a LOGLEVEL=5' "$configfile"
+			echo "<INFO> Added default vzLogger service log level"
 		fi
 	fi
 }
@@ -130,8 +152,8 @@ chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_config.pl" 2>/dev/null || true
 chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_validate.pl" 2>/dev/null || true
 chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_control.pl" 2>/dev/null || true
 chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_mqtt_bridge.pl" 2>/dev/null || true
-chmod +x "$ARGV5/bin/plugins/$ARGV3/install_vzlogger_package.sh" 2>/dev/null || true
 chmod +x "$ARGV5/bin/plugins/$ARGV3/install_vzlogger_bridge_service.sh" 2>/dev/null || true
+chmod +x "$ARGV5/webfrontend/htmlauth/plugins/$ARGV3/vzlogger_live.cgi" 2>/dev/null || true
 
 echo "<INFO> Copy back existing log files"
 if [ -d "/tmp/$ARGV1"_upgrade/log/"$ARGV3" ]; then

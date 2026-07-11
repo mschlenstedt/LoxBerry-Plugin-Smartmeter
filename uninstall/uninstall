@@ -6,6 +6,12 @@
 UDEV_RULE="/etc/udev/rules.d/99-smartmeter.rules"
 BRIDGE_SERVICE="smartmeter-v2-vzlogger-bridge.service"
 BRIDGE_UNIT="/etc/systemd/system/$BRIDGE_SERVICE"
+CONFIG_DIR="$5/config/plugins/$3"
+VZLOGGER_MARKER="$CONFIG_DIR/vzlogger.installed-by-plugin"
+VZLOGGER_CONFIG="/etc/vzlogger.conf"
+VZLOGGER_CONFIG_MARKER="/etc/vzlogger.conf.smartmeter-v2"
+SOURCE_LIST="/etc/apt/sources.list.d/volkszaehler-volkszaehler-org-project.list"
+KEYRING="/usr/share/keyrings/volkszaehler-volkszaehler-org-project-archive-keyring.gpg"
 
 if [ -f "$BRIDGE_UNIT" ]; then
     echo "<INFO> Removing Smartmeter vzLogger bridge service"
@@ -19,6 +25,42 @@ if [ -f "$BRIDGE_UNIT" ]; then
     fi
 else
     echo "<INFO> Smartmeter vzLogger bridge service not found"
+fi
+
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl stop vzlogger.service >/dev/null 2>&1 || true
+fi
+
+if [ -f "$VZLOGGER_CONFIG_MARKER" ]; then
+    echo "<INFO> Removing Smartmeter-generated /etc/vzlogger.conf"
+    rm -f "$VZLOGGER_CONFIG"
+    rm -f "$VZLOGGER_CONFIG_MARKER"
+else
+    echo "<INFO> System vzLogger config not found or not owned by this plugin"
+fi
+
+if [ -f "$SOURCE_LIST" ]; then
+    echo "<INFO> Removing Volkszaehler apt source configured by Smartmeter"
+    rm -f "$SOURCE_LIST"
+fi
+
+if [ -f "$KEYRING" ]; then
+    echo "<INFO> Removing Volkszaehler apt keyring configured by Smartmeter"
+    rm -f "$KEYRING"
+fi
+
+if [ -f "$VZLOGGER_MARKER" ]; then
+    if dpkg-query -W -f='${Status}' vzlogger 2>/dev/null | grep -q "install ok installed"; then
+        echo "<INFO> Removing vzLogger package installed by Smartmeter"
+        apt-get remove -y vzlogger || echo "<WARNING> Could not remove vzLogger package"
+    fi
+    rm -f "$VZLOGGER_MARKER"
+else
+    echo "<INFO> vzLogger package was not marked as installed by this plugin; leaving package installed"
+fi
+
+if command -v apt-get >/dev/null 2>&1; then
+    apt-get update >/dev/null 2>&1 || true
 fi
 
 if [ -f "$UDEV_RULE" ] && grep -q "LoxBerry SML-eMon Plugin device rule file" "$UDEV_RULE"; then
