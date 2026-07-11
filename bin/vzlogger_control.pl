@@ -38,7 +38,7 @@ if ($action eq "apply") {
 	if (!vzlogger_enabled()) {
 		stop_bridge();
 		stop_vzlogger(1);
-		print "vzLogger mode is disabled. Stopped vzLogger and bridge.\n";
+		print "vzLogger meter reading is disabled. Stopped vzLogger and bridge.\n";
 		exit 0;
 	}
 	restart_vzlogger();

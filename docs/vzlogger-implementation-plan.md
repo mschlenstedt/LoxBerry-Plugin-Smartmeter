@@ -220,6 +220,7 @@ Implemented files:
 
 - `[x]` Set executable permissions for helper scripts in `postinstall.sh`.
 - `[x]` Set executable permissions for helper scripts in `postupgrade.sh`.
+- `[x]` Install and trigger the SmartMeter I/R head udev rule from `postroot.sh` so readers are visible before the first reboot.
 - `[x]` Migrate `[VZLOGGER]` default config section during upgrade.
 - `[x]` Install `vzlogger` and `mosquitto_sub` through LoxBerry `dpkg/apt` dependencies.
 - `[x]` Remove bridge service during uninstall.

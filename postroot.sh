@@ -12,6 +12,9 @@ BRIDGE_SERVICE="smartmeter-v2-vzlogger-bridge.service"
 BRIDGE_INSTALLER="$ARGV5/bin/plugins/$ARGV3/install_vzlogger_bridge_service.sh"
 VZLOGGER_CONTROL="$ARGV5/bin/plugins/$ARGV3/vzlogger_control.pl"
 PREUPGRADE_ACTIVE_FILE="$ARGV5/config/plugins/$ARGV3/vzlogger.preupgrade-service-active"
+SMARTMETER_LOG_DIR="$ARGV5/log/plugins/$ARGV3"
+SMARTMETER_LOG_FILE="$SMARTMETER_LOG_DIR/smartmeter.log"
+SMARTMETER_UDEV_RULE="/etc/udev/rules.d/99-smartmeter.rules"
 
 if [ "$(id -u)" != "0" ]; then
 	echo "<ERROR> postroot.sh must run as root."
@@ -24,6 +27,27 @@ if [ -f "$CONFIG_FILE" ]; then
 	implementation=$(sed -n 's/^IMPLEMENTATION=//p' "$CONFIG_FILE" | tail -n 1)
 	read_enabled=$(sed -n 's/^READ=//p' "$CONFIG_FILE" | tail -n 1)
 fi
+
+install_ir_head_udev_rule()
+{
+	mkdir -p "$SMARTMETER_LOG_DIR"
+
+	echo "<INFO> Installing SmartMeter I/R head udev rule."
+	echo "$(date) - Creating UDEV rule for I/R heads: $SMARTMETER_UDEV_RULE" >>"$SMARTMETER_LOG_FILE"
+	printf '%s\n' "# LoxBerry SML-eMon Plugin device rule file - DO NOT EDIT BY HAND!" >"$SMARTMETER_UDEV_RULE"
+	printf '%s\n' "KERNEL==\"ttyUSB[0-9]*\",GROUP=\"loxberry\",MODE=\"0666\",SYMLINK+=\"serial/smartmeter/\$env{ID_SERIAL_SHORT}\"" >>"$SMARTMETER_UDEV_RULE"
+
+	if command -v udevadm >/dev/null 2>&1; then
+		echo "$(date) - Reload udev rules and trigger devices." >>"$SMARTMETER_LOG_FILE"
+		if udevadm control --reload-rules >>"$SMARTMETER_LOG_FILE" 2>&1 && udevadm trigger >>"$SMARTMETER_LOG_FILE" 2>&1; then
+			echo "<INFO> SmartMeter I/R head udev rule installed and triggered."
+		else
+			echo "<WARNING> SmartMeter I/R head udev rule was written, but udev reload/trigger failed."
+		fi
+	else
+		echo "<WARNING> udevadm is not available. SmartMeter I/R head rule was written but not triggered."
+	fi
+}
 
 refresh_bridge_service()
 {
@@ -39,6 +63,8 @@ refresh_bridge_service()
 		echo "<WARNING> Could not refresh vzLogger bridge systemd service"
 	fi
 }
+
+install_ir_head_udev_rule
 
 if [ "$implementation" = "vzlogger" ] && [ "$read_enabled" = "1" ]; then
 	refresh_bridge_service

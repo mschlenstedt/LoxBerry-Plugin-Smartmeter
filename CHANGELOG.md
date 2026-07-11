@@ -4,6 +4,12 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
+## 2.0.0.24 - 2026-07-11
+
+- Fix fresh installs so the SmartMeter I/R head udev rule is installed and triggered from the root hook immediately, making `/dev/serial/smartmeter/*` readers available before the first reboot.
+- Clarify the apply output when vzLogger mode is selected but meter reading is disabled.
+- Purge the plugin-managed `vzlogger` package and remove runtime cache plus stale service links during uninstall.
+
 ## 2.0.0.23 - 2026-07-11
 
 - Publish the GitHub-built plugin ZIP through a draft-release flow so immutable GitHub Releases already contain `Smartmeter-V<version>.zip` when they become public.

@@ -26,6 +26,7 @@ Expected:
 
 - Installation completes successfully.
 - The active implementation is `vzlogger`.
+- Connected USB I/R heads are available below `/dev/serial/smartmeter/` before the first reboot.
 - The MQTT bridge is disabled.
 - All optional logs and debug logs are disabled.
 

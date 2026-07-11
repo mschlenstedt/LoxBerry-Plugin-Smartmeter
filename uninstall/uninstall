@@ -10,6 +10,7 @@ CONFIG_DIR="$5/config/plugins/$3"
 VZLOGGER_MARKER="$CONFIG_DIR/vzlogger.installed-by-plugin"
 VZLOGGER_CONFIG="/etc/vzlogger.conf"
 VZLOGGER_CONFIG_MARKER="/etc/vzlogger.conf.smartmeter-v2"
+RUNTIME_DIR="/var/run/shm/$3"
 SOURCE_LIST="/etc/apt/sources.list.d/volkszaehler-volkszaehler-org-project.list"
 KEYRING="/usr/share/keyrings/volkszaehler-volkszaehler-org-project-archive-keyring.gpg"
 
@@ -29,6 +30,8 @@ fi
 
 if command -v systemctl >/dev/null 2>&1; then
     systemctl stop vzlogger.service >/dev/null 2>&1 || true
+    systemctl disable vzlogger.service >/dev/null 2>&1 || true
+    systemctl reset-failed vzlogger.service >/dev/null 2>&1 || true
 fi
 
 if [ -f "$VZLOGGER_CONFIG_MARKER" ]; then
@@ -50,13 +53,20 @@ if [ -f "$KEYRING" ]; then
 fi
 
 if [ -f "$VZLOGGER_MARKER" ]; then
-    if dpkg-query -W -f='${Status}' vzlogger 2>/dev/null | grep -q "install ok installed"; then
-        echo "<INFO> Removing vzLogger package installed by Smartmeter"
-        apt-get remove -y vzlogger || echo "<WARNING> Could not remove vzLogger package"
+    if dpkg-query -W -f='${Status}' vzlogger >/dev/null 2>&1; then
+        echo "<INFO> Purging vzLogger package installed by Smartmeter"
+        apt-get purge -y vzlogger || echo "<WARNING> Could not purge vzLogger package"
     fi
+    rm -f /etc/systemd/system/multi-user.target.wants/vzlogger.service
+    rm -f /etc/rc0.d/*vzlogger /etc/rc1.d/*vzlogger /etc/rc2.d/*vzlogger /etc/rc3.d/*vzlogger
+    rm -f /etc/rc4.d/*vzlogger /etc/rc5.d/*vzlogger /etc/rc6.d/*vzlogger
     rm -f "$VZLOGGER_MARKER"
 else
     echo "<INFO> vzLogger package was not marked as installed by this plugin; leaving package installed"
+fi
+
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload >/dev/null 2>&1 || true
 fi
 
 if command -v apt-get >/dev/null 2>&1; then
@@ -73,6 +83,11 @@ if [ -f "$UDEV_RULE" ] && grep -q "LoxBerry SML-eMon Plugin device rule file" "$
     fi
 else
     echo "<INFO> Smartmeter UDEV rule not found or not owned by this plugin"
+fi
+
+if [ -d "$RUNTIME_DIR" ]; then
+    echo "<INFO> Removing Smartmeter runtime cache"
+    rm -rf "$RUNTIME_DIR"
 fi
 
 exit 0
