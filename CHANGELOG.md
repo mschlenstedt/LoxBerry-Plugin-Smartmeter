@@ -4,6 +4,8 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
+## 2.0.0.21 - 2026-07-11
+
 - Enable the `vzlogger` systemd service during vzLogger Save/Apply, Start, and Restart so it starts again automatically after a LoxBerry reboot while vzLogger meter reading is active.
 
 ## 2.0.0.20 - 2026-07-11
