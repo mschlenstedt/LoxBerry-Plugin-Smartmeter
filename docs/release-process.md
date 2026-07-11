@@ -40,12 +40,12 @@ Smartmeter-V2.0.0.10
 4. Confirm user documentation is current for changed behavior, setup, configuration, dependencies, and upgrade steps. Check `docs/Readme.md`, `docs/User-Guide.de.md`, and `docs/User-Guide.en.md` when user-facing behavior changed.
 5. Move the relevant `CHANGELOG.md` entries from `Unreleased` to the target version and date.
 6. Run cheap validation:
-   - `perl -c` for changed Perl files;
+   - `tools/check-perl-syntax.ps1 <file>` for changed Perl files on Windows, or `perl -I .github/ci/perl-lib -c <file>` on Linux/macOS;
    - `php -l` for changed PHP files;
    - shell syntax checks where available;
    - inspect changed release metadata with `git diff`.
 7. Ensure the required GitHub Actions `Perl and PHP syntax` check passes on the release pull request before merging to `master`.
-8. Run a plugin install or upgrade smoke test on LoxBerry when the release changes installation, upgrade, dependencies, services, cron jobs, or core runtime behavior.
+8. Run the relevant lifecycle checks from `docs/lifecycle-test-expectations.md` on LoxBerry when the release changes installation, upgrade, uninstall, dependencies, services, cron jobs, or default configuration behavior.
 9. Commit the release changes.
 10. Push the branch.
 11. Create an annotated tag on the pushed release commit:

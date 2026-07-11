@@ -10,41 +10,53 @@ The legacy implementation remains available. Use it if an existing setup depends
 
 - LoxBerry with the SmartMeter v2 plugin installed.
 - At least one supported optical I/R reading head below `/dev/serial/smartmeter/`.
-- For the standard implementation: installed `vzlogger` package and `mosquitto-clients`.
+- For the standard implementation: installed `vzlogger` package and `mosquitto-clients`. Both packages are installed by LoxBerry during plugin installation.
 - For MQTT transport: the LoxBerry MQTT broker settings must be available in LoxBerry.
 
 ## Standard Configuration With vzLogger
 
 Open the SmartMeter v2 plugin in the LoxBerry web interface and use the **Smartmeter Configuration (vzLogger)** page.
 
+The **Smartmeter Configuration (vzLogger)** and **Smartmeter Configuration (Legacy)** tabs only switch between configuration views. The active reader is selected through the **Implementation** field and is applied only when the form is saved.
+
+Select **vzLogger** as the **Implementation** mode at the top of the page. When saved, the plugin removes the legacy polling cron jobs so both readers do not run in parallel.
+
 ### Package Installation
 
-If `vzlogger` is missing, use **Install vzLogger package**. The helper configures the Volkszaehler/Cloudsmith apt repository and installs `vzlogger` through apt. This action requires root privileges on the target system.
+During installation or upgrade, the plugin configures the Volkszaehler/Cloudsmith apt repository. LoxBerry then installs `vzlogger` and `mosquitto-clients` through the plugin's normal `dpkg/apt` package list. If `vzlogger` is already installed, the existing package ownership is preserved and apt updates it to the available current version.
 
-`mosquitto-clients` remains a regular plugin dependency because the MQTT bridge uses `mosquitto_sub`.
+After installation, the plugin stops and disables the `vzlogger` service again while Legacy is active or **Read meters** is disabled. vzLogger starts only when **Save and apply** is used in vzLogger mode.
 
 ### Meter Setup
 
-Enable **Read meters** to let vzLogger and the MQTT bridge provide live values.
+Enable **Bridge service enabled** to let vzLogger and the MQTT bridge provide live values. The **Update cycle** controls how often vzLogger publishes meter values by MQTT; the selection ranges from 5 seconds to 60 minutes. The bridge subscribes to those MQTT values and uses the same cycle for UDP sends. The MQTT base topic is a shared setting and remains configurable independently of the service switch.
 
-Select the detected I/R head and choose a meter preset. The current generator maps presets to the vzLogger protocols `sml` or `d0`. For D0 meters, manual serial settings can be set if the preset defaults are not sufficient.
+Connect an I/R head and select **Rescan for I/R heads**. Then select the detected head and choose a meter preset. The current generator maps presets to the vzLogger protocols `sml` or `d0`. For D0 meters, manual serial settings can be set if the preset defaults are not sufficient.
 
 The plugin generates:
 
 - `vzlogger.conf` in the plugin config directory.
 - `vzlogger_channels.json` with the stable channel UUID to SmartMeter cache-name mapping.
 
-Use **Save and generate config** to write the files and validate their structure. Use **Validate config** to run validation again without applying the configuration.
+Use **Save and apply** for the normal workflow; it writes, validates, and applies the configuration. **Validate config** is retained to validate a saved or manually edited configuration without applying it.
+
+For each reader, known OBIS channels can be selected and additional meter-specific OBIS channels can be added line by line. An optional `*255` suffix is removed when saving, because the generated vzLogger config uses identifiers without that suffix.
 
 ### Apply Flow
 
-Use **Save and apply** to generate and validate the config, copy it to `/etc/vzlogger.conf`, restart `vzlogger`, and start the MQTT bridge.
+Use **Save and apply** to generate and validate the config, copy it to `/etc/vzlogger.conf`, enable the `vzlogger` service for LoxBerry reboot startup, restart `vzlogger`, and install and start the MQTT bridge as a systemd service if it is not already installed.
 
 If meter reading is disabled, applying the configuration stops vzLogger and the bridge.
 
-### Bridge Service
+### Service Control
 
-Use **Install bridge service** to install the MQTT bridge as a systemd service. Without the service, the control script can still start a forked bridge process as fallback.
+The vzLogger page shows the status of `vzlogger` and the MQTT bridge with service state and PID. The **Restart**, **Start**, and **Stop** buttons are intended only for troubleshooting during operation and are disabled while the vzLogger implementation or **Read meters** is inactive. **Open live data (JSON)** opens vzLogger's integrated HTTP service; `/` returns all configured channels because the index is enabled, while `/<UUID>` returns one channel.
+
+In addition to raw JSON, an automatically refreshed generic web page renders the response every two seconds. The generated OBIS channel configuration determines which channels appear; `vzlogger_channels.json` contains the UUID mapping.
+
+If the meter does not provide an instantaneous power value, the MQTT bridge additionally calculates `Consumption_CalculatedPower_OBIS_1.99.0` from `1.8.0` and `Delivery_CalculatedPower_OBIS_2.99.0` from `2.8.0` once two different counter readings are available. The unit follows the unit of the received counter value per hour.
+
+The bridge log is `/opt/loxberry/log/plugins/smartmeter-v2/vzlogger_mqtt_bridge.log` and rotates at 2 MB. The control log is `/opt/loxberry/log/plugins/smartmeter-v2/vzlogger_control.log` and rotates at 512 KB. Apply and diagnostic logs are also written to the plugin log directory; the last five `vzlogger_debug_*.log` files are kept. The separate vzLogger debug log `/opt/loxberry/log/plugins/smartmeter-v2/vzlogger.log` is written only when vzLogger debugging is enabled. Normal operation does not write a vzLogger file log.
 
 The service name is:
 
@@ -72,13 +84,13 @@ The bridge converts recognized vzLogger messages into legacy-compatible `.data` 
 /var/run/shm/<plugin folder>/
 ```
 
-The existing HTTP endpoint continues to serve values from these cache files. If UDP is enabled, the bridge sends the cached values cyclically to all configured Miniservers.
+The existing HTTP endpoint continues to serve values from these cache files. The vzLogger page shows cache status, the last update, and a direct link to the cache endpoint in the **HTTP cache** section. If UDP is enabled, the bridge sends the cached values to all configured Miniservers on the configured update cycle.
 
 ## Debug Log
 
-Enable **Debug log** before reproducing a problem. This makes the MQTT bridge log raw MQTT topics, payloads, UUID mapping decisions, parsed cache names, and ignored messages.
+Enable **Debug log** in the bridge row before reproducing a bridge problem. This makes the MQTT bridge log raw MQTT topics, payloads, UUID mapping decisions, parsed cache names, and ignored messages. The separate switch in the vzLogger service row controls vzLogger's own log.
 
-Use **Create debug log** to create a diagnostic log in the runtime directory. It includes:
+Use **Create debug log** to create a diagnostic log in the plugin log directory. It includes:
 
 - package, apt source, service, bridge, and validation status
 - recent vzLogger control and web action output
@@ -95,6 +107,8 @@ This debug log contains the information needed to verify the real vzLogger MQTT 
 ## Legacy Configuration
 
 The legacy implementation is still available through **Smartmeter Configuration (Legacy)**. It supports optical I/R reading heads connected below `/dev/serial/smartmeter/` and can periodically read meters with the older SmartMeter scripts.
+
+Saving the legacy page sets the mode to **Legacy**, stops vzLogger and the MQTT bridge, and restores the legacy polling cron job when **Read meters** is enabled.
 
 The legacy plugin path can publish values through:
 
@@ -141,7 +155,7 @@ The available values depend on the meter type, protocol, and configured OBIS cha
 
 ### vzLogger package installation fails
 
-Check whether the target Debian/Raspberry Pi OS codename and architecture are supported by the Volkszaehler/Cloudsmith repository. Run the package installer as root and attach the debug log if the failure is not obvious.
+Check the LoxBerry installation log. The relevant steps are `PREROOT`, `Refreshing APT database`, and `Installing additional software packages`. If the Volkszaehler/Cloudsmith repository does not support the target codename or architecture, LoxBerry cannot install the `vzlogger` package.
 
 ### No cached values are written
 
@@ -155,7 +169,7 @@ Check the following:
 
 ### HTTP or UDP has no values
 
-Check whether `.data` files exist below `/var/run/shm/<plugin folder>/`. HTTP and UDP use this cache and do not query vzLogger directly.
+Check the **HTTP cache** section for a `.data` file and a current last update. Alternatively, check whether `.data` files exist below `/var/run/shm/<plugin folder>/`. HTTP and UDP use this cache and do not query vzLogger directly.
 
 ### Legacy reading has no meter data
 

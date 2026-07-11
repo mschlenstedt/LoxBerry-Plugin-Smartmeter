@@ -17,23 +17,23 @@ This plan tracks the migration from the legacy SmartMeter reader to a vzLogger-b
 
 - `[x]` Remove bundled vzLogger binary from the plugin.
 - `[x]` Keep `mosquitto-clients` as regular plugin dependency.
-- `[x]` Do not keep `vzlogger` as hard `dpkg/apt` dependency, because installation would fail if the Volkszaehler/Cloudsmith apt repository is not configured yet.
-- `[x]` Add `bin/install_vzlogger_package.sh` to configure the official Volkszaehler/Cloudsmith apt repository and install `vzlogger` via apt.
-- `[x]` Expose package installation through `vzlogger_control.pl install-vzlogger`.
-- `[x]` Add an `Install vzLogger package` button to the vzLogger configuration page.
-- `[ ]` Verify `install_vzlogger_package.sh` on the target LoxBerry versions as root.
+- `[x]` Keep `vzlogger` as regular `dpkg/apt` dependency after configuring the Volkszaehler/Cloudsmith apt repository in `preroot.sh`.
+- `[x]` Remove the explicit `Install vzLogger package` UI button.
+- `[x]` Stop and disable the vzLogger service in `postroot.sh` unless vzLogger mode and meter reading are explicitly enabled.
+- `[x]` Preserve an active vzLogger service across plugin upgrades by recording the pre-upgrade state in `preroot.sh` and applying the generated configuration from `postroot.sh`.
+- `[ ]` Verify `preroot.sh` repository setup on the target LoxBerry versions as root.
 - `[ ]` Confirm supported Debian/Raspberry Pi OS codenames and architecture behavior.
 
 Decision notes:
 
 - The plugin no longer ships a stale ARM binary. This avoids architecture drift and security/maintenance issues.
-- The package installer uses explicit keyring and source-list setup instead of a blind `curl | bash`.
-- The normal plugin dependency file still installs `mosquitto-clients`, because the MQTT bridge needs `mosquitto_sub`.
+- The repository setup uses explicit keyring and source-list setup instead of a blind `curl | bash`.
+- The normal plugin dependency file installs `vzlogger` and `mosquitto-clients`; apt can update an already installed `vzlogger` package to the current candidate version.
 
 Implemented files:
 
-- `bin/install_vzlogger_package.sh`
-- `bin/vzlogger_control.pl`
+- `preroot.sh`
+- `postroot.sh`
 - `dpkg/apt`
 - `postinstall.sh`
 - `postupgrade.sh`
@@ -51,7 +51,8 @@ Implemented files:
 - `[x]` Configure local vzLogger HTTP daemon settings.
 - `[~]` Map serial/D0 settings from legacy fields.
 - `[ ]` Verify all legacy meter presets against actual vzLogger options.
-- `[ ]` Make OBIS channels configurable in the UI.
+- `[x]` Make OBIS channels configurable in the UI, including custom meter-specific OBIS identifiers.
+- `[ ]` Add dynamic OBIS channel discovery for configuration, for example by temporarily running vzLogger with `verbosity: 15` and parsing discovered OBIS identifiers from the vzLogger log.
 - `[ ]` Add a guided migration from existing legacy config to vzLogger config.
 
 Decision notes:
@@ -59,6 +60,8 @@ Decision notes:
 - UUIDs are generated deterministically from plugin folder, serial, and OBIS identifier, so MQTT topics/mapping remain stable across regenerations.
 - The generator keeps HTTP enabled for optional vzLogger live readings, but MQTT is the primary integration path.
 - `MAIN.READ=0` causes generated meter entries to be disabled, so apply can stop services cleanly.
+- Custom OBIS identifiers are normalized by removing an optional `*255` suffix before writing the vzLogger configuration.
+- Dynamic OBIS discovery should cache discovered channels per meter/reader and allow the user to select them before regenerating `vzlogger.conf`.
 
 Implemented files:
 
@@ -102,12 +105,14 @@ Implemented files:
 - `[x]` Convert MQTT readings into legacy-compatible `.data` cache files below `/var/run/shm/<plugin>/`.
 - `[x]` Preserve HTTP compatibility by continuing to serve cached `.data` files through the existing PHP endpoint.
 - `[x]` Send UDP cyclically from cached values to configured Miniservers.
-- `[~]` Parse plausible vzLogger MQTT payloads and UUID-in-topic formats.
+- `[x]` Parse the verified retained `chnN/id`, `chnN/uuid`, and `chnN/raw` MQTT topic sequence.
+- `[x]` Persist generated `chnN` channel indexes in `vzlogger_channels.json` so `chnN/raw` messages without embedded UUIDs can be parsed deterministically.
 - `[x]` Add debug logging for raw MQTT messages, parser decisions, mapped cache names, and ignored messages.
 - `[x]` Add a diagnostic debug-log action to capture status, config, mapping, control/UI action logs, install/plugin logs, cache files, and MQTT samples for parser verification.
-- `[ ]` Capture real vzLogger MQTT topics/payloads on a target system.
-- `[ ]` Adjust bridge parser to exact real payload format.
-- `[ ]` Add last-value and last-update display to the web UI.
+- `[x]` Calculate legacy-compatible consumption and delivery power values from counter deltas.
+- `[x]` Capture real vzLogger MQTT topics/payloads on a target system (2.0.0.15).
+- `[x]` Adjust bridge parser to the exact real payload format.
+- `[~]` Add last-value and last-update display to the web UI. The HTTP cache section now shows cache presence, last update, and the cache endpoint link; a full last-values table remains open.
 
 Decision notes:
 
@@ -115,6 +120,7 @@ Decision notes:
 - HTTP and UDP are intentionally cache-based, not direct live calls into vzLogger.
 - Retained MQTT messages are expected to repopulate cache after restart.
 - The debug log is the standard evidence artifact for closing the real-payload parser verification.
+- 2.0.0.19 target testing showed the parser must preserve the captured `chnN` topic segment before validating `/uuid` or cleaning `/id` payloads, because later regex matches reset Perl's `$1`.
 
 Implemented files:
 
@@ -128,13 +134,13 @@ Implemented files:
 
 - `[x]` Add systemd service template for the MQTT bridge.
 - `[x]` Add root helper to install/remove the bridge systemd unit.
-- `[x]` Add `install-bridge-service` and `remove-bridge-service` control actions.
+- `[x]` Make `start-bridge`/`restart-bridge` install the bridge systemd service when the unit is missing.
 - `[x]` Make `start-bridge`/`stop-bridge` prefer systemd when the unit is installed.
 - `[x]` Keep forked bridge process as fallback if systemd unit is absent.
 - `[x]` Add `--foreground` support to the bridge script for systemd.
-- `[x]` Add `Install bridge service` UI button.
+- `[x]` Replace the explicit `Install bridge service` UI button with service status and Restart/Start/Stop controls.
 - `[x]` Remove bridge service on plugin uninstall.
-- `[ ]` Test service install/start/stop/restart on LoxBerry.
+- `[x]` Test service install/start/stop/restart on LoxBerry (2.0.0.14; service installation and control work, while startup without the configured I/R head fails as expected).
 - `[ ]` Decide whether bridge service should be auto-installed during plugin install or remain explicit user action.
 
 Decision notes:
@@ -157,17 +163,20 @@ Implemented files:
 - `[x]` Support update cycle.
 - `[x]` Support MQTT base topic.
 - `[x]` Support UDP enable/port/cycle.
-- `[x]` Support vzLogger local HTTP port and verbosity.
+- `[x]` Support vzLogger local HTTP port and debug-controlled vzLogger logging.
 - `[x]` Detect IR heads below `/dev/serial/smartmeter/*`.
 - `[x]` Allow selecting legacy meter presets and basic manual serial values.
 - `[x]` Show control/status output.
 - `[x]` Link to vzLogger local HTTP live readings.
 - `[x]` Move hard-coded English UI strings to language files.
 - `[x]` Add a debug-log option and debug-log creation button.
-- `[ ]` Add better LoxBerry-style layout polish.
-- `[ ]` Add log links for vzLogger, bridge, and generated config.
+- `[x]` Add raw JSON and automatically refreshed, generically rendered live-data links.
+- `[x]` Reduce the normal workflow to one save/apply action; retain validation for manually edited configuration.
+- `[x]` Separate bridge and vzLogger debug controls and document their log paths.
+- `[~]` Add better LoxBerry-style layout polish (implementation tabs and service grouping refined after 2.0.0.15 test).
+- `[~]` Add log links for vzLogger, bridge, and generated config (service log links added; generated config remains a path display).
 - `[ ]` Add last cached values table.
-- `[ ]` Add explicit OBIS channel selection.
+- `[x]` Add explicit OBIS channel selection and custom OBIS entry.
 
 Decision notes:
 
@@ -195,6 +204,8 @@ Implemented files:
 - `[ ]` Decide whether to support a custom vzLogger config path instead of overwriting `/etc/vzlogger.conf`.
 - `[ ]` Test permission behavior when actions are triggered from the web UI as the LoxBerry user.
 
+Target finding (2.0.0.15): the bridge unit lacked LoxBerry's Perl library environment and exited with status 2 because `LoxBerry::System` was not in `@INC`. The unit template now sets `LBHOMEDIR` and `PERL5LIB` explicitly.
+
 Decision notes:
 
 - Current apply behavior uses `/etc/vzlogger.conf`, because the packaged vzLogger service is expected to use that path.
@@ -209,16 +220,17 @@ Implemented files:
 - `[x]` Set executable permissions for helper scripts in `postinstall.sh`.
 - `[x]` Set executable permissions for helper scripts in `postupgrade.sh`.
 - `[x]` Migrate `[VZLOGGER]` default config section during upgrade.
-- `[x]` Warn during install if `vzlogger` or `mosquitto_sub` is missing.
+- `[x]` Install `vzlogger` and `mosquitto_sub` through LoxBerry `dpkg/apt` dependencies.
 - `[x]` Remove bridge service during uninstall.
 - `[~]` Existing legacy cron restore remains in place for legacy mode.
-- `[ ]` Decide whether vzLogger mode should disable legacy cron automatically when enabled.
+- `[x]` Disable legacy cron automatically when vzLogger mode is enabled, and stop vzLogger/bridge when legacy mode is selected.
 - `[ ]` Add cleanup policy for generated `vzlogger.conf`, channel mapping, and runtime cache.
 
 Decision notes:
 
 - Legacy behavior is preserved as a supported mode; migration to vzLogger should be explicit and reversible.
-- Generated system-wide `/etc/vzlogger.conf` is not removed on uninstall yet, except bridge service cleanup.
+- Generated system-wide `/etc/vzlogger.conf` is removed on uninstall only if `/etc/vzlogger.conf.smartmeter-v2` marks it as SmartMeter-generated.
+- The external apt source and keyring are removed on uninstall. The `vzlogger` package is removed only if a marker shows that this plugin introduced it.
 
 Implemented files:
 
@@ -245,20 +257,23 @@ Implemented files:
 
 ## 10. Target-System Verification Checklist
 
-- `[ ]` Install plugin on LoxBerry.
-- `[ ]` Run `install_vzlogger_package.sh` as root.
-- `[ ]` Confirm `vzlogger --version`.
-- `[ ]` Install bridge service.
-- `[ ]` Generate config from UI.
-- `[ ]` Validate config from UI.
-- `[ ]` Apply config from UI.
-- `[ ]` Confirm `systemctl status vzlogger`.
-- `[ ]` Confirm `systemctl status smartmeter-v2-vzlogger-bridge`.
-- `[ ]` Subscribe to generated MQTT topic and capture real messages.
-- `[ ]` Confirm `.data` files are written below `/var/run/shm/<plugin>/`.
-- `[ ]` Confirm plugin HTTP endpoint returns cached values.
+- `[x]` Install plugin on LoxBerry (2.0.0.15 on LoxBerry 4.0.0.13).
+- `[x]` Confirm `preroot.sh` configures the Volkszaehler apt source.
+- `[x]` Confirm LoxBerry installs or updates `vzlogger` through `dpkg/apt`.
+- `[x]` Confirm `vzlogger --version`.
+- `[x]` Confirm bridge service is installed automatically when vzLogger mode is applied.
+- `[x]` Generate config from UI.
+- `[x]` Validate config from UI.
+- `[x]` Apply config from UI.
+- `[x]` Confirm `systemctl status vzlogger`.
+- `[x]` Confirm `systemctl status smartmeter-v2-vzlogger-bridge`.
+- `[x]` Subscribe to generated MQTT topic and capture real messages.
+- `[x]` Confirm `.data` cache updates from the real 2.0.0.17 `chnN/id`, `chnN/uuid`, and `chnN/raw` MQTT sequence using the current bridge parser logic.
+- `[x]` Fix the 2.0.0.19 regression where `chnN/uuid` was received but stored under an empty channel name, so later `chnN/raw` values were ignored.
+- `[ ]` Confirm `.data` files are written below `/var/run/shm/<plugin>/` on the target LoxBerry, including calculated power values when counter channels are present.
+- `[ ]` Confirm plugin HTTP endpoint returns cached values on the target LoxBerry.
 - `[ ]` Confirm UDP messages reach all configured Miniservers.
-- `[ ]` Test disabling meter reading stops vzLogger and bridge.
+- `[~]` Test disabling meter reading stops vzLogger and bridge.
 - `[ ]` Test uninstall removes bridge service and UDEV rule.
 
 ## Recommended Next Implementation Steps
@@ -266,5 +281,6 @@ Implemented files:
 1. Test on a real LoxBerry target and create the debug log while vzLogger publishes MQTT messages.
 2. Adjust `vzlogger_mqtt_bridge.pl` parser to the verified payload format from the debug log.
 3. Add UI display for last cached values and direct bridge/vzLogger log links.
-4. Add selectable OBIS channels instead of the current fixed default set.
-5. Implement and document guided migration from legacy mode.
+4. Add dynamic OBIS channel discovery using a temporary high-verbosity vzLogger run and cached per-reader results.
+5. Verify custom OBIS identifiers and calculated power values on a real meter.
+6. Verify the explicit legacy/vzLogger mode switch on a real LoxBerry target.

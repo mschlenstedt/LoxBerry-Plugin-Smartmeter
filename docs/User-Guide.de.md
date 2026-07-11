@@ -10,41 +10,53 @@ Die Legacy-Implementierung bleibt weiterhin verfügbar. Verwende sie, wenn eine 
 
 - LoxBerry mit installiertem SmartMeter v2 Plugin.
 - Mindestens ein unterstützter optischer I/R-Lesekopf unter `/dev/serial/smartmeter/`.
-- Für die Standardimplementierung: installiertes `vzlogger`-Paket und `mosquitto-clients`.
+- Für die Standardimplementierung: installiertes `vzlogger`-Paket und `mosquitto-clients`. Beide Pakete werden während der Plugin-Installation über LoxBerry installiert.
 - Für MQTT-Transport: Die LoxBerry MQTT-Broker-Einstellungen müssen in LoxBerry verfügbar sein.
 
 ## Standardkonfiguration mit vzLogger
 
 Öffne SmartMeter v2 im LoxBerry-Webinterface und nutze die Seite **Smartmeter Konfiguration (vzLogger)**.
 
+Die Tabs **Smartmeter Konfiguration (vzLogger)** und **Smartmeter Konfiguration (Legacy)** wechseln nur zwischen den Konfigurationsansichten. Der aktive Reader wird über das Feld **Implementierung** gewählt und erst beim Speichern angewendet.
+
+Wähle oben bei **Implementierung** den Modus **vzLogger**. Beim Speichern entfernt das Plugin die Legacy-Cronjobs, damit nicht beide Reader parallel laufen.
+
 ### Paketinstallation
 
-Wenn `vzlogger` fehlt, verwende **vzLogger-Paket installieren**. Der Helfer richtet das Volkszaehler/Cloudsmith apt-Repository ein und installiert `vzlogger` per apt. Diese Aktion benötigt Root-Rechte auf dem Zielsystem.
+Das Plugin richtet während der Installation bzw. beim Upgrade die Volkszaehler/Cloudsmith apt-Quelle ein. LoxBerry installiert danach `vzlogger` und `mosquitto-clients` über die normale `dpkg/apt`-Paketliste des Plugins. Wenn `vzlogger` bereits installiert ist, bleibt die bestehende Paketinstallation erhalten und wird durch apt auf die verfügbare aktuelle Version gebracht.
 
-`mosquitto-clients` bleibt eine reguläre Plugin-Abhängigkeit, weil die MQTT-Bridge `mosquitto_sub` verwendet.
+Nach der Installation stoppt und deaktiviert das Plugin den `vzlogger`-Dienst wieder, solange Legacy aktiv ist oder **Zähler lesen** deaktiviert ist. vzLogger wird erst mit **Speichern und anwenden** im vzLogger-Modus gestartet.
 
 ### Zählereinrichtung
 
-Aktiviere **Zähler lesen**, damit vzLogger und die MQTT-Bridge Live-Werte bereitstellen.
+Aktiviere **Bridge-Service aktiv**, damit vzLogger und die MQTT-Bridge Live-Werte bereitstellen. Das **Aktualisierungsintervall** steuert, wie oft vzLogger Zaehlerwerte per MQTT veroeffentlicht; die Auswahl reicht von 5 Sekunden bis 60 Minuten. Die Bridge abonniert diese MQTT-Werte und verwendet denselben Takt fuer UDP-Sendungen. Das MQTT-Basis-Topic ist eine übergreifende Einstellung und bleibt unabhängig vom Dienstschalter konfigurierbar.
 
-Wähle den erkannten I/R-Lesekopf und eine Zählervorgabe. Der aktuelle Generator bildet Vorgaben auf die vzLogger-Protokolle `sml` oder `d0` ab. Für D0-Zähler können manuelle serielle Einstellungen gesetzt werden, wenn die Vorgaben nicht ausreichen.
+Schließe einen I/R-Lesekopf an und wähle **Nach I/R Leseköpfen suchen**. Wähle danach den erkannten Lesekopf und eine Zählervorgabe. Der aktuelle Generator bildet Vorgaben auf die vzLogger-Protokolle `sml` oder `d0` ab. Für D0-Zähler können manuelle serielle Einstellungen gesetzt werden, wenn die Vorgaben nicht ausreichen.
 
 Das Plugin erzeugt:
 
 - `vzlogger.conf` im Plugin-Konfigurationsverzeichnis.
 - `vzlogger_channels.json` mit der stabilen Zuordnung von Channel-UUIDs zu SmartMeter-Cache-Namen.
 
-Verwende **Speichern und Konfiguration erzeugen**, um die Dateien zu schreiben und strukturell zu prüfen. Verwende **Konfiguration prüfen**, um die Prüfung ohne Anwenden erneut auszuführen.
+Verwende **Speichern und anwenden** fuer den normalen Ablauf; die Aktion schreibt, prueft und aktiviert die Konfiguration. Verwende **Konfiguration pruefen**, um eine gespeicherte oder manuell bearbeitete Konfiguration ohne Anwenden zu pruefen.
+
+Pro Lesekopf koennen bekannte OBIS-Kanaele ausgewaehlt und weitere zaehlerspezifische OBIS-Kanaele zeilenweise ergaenzt werden. Ein optionaler `*255`-Suffix wird beim Speichern entfernt, weil die erzeugte vzLogger-Konfiguration die Identifier ohne Suffix verwendet.
 
 ### Anwenden
 
-Mit **Speichern und anwenden** wird die Konfiguration erzeugt und geprüft, nach `/etc/vzlogger.conf` kopiert, `vzlogger` neu gestartet und die MQTT-Bridge gestartet.
+Mit **Speichern und anwenden** wird die Konfiguration erzeugt und geprüft, nach `/etc/vzlogger.conf` kopiert, der `vzlogger`-Dienst für den Start nach einem LoxBerry-Neustart aktiviert, `vzlogger` neu gestartet und die MQTT-Bridge als systemd-Service installiert und gestartet, falls sie noch nicht eingerichtet ist.
 
 Wenn das Zählerlesen deaktiviert ist, stoppt das Anwenden vzLogger und die Bridge.
 
-### Bridge-Service
+### Dienststeuerung
 
-Mit **Bridge-Service installieren** wird die MQTT-Bridge als systemd-Service installiert. Ohne Service kann das Control-Skript weiterhin einen direkt gestarteten Bridge-Prozess als Fallback verwenden.
+Die vzLogger-Seite zeigt den Status von `vzlogger` und der MQTT-Bridge mit Dienstzustand und PID. Die Schaltflächen **Restart**, **Start** und **Stop** dienen nur der Fehlersuche während des Betriebs und sind deaktiviert, solange die vzLogger-Implementierung oder **Zähler lesen** nicht aktiv ist. **Live-Daten (JSON) öffnen** ruft den integrierten vzLogger-HTTP-Dienst auf; `/` liefert wegen der aktivierten Indexfunktion alle konfigurierten Kanäle, `/<UUID>` einen einzelnen Kanal.
+
+Neben den rohen JSON-Daten gibt es eine generisch gerenderte Webseite, die sich alle zwei Sekunden aktualisiert. Die angezeigten Kanäle werden durch die erzeugte OBIS-Kanalkonfiguration bestimmt; die UUID-Zuordnung steht in `vzlogger_channels.json`.
+
+Wenn der Zaehler keinen Momentanleistungswert liefert, berechnet die MQTT-Bridge zusaetzlich `Consumption_CalculatedPower_OBIS_1.99.0` aus `1.8.0` und `Delivery_CalculatedPower_OBIS_2.99.0` aus `2.8.0`, sobald zwei unterschiedliche Zaehlerstaende vorliegen. Die Einheit folgt der Einheit des vom Zaehler gelieferten Zaehlerstands pro Stunde.
+
+Das Bridge-Log liegt unter `/opt/loxberry/log/plugins/smartmeter-v2/vzlogger_mqtt_bridge.log` und wird bei 2 MB rotiert. Das Control-Log liegt unter `/opt/loxberry/log/plugins/smartmeter-v2/vzlogger_control.log` und wird bei 512 KB rotiert. Apply- und Diagnose-Logs werden ebenfalls im Plugin-Logverzeichnis abgelegt; von `vzlogger_debug_*.log` bleiben die letzten fuenf Dateien erhalten. Das separate vzLogger-Debug-Log `/opt/loxberry/log/plugins/smartmeter-v2/vzlogger.log` wird nur bei aktivierter vzLogger-Debugoption geschrieben. Im Normalbetrieb schreibt vzLogger kein Dateilog.
 
 Der Service heißt:
 
@@ -72,13 +84,13 @@ Die Bridge wandelt erkannte vzLogger-Nachrichten in Legacy-kompatible `.data`-Ca
 /var/run/shm/<Plugin-Ordner>/
 ```
 
-Der bestehende HTTP-Endpunkt liefert weiterhin Werte aus diesen Cachedateien. Wenn UDP aktiviert ist, sendet die Bridge die gecachten Werte zyklisch an alle konfigurierten Miniservers.
+Der bestehende HTTP-Endpunkt liefert weiterhin Werte aus diesen Cachedateien. Die vzLogger-Seite zeigt im Bereich **HTTP-Cache** den Cache-Status, die letzte Aktualisierung und einen direkten Link zum Cache-Endpunkt. Wenn UDP aktiviert ist, sendet die Bridge die gecachten Werte im konfigurierten Aktualisierungsintervall an alle konfigurierten Miniservers.
 
 ## Debug-Log
 
-Aktiviere **Debug-Log**, bevor ein Problem reproduziert wird. Dadurch protokolliert die MQTT-Bridge rohe MQTT-Topics, Payloads, UUID-Zuordnungen, erkannte Cache-Namen und ignorierte Nachrichten.
+Aktiviere **Debug-Log** in der Bridge-Zeile, bevor ein Bridge-Problem reproduziert wird. Dadurch protokolliert die MQTT-Bridge rohe MQTT-Topics, Payloads, UUID-Zuordnungen, erkannte Cache-Namen und ignorierte Nachrichten. Die getrennte Debug-Option beim vzLogger-Dienst steuert dessen eigenes Log.
 
-Mit **Debug-Log erstellen** wird ein Diagnose-Log im Laufzeitverzeichnis erzeugt. Es enthält:
+Mit **Debug-Log erstellen** wird ein Diagnose-Log im Plugin-Logverzeichnis erzeugt. Es enthält:
 
 - Paket-, apt-Source-, Service-, Bridge- und Validierungsstatus
 - letzte vzLogger-Control- und Web-Aktionsausgaben
@@ -95,6 +107,8 @@ Dieses Debug-Log enthält die Informationen, die benötigt werden, um das reale 
 ## Legacy-Konfiguration
 
 Die Legacy-Implementierung bleibt über **Smartmeter Konfiguration (Legacy)** verfügbar. Sie unterstützt optische I/R-Leseköpfe unter `/dev/serial/smartmeter/` und kann Zähler weiterhin mit den älteren SmartMeter-Skripten zyklisch auslesen.
+
+Beim Speichern der Legacy-Seite setzt das Plugin den Modus auf **Legacy**, stoppt vzLogger und die MQTT-Bridge und stellt den Legacy-Cronjob wieder her, wenn **Zähler lesen** aktiviert ist.
 
 Der Legacy-Pfad kann Werte über mehrere Ausgänge bereitstellen:
 
@@ -141,7 +155,7 @@ Die tatsächlich verfügbaren Werte hängen vom Zählertyp, Protokoll und den ko
 
 ### vzLogger-Paketinstallation schlägt fehl
 
-Prüfe, ob Codename und Architektur des Zielsystems vom Volkszaehler/Cloudsmith-Repository unterstützt werden. Führe den Paketinstaller als root aus und hänge das Debug-Log an, wenn die Ursache nicht offensichtlich ist.
+Prüfe das LoxBerry-Installationslog. Entscheidend sind die Schritte `PREROOT`, `Refreshing APT database` und `Installing additional software packages`. Wenn die Volkszaehler/Cloudsmith-Quelle für Codename oder Architektur nicht verfügbar ist, kann LoxBerry das Paket `vzlogger` nicht installieren.
 
 ### Es werden keine Cachewerte geschrieben
 
@@ -155,7 +169,7 @@ Prüfe folgende Punkte:
 
 ### HTTP oder UDP liefern keine Werte
 
-Prüfe, ob `.data`-Dateien unter `/var/run/shm/<Plugin-Ordner>/` existieren. HTTP und UDP verwenden diesen Cache und fragen vzLogger nicht direkt ab.
+Prüfe im Bereich **HTTP-Cache**, ob eine `.data`-Datei und eine aktuelle letzte Aktualisierung angezeigt werden. Alternativ prüfe direkt, ob `.data`-Dateien unter `/var/run/shm/<Plugin-Ordner>/` existieren. HTTP und UDP verwenden diesen Cache und fragen vzLogger nicht direkt ab.
 
 ### Legacy-Auslesen liefert keine Zählerdaten
 

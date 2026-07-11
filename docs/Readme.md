@@ -7,4 +7,6 @@ Choose your language:
 
 Additional project documentation:
 
+- [Known issues](known-issues.md)
+- [Plugin lifecycle test expectations](lifecycle-test-expectations.md)
 - [Release process](release-process.md)
