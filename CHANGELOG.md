@@ -4,6 +4,8 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
+## 2.0.0.26 - 2026-07-11
+
 - Add known vzLogger OBIS channel selections for manufacturer ID (`1-0:96.50.1`) and server ID (`1-0:96.1.0`) so they map to the legacy-compatible cache names.
 - Write legacy-compatible `Last_Update` and `Last_UpdateLoxEpoche` fields from vzLogger MQTT timestamps and scale vzLogger energy counter readings from Wh to kWh in the bridge cache.
 - Parse additional vzLogger OBIS channels saved with escaped `\n` separators so all configured custom channels are generated into `vzlogger.conf`.
