@@ -29,7 +29,7 @@ use LoxBerry::System;
 #use LoxBerry::Web;
 use LoxBerry::JSON; # Available with LoxBerry 2.0
 use LoxBerry::Log;
-use POSIX ":sys_wait_h";
+use POSIX qw(:sys_wait_h setsid);
 use warnings;
 use strict;
 
@@ -62,13 +62,32 @@ my %L;
 ##########################################################################
 
 if( $q->{ajax} ) {
-	
-	## Handle all ajax requests 
-	require JSON;
-	# require Time::HiRes;
-	my %response;
+	my $response = { ok => JSON::PP::false, state => "failed" };
+	eval {
+		my $action = $q->{ajaxaction} || "";
+		if ($action eq "obis-start") {
+			my $config_file = "$lbpconfigdir/smartmeter.cfg";
+			$plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file";
+			ensure_vzlogger_defaults();
+			my @heads = detect_heads();
+			ensure_head_defaults(@heads);
+			save_vzlogger_form(@heads);
+			$response = start_obis_discovery_background($q->{obis_serial}, @heads);
+		} elsif ($action eq "obis-status") {
+			$response = obis_discovery_status();
+		} elsif ($action eq "obis-cancel") {
+			$response = cancel_obis_discovery($q->{job_id});
+		} else {
+			$response->{message} = "Unknown AJAX action.";
+		}
+	};
+	if ($@) {
+		my $error = $@;
+		$error =~ s/[\r\n]+/ /g;
+		$response = { ok => JSON::PP::false, state => "failed", message => $error || "AJAX request failed." };
+	}
 	ajax_header();
-
+	print JSON::PP->new->utf8->canonical->encode($response);
 	exit;
 
 ##########################################################################
@@ -442,15 +461,32 @@ sub ensure_head_defaults
 		$plugin_cfg->param("$serial.SERIAL", "$serial");
 		$plugin_cfg->param("$serial.DEVICE", "$device");
 		$plugin_cfg->param("$serial.METER", "0");
+		$plugin_cfg->param("$serial.ENABLED", "1");
+		$plugin_cfg->param("$serial.ALLOWSKIP", "1");
+		$plugin_cfg->param("$serial.AGGTIME", "-1");
 		$plugin_cfg->param("$serial.PROTOCOL", "");
 		$plugin_cfg->param("$serial.STARTBAUDRATE", "");
 		$plugin_cfg->param("$serial.BAUDRATE", "");
+		$plugin_cfg->param("$serial.BAUDRATESET", "0");
 		$plugin_cfg->param("$serial.TIMEOUT", "");
 		$plugin_cfg->param("$serial.DELAY", "");
 		$plugin_cfg->param("$serial.HANDSHAKE", "");
 		$plugin_cfg->param("$serial.DATABITS", "");
 		$plugin_cfg->param("$serial.STOPBITS", "");
 		$plugin_cfg->param("$serial.PARITY", "");
+		$plugin_cfg->param("$serial.INTERVAL", "");
+		$plugin_cfg->param("$serial.PULLSEQ", "");
+		$plugin_cfg->param("$serial.USELOCALTIME", "0");
+		$plugin_cfg->param("$serial.DUMPFILE", "");
+		$plugin_cfg->param("$serial.ACKSEQ", "");
+		$plugin_cfg->param("$serial.BAUDRATEREAD", "");
+		$plugin_cfg->param("$serial.PARITYMODE", "");
+		$plugin_cfg->param("$serial.PARITYSET", "0");
+		$plugin_cfg->param("$serial.WAITSYNC", "");
+		$plugin_cfg->param("$serial.READTIMEOUT", "");
+		$plugin_cfg->param("$serial.BAUDRATECHANGEDELAY", "");
+		$plugin_cfg->param("$serial.OMSKEY", "");
+		$plugin_cfg->param("$serial.MBUSDEBUG", "0");
 		$plugin_cfg->param("$serial.OBISCHANNELS", "");
 		$plugin_cfg->param("$serial.OBISCUSTOM", "");
 	}
@@ -507,19 +543,43 @@ sub save_vzlogger_form
 	foreach my $device (@heads) {
 		my $serial = $device;
 		$serial =~ s%/dev/serial/smartmeter/%%g;
+		my $previous_meter = $plugin_cfg->param("$serial.METER") || "0";
 		$plugin_cfg->param("$serial.NAME", clean_config_value($q->{"$serial\_name"}, qr/\A[A-Za-z0-9_-]+\z/, $serial));
-		$plugin_cfg->param("$serial.METER", clean_config_value($q->{"$serial\_meter"}, qr/\A[A-Za-z0-9_.:-]+\z/, "0"));
-		$plugin_cfg->param("$serial.PROTOCOL", clean_config_value($q->{"$serial\_protocol"}, qr/\A[A-Za-z0-9_.:-]*\z/, ""));
-		$plugin_cfg->param("$serial.STARTBAUDRATE", clean_config_value($q->{"$serial\_startbaudrate"}, qr/\A\d*\z/, ""));
-		$plugin_cfg->param("$serial.BAUDRATE", clean_config_value($q->{"$serial\_baudrate"}, qr/\A\d*\z/, ""));
-		$plugin_cfg->param("$serial.TIMEOUT", clean_config_value($q->{"$serial\_timeout"}, qr/\A\d*\z/, ""));
-		$plugin_cfg->param("$serial.DATABITS", clean_config_value($q->{"$serial\_databits"}, qr/\A\d*\z/, ""));
-		$plugin_cfg->param("$serial.STOPBITS", clean_config_value($q->{"$serial\_stopbits"}, qr/\A\d*\z/, ""));
-		$plugin_cfg->param("$serial.PARITY", clean_config_value($q->{"$serial\_parity"}, qr/\A[A-Za-z0-9_.:-]*\z/, ""));
-		my @selected_obis = grep { normalize_obis_identifier($_) ne "" } $cgi->multi_param("$serial\_obis");
-		@selected_obis = map { normalize_obis_identifier($_) } @selected_obis;
-		$plugin_cfg->param("$serial.OBISCHANNELS", join(",", @selected_obis));
-		$plugin_cfg->param("$serial.OBISCUSTOM", clean_multiline_obis($q->{"$serial\_obis_custom"}));
+		my $mode = clean_config_value($q->{"$serial\_meter"}, qr/\A(?:0|sml|d0|oms|user)\z/, normalized_meter_mode($previous_meter, $plugin_cfg->param("$serial.PROTOCOL")));
+		$plugin_cfg->param("$serial.METER", $mode);
+		if ($mode =~ /\A(?:sml|d0|oms)\z/) {
+			$plugin_cfg->param("$serial.ENABLED", clean_config_value($q->{"$serial\_enabled"}, qr/\A[01]\z/, clean_boolean(config_scalar_value("$serial.ENABLED"), 1)));
+			$plugin_cfg->param("$serial.ALLOWSKIP", clean_config_value($q->{"$serial\_allowskip"}, qr/\A[01]\z/, clean_boolean(config_scalar_value("$serial.ALLOWSKIP"), 1)));
+			$plugin_cfg->param("$serial.AGGTIME", clean_config_value($q->{"$serial\_aggtime"}, qr/\A(?:-?\d+)?\z/, config_scalar_value("$serial.AGGTIME")));
+			$plugin_cfg->param("$serial.INTERVAL", clean_config_value($q->{"$serial\_interval"}, qr/\A(?:-?\d+)?\z/, config_scalar_value("$serial.INTERVAL")));
+			$plugin_cfg->param("$serial.PULLSEQ", clean_config_value($q->{"$serial\_pullseq"}, qr/\A[A-Fa-f0-9]*\z/, config_scalar_value("$serial.PULLSEQ")));
+			$plugin_cfg->param("$serial.BAUDRATE", clean_config_value($q->{"$serial\_baudrate"}, qr/\A\d*\z/, config_scalar_value("$serial.BAUDRATE")));
+			$plugin_cfg->param("$serial.PARITYMODE", clean_config_value($q->{"$serial\_paritymode"}, qr/\A(?:|8n1|7e1|7o1|7n1)\z/i, configured_parity_optional($serial)));
+			$plugin_cfg->param("$serial.BAUDRATESET", (defined($q->{"$serial\_baudrate"}) && $q->{"$serial\_baudrate"} ne "") ? "1" : "0");
+			$plugin_cfg->param("$serial.PARITYSET", (defined($q->{"$serial\_paritymode"}) && $q->{"$serial\_paritymode"} ne "") ? "1" : "0");
+			$plugin_cfg->param("$serial.USELOCALTIME", clean_config_value($q->{"$serial\_uselocaltime"}, qr/\A[01]\z/, clean_boolean(config_scalar_value("$serial.USELOCALTIME"), 0)));
+		}
+		if ($mode eq "d0") {
+			$plugin_cfg->param("$serial.DUMPFILE", clean_config_value($q->{"$serial\_dumpfile"}, qr/\A[^\r\n]*\z/, config_scalar_value("$serial.DUMPFILE")));
+			$plugin_cfg->param("$serial.ACKSEQ", clean_config_value($q->{"$serial\_ackseq"}, qr/\A(?:auto|[A-Fa-f0-9]*)\z/, config_scalar_value("$serial.ACKSEQ")));
+			$plugin_cfg->param("$serial.BAUDRATEREAD", clean_config_value($q->{"$serial\_baudrateread"}, qr/\A\d*\z/, first_config_value($serial, "BAUDRATEREAD", "STARTBAUDRATE") || ""));
+			$plugin_cfg->param("$serial.WAITSYNC", clean_config_value($q->{"$serial\_waitsync"}, qr/\A(?:|off|end)\z/, config_scalar_value("$serial.WAITSYNC")));
+			$plugin_cfg->param("$serial.READTIMEOUT", clean_config_value($q->{"$serial\_readtimeout"}, qr/\A\d*\z/, first_config_value($serial, "READTIMEOUT", "TIMEOUT") || ""));
+			$plugin_cfg->param("$serial.BAUDRATECHANGEDELAY", clean_config_value($q->{"$serial\_baudratechangedelay"}, qr/\A\d*\z/, config_scalar_value("$serial.BAUDRATECHANGEDELAY")));
+		}
+		if ($mode eq "oms") {
+			$plugin_cfg->param("$serial.OMSKEY", clean_config_value($q->{"$serial\_omskey"}, qr/\A(?:[A-Fa-f0-9]{32})?\z/, config_scalar_value("$serial.OMSKEY")));
+			$plugin_cfg->param("$serial.MBUSDEBUG", clean_config_value($q->{"$serial\_mbusdebug"}, qr/\A[01]\z/, clean_boolean(config_scalar_value("$serial.MBUSDEBUG"), 0)));
+		}
+		if ($mode eq "user" && defined($q->{"$serial\_userjson"})) {
+			save_user_meter_source($serial, $q->{"$serial\_userjson"});
+		}
+		if ($mode =~ /\A(?:sml|d0|oms)\z/) {
+			my @selected_obis = grep { normalize_obis_identifier($_) ne "" } $cgi->multi_param("$serial\_obis");
+			@selected_obis = map { normalize_obis_identifier($_) } @selected_obis;
+			$plugin_cfg->param("$serial.OBISCHANNELS", join(",", @selected_obis));
+			$plugin_cfg->param("$serial.OBISCUSTOM", clean_multiline_obis($q->{"$serial\_obis_custom"}));
+		}
 	}
 	$plugin_cfg->save;
 }
@@ -539,10 +599,6 @@ sub read_obis_channels
 
 	my $was_active = service_state("vzlogger") eq "active";
 	my $output = "Read OBIS channels for $target_serial.\n";
-	if ($was_active) {
-		$output .= "Stopping vzlogger service before OBIS discovery.\n";
-		run_control("stop-vzlogger");
-	}
 
 	if (!command_exists("vzlogger")) {
 		$output .= "vzlogger binary not found. Install vzlogger before reading OBIS channels.\n";
@@ -552,7 +608,7 @@ sub read_obis_channels
 			$output .= $config_error;
 		} else {
 			unlink($test_log) if (-e $test_log);
-			my $vzlogger_output = run_vzlogger_obis_test($test_config);
+			my $vzlogger_output = run_vzlogger_obis_test($test_config, $test_log, $was_active);
 			write_control_log("read-obis-vzlogger", "config=$test_config\nlog=$test_log\n$vzlogger_output");
 			$output .= "vzLogger OBIS discovery completed. Details were written to the control log.\n";
 			$output .= "Discovery log: $test_log\n";
@@ -568,12 +624,161 @@ sub read_obis_channels
 		}
 	}
 
-	if ($was_active) {
-		$output .= "Restarting vzlogger service after OBIS channel discovery.\n";
-		run_control("start-vzlogger");
+	return $output;
+}
+
+sub start_obis_discovery_background
+{
+	my ($target_serial, @heads) = @_;
+	$target_serial = clean_config_value($target_serial, qr/\A[A-Za-z0-9_.:-]+\z/, "");
+	return obis_error_status("No I/R head selected for OBIS channel discovery.") if (!$target_serial);
+
+	my %known_heads = map {
+		my $serial = $_;
+		$serial =~ s%/dev/serial/smartmeter/%%g;
+		$serial => 1;
+	} @heads;
+	return obis_error_status("Unknown I/R head '$target_serial'.") if (!$known_heads{$target_serial});
+	return obis_error_status("vzlogger binary not found. Install vzlogger before reading OBIS channels.") if (!command_exists("vzlogger"));
+	return obis_error_status("timeout command not found; OBIS discovery was not started.") if (!command_exists("timeout"));
+
+	my $current = read_obis_discovery_status_file();
+	if ($current->{state} && $current->{state} =~ /\A(?:starting|running|cancelling)\z/ && obis_discovery_watchdog_is_active()) {
+		$current->{ok} = JSON::PP::true;
+		return $current;
 	}
 
-	return $output;
+	my ($test_config, $test_log, $config_error) = write_vzlogger_obis_test_config($target_serial);
+	return obis_error_status($config_error) if ($config_error);
+	unlink($test_log) if (-e $test_log);
+
+	my $job_id = time() . "-$$-" . int(rand(1000000));
+	my $status = {
+		ok => JSON::PP::true,
+		state => "starting",
+		job_id => $job_id,
+		serial => $target_serial,
+		started_at => time(),
+	};
+	write_obis_discovery_status_file($status);
+	unlink(obis_discovery_cancel_file()) if (-e obis_discovery_cancel_file());
+
+	my $was_active = service_state("vzlogger") eq "active";
+	my $launch_output = run_vzlogger_obis_test($test_config, $test_log, $was_active, $target_serial, $job_id, 1);
+	if ($launch_output !~ /\Astarted:/) {
+		$status->{ok} = JSON::PP::false;
+		$status->{state} = "failed";
+		$status->{message} = $launch_output || "Could not start OBIS discovery.";
+		$status->{finished_at} = time();
+		write_obis_discovery_status_file($status);
+	}
+	return $status;
+}
+
+sub obis_error_status
+{
+	my ($message) = @_;
+	$message ||= "OBIS discovery failed.";
+	$message =~ s/[\r\n]+\z//;
+	return { ok => JSON::PP::false, state => "failed", message => $message };
+}
+
+sub obis_discovery_runtime_dir
+{
+	return "/var/run/shm/$lbpplugindir";
+}
+
+sub obis_discovery_status_file
+{
+	return obis_discovery_runtime_dir() . "/vzlogger_obis_status.json";
+}
+
+sub obis_discovery_cancel_file
+{
+	return obis_discovery_runtime_dir() . "/vzlogger_obis_cancel";
+}
+
+sub write_obis_discovery_status_file
+{
+	my ($status) = @_;
+	my $runtime_dir = obis_discovery_runtime_dir();
+	make_path($runtime_dir) if (!-d $runtime_dir);
+	my $file = obis_discovery_status_file();
+	my $tmp = "$file.$$";
+	return 0 if (!open(my $fh, ">", $tmp));
+	print $fh JSON::PP->new->utf8->canonical->encode($status);
+	close($fh);
+	return rename($tmp, $file) ? 1 : 0;
+}
+
+sub read_obis_discovery_status_file
+{
+	my $file = obis_discovery_status_file();
+	return { state => "idle" } if (!-e $file || !open(my $fh, "<", $file));
+	local $/;
+	my $json = <$fh>;
+	close($fh);
+	my $status = eval { JSON::PP->new->utf8->decode($json || "") };
+	return ref($status) eq "HASH" ? $status : { state => "idle" };
+}
+
+sub obis_discovery_watchdog_is_active
+{
+	my $pid_file = obis_discovery_runtime_dir() . "/vzlogger_obis_watchdog.pid";
+	return 0 if (!-e $pid_file || !open(my $fh, "<", $pid_file));
+	my $pid = <$fh>;
+	close($fh);
+	chomp($pid) if (defined($pid));
+	return obis_watchdog_running($pid);
+}
+
+sub obis_discovery_status
+{
+	my $status = read_obis_discovery_status_file();
+	if (($status->{state} || "") =~ /\A(?:starting|running|cancelling)\z/ && !obis_discovery_watchdog_is_active()) {
+		my $started_at = int($status->{started_at} || 0);
+		if (!$started_at || time() - $started_at > 2) {
+			$status->{state} = "failed";
+			$status->{message} = "The OBIS discovery process ended unexpectedly.";
+			$status->{finished_at} = time();
+			write_obis_discovery_status_file($status);
+		}
+	}
+	$status->{ok} = JSON::PP::true;
+	return $status;
+}
+
+sub cancel_obis_discovery
+{
+	my ($job_id) = @_;
+	$job_id = clean_config_value($job_id, qr/\A[0-9-]+\z/, "");
+	my $status = read_obis_discovery_status_file();
+	return obis_error_status("No matching OBIS discovery is active.") if (!$job_id || ($status->{job_id} || "") ne $job_id);
+	return obis_error_status("The OBIS discovery is no longer active.") if (($status->{state} || "") !~ /\A(?:starting|running|cancelling)\z/);
+
+	my $cancel_file = obis_discovery_cancel_file();
+	make_path(obis_discovery_runtime_dir()) if (!-d obis_discovery_runtime_dir());
+	my $fh;
+	if (!open($fh, ">", $cancel_file)) {
+		return obis_error_status("Could not request cancellation: $!");
+	}
+	print $fh $job_id;
+	close($fh);
+	$status->{state} = "cancelling";
+	$status->{ok} = JSON::PP::true;
+	write_obis_discovery_status_file($status);
+	return $status;
+}
+
+sub obis_discovery_cancel_requested
+{
+	my ($job_id) = @_;
+	my $file = obis_discovery_cancel_file();
+	return 0 if (!$job_id || !-e $file || !open(my $fh, "<", $file));
+	my $requested_job = <$fh>;
+	close($fh);
+	chomp($requested_job) if (defined($requested_job));
+	return ($requested_job || "") eq $job_id ? 1 : 0;
 }
 
 sub apply_selected_implementation
@@ -592,36 +797,46 @@ sub write_vzlogger_obis_test_config
 {
 	my ($serial) = @_;
 	my $meter = $plugin_cfg->param("$serial.METER") || "0";
-	return ("", "", "No meter preset is configured for $serial.\n") if ($meter eq "0");
-
-	my $protocol_name = $meter eq "manual" ? ($plugin_cfg->param("$serial.PROTOCOL") || "") : $meter;
-	my $protocol = protocol_for_meter($protocol_name);
-	return ("", "", "Meter preset '$protocol_name' cannot be mapped to a vzLogger protocol.\n") if (!$protocol);
+	my $protocol = normalized_meter_mode($meter, $plugin_cfg->param("$serial.PROTOCOL"));
+	return ("", "", "No protocol is configured for $serial.\n") if ($protocol eq "0");
+	return ("", "", "OBIS discovery is not available for custom JSON meters.\n") if ($protocol eq "user");
+	return ("", "", "The installed vzLogger does not support OMS.\n") if ($protocol eq "oms" && !vzlogger_supports_protocol("oms"));
 
 	my $device = $plugin_cfg->param("$serial.DEVICE") || "/dev/serial/smartmeter/$serial";
 	return ("", "", "No serial device is configured for $serial.\n") if (!$device);
 
 	my $meter_config = {
 		enabled => JSON::PP::true,
-		allowskip => JSON::PP::true,
-		aggtime => -1,
+		allowskip => clean_boolean(config_scalar_value("$serial.ALLOWSKIP"), 1) ? JSON::PP::true : JSON::PP::false,
 		protocol => $protocol,
 		device => $device,
 		channels => [],
 	};
+	set_optional_integer($meter_config, "aggtime", config_scalar_value("$serial.AGGTIME"), 1);
 
 	if ($protocol eq "sml") {
-		$meter_config->{interval} = -1;
-	} else {
-		$meter_config->{interval} = -1;
-		$meter_config->{read_timeout} = clean_number($plugin_cfg->param("$serial.TIMEOUT"), 10);
-		$meter_config->{baudrate} = clean_number($plugin_cfg->param("$serial.BAUDRATE"), default_baudrate($protocol_name));
-		$meter_config->{baudrate_read} = clean_number($plugin_cfg->param("$serial.STARTBAUDRATE"), 300);
-		$meter_config->{parity} = serial_mode(
-			$plugin_cfg->param("$serial.DATABITS"),
-			$plugin_cfg->param("$serial.PARITY"),
-			$plugin_cfg->param("$serial.STOPBITS")
-		);
+		set_optional_integer($meter_config, "interval", config_scalar_value("$serial.INTERVAL"), 1);
+		set_optional_text($meter_config, "pullseq", config_scalar_value("$serial.PULLSEQ"));
+		my $legacy_manual = config_scalar_value("$serial.METER") eq "manual";
+		set_optional_integer($meter_config, "baudrate", config_scalar_value("$serial.BAUDRATE"), 0) if ($legacy_manual || config_scalar_value("$serial.BAUDRATESET") eq "1");
+		set_optional_enum($meter_config, "parity", configured_parity_optional($serial), qr/\A(?:8n1|7e1|7o1|7n1)\z/i) if ($legacy_manual || config_scalar_value("$serial.PARITYSET") eq "1");
+		set_optional_boolean($meter_config, "use_local_time", config_scalar_value("$serial.USELOCALTIME"));
+	} elsif ($protocol eq "d0") {
+		set_optional_integer($meter_config, "interval", config_scalar_value("$serial.INTERVAL"), 1);
+		set_optional_text($meter_config, "dump_file", config_scalar_value("$serial.DUMPFILE"));
+		set_optional_text($meter_config, "pullseq", config_scalar_value("$serial.PULLSEQ"));
+		set_optional_text($meter_config, "ackseq", config_scalar_value("$serial.ACKSEQ"));
+		set_optional_integer($meter_config, "baudrate", config_scalar_value("$serial.BAUDRATE"), 0);
+		set_optional_integer($meter_config, "baudrate_read", first_config_value($serial, "BAUDRATEREAD", "STARTBAUDRATE"), 0);
+		set_optional_enum($meter_config, "parity", configured_parity_optional($serial), qr/\A(?:8n1|7e1|7o1|7n1)\z/i);
+		set_optional_enum($meter_config, "wait_sync", config_scalar_value("$serial.WAITSYNC"), qr/\A(?:off|end)\z/);
+		set_optional_integer($meter_config, "read_timeout", first_config_value($serial, "READTIMEOUT", "TIMEOUT"), 0);
+		set_optional_integer($meter_config, "baudrate_change_delay", config_scalar_value("$serial.BAUDRATECHANGEDELAY"), 0);
+	} elsif ($protocol eq "oms") {
+		set_optional_integer($meter_config, "baudrate", config_scalar_value("$serial.BAUDRATE"), 0);
+		set_optional_enum($meter_config, "key", config_scalar_value("$serial.OMSKEY"), qr/\A[A-Fa-f0-9]{32}\z/);
+		set_optional_boolean($meter_config, "mbus_debug", config_scalar_value("$serial.MBUSDEBUG"));
+		set_optional_boolean($meter_config, "use_local_time", config_scalar_value("$serial.USELOCALTIME"));
 	}
 
 	my $safe_serial = safe_filename($serial);
@@ -656,35 +871,145 @@ sub write_vzlogger_obis_test_config
 
 sub run_vzlogger_obis_test
 {
-	my ($config_file) = @_;
+	my ($config_file, $test_log, $restart_service, $serial, $job_id, $background) = @_;
 	my $console_log = "$config_file.output.log";
+	my $runtime_dir = "/var/run/shm/$lbpplugindir";
+	my $watchdog_pid_file = "$runtime_dir/vzlogger_obis_watchdog.pid";
 	unlink($console_log) if (-e $console_log);
+	return "timeout command not found; OBIS discovery was not started.\n" if (!command_exists("timeout"));
+	if (-e $watchdog_pid_file && open(my $existing_fh, "<", $watchdog_pid_file)) {
+		my $existing_pid = <$existing_fh>;
+		close($existing_fh);
+		chomp($existing_pid) if (defined($existing_pid));
+		return "Another vzLogger OBIS discovery run is already active.\n" if (obis_watchdog_running($existing_pid));
+		unlink($watchdog_pid_file);
+	}
 
 	my $pid = fork();
 	return "Could not fork vzlogger discovery run: $!\n" if (!defined($pid));
 	if ($pid == 0) {
+		setsid() or exit 127;
+		$0 = "$lbpplugindir-vzlogger-obis-watchdog";
 		open STDIN, "</dev/null";
 		open STDOUT, ">", $console_log;
 		open STDERR, ">&STDOUT";
-		exec("vzlogger", "-c", $config_file);
-		exit 1;
-	}
-
-	my $status = "timeout";
-	for (my $i = 0; $i < 15; $i++) {
-		my $done = waitpid($pid, WNOHANG);
-		if ($done == $pid) {
-			$status = "exit=" . ($? >> 8);
-			last;
+		select(STDOUT);
+		$| = 1;
+		make_path($runtime_dir) if (!-d $runtime_dir);
+		if (open(my $pid_fh, ">", $watchdog_pid_file)) {
+			print $pid_fh "$$\n";
+			close($pid_fh);
 		}
-		sleep(1);
+		# This watchdog owns the complete service lifecycle. It remains alive if
+		# the browser reloads and Apache terminates the parent CGI request.
+		my $test_exit = 125;
+		my $can_run_test = 1;
+		my $cancelled = 0;
+		my $restore_failed = 0;
+		local $ENV{SMARTMETER_OBIS_WATCHDOG} = "1";
+		if ($job_id) {
+			write_obis_discovery_status_file({
+				ok => JSON::PP::true,
+				state => "running",
+				job_id => $job_id,
+				serial => $serial,
+				started_at => time(),
+			});
+			$cancelled = obis_discovery_cancel_requested($job_id);
+		}
+		if ($restart_service) {
+			system($^X, "$lbpbindir/vzlogger_control.pl", "stop-vzlogger");
+			$can_run_test = (($? >> 8) == 0);
+		}
+		$cancelled = 1 if ($job_id && obis_discovery_cancel_requested($job_id));
+		if ($can_run_test && !$cancelled) {
+			my $test_pid = fork();
+			if (!defined($test_pid)) {
+				print "Could not fork bounded vzLogger test process: $!\n";
+				$test_exit = 125;
+			} elsif ($test_pid == 0) {
+				setpgrp(0, 0) or exit 127;
+				exec("timeout", "--foreground", "--signal=TERM", "--kill-after=2s", "15s", "vzlogger", "-f", "-c", $config_file);
+				exit 127;
+			} else {
+				if (open(my $pid_fh, ">", $watchdog_pid_file)) {
+					print $pid_fh "$$\n$test_pid\n";
+					close($pid_fh);
+				}
+				while (1) {
+					sleep(1);
+					my $done = waitpid($test_pid, WNOHANG);
+					if ($done == $test_pid) {
+						$test_exit = wait_status_exit_code($?);
+						last;
+					}
+					if ($done == -1) {
+						$test_exit = 125;
+						last;
+					}
+					if ($job_id && obis_discovery_cancel_requested($job_id)) {
+						print "OBIS discovery cancellation requested.\n";
+						terminate_obis_test_group($test_pid);
+						$test_exit = 130;
+						$cancelled = 1;
+						last;
+					}
+					my $repeated_channels = repeated_obis_channel_count($test_log);
+					if ($repeated_channels > 0) {
+						print "Detected $repeated_channels OBIS channel(s) at least twice; stopping discovery early.\n";
+						terminate_obis_test_group($test_pid);
+						$test_exit = 0;
+						last;
+					}
+				}
+			}
+		}
+		if ($restart_service) {
+			system($^X, "$lbpbindir/vzlogger_control.pl", "start-vzlogger");
+			if (($? >> 8) != 0) {
+				$test_exit = 126;
+				$restore_failed = 1;
+			}
+		}
+		if ($job_id) {
+			my @channels = $cancelled ? () : channels_from_vzlogger_log($test_log);
+			write_obis_discovery_cache($serial, @channels) if (@channels && !$restore_failed);
+			my $state = $restore_failed ? "failed" : $cancelled ? "cancelled" : @channels ? "completed" : "failed";
+			my $message = $restore_failed ? "OBIS discovery ended, but the vzLogger service could not be restored." :
+				$cancelled ? "OBIS discovery was cancelled." :
+				@channels ? "Detected " . scalar(@channels) . " OBIS channel(s)." :
+				"No OBIS channels were detected. Check the vzLogger discovery log and meter settings.";
+			my $details = "";
+			if (-e $console_log && open(my $detail_fh, "<", $console_log)) {
+				$details = do { local $/; <$detail_fh> };
+				close($detail_fh);
+			}
+			write_control_log("read-obis-vzlogger", "config=$config_file\nlog=$test_log\nstate=$state\n$message\n$details");
+			write_obis_discovery_status_file({
+				ok => $state eq "failed" ? JSON::PP::false : JSON::PP::true,
+				state => $state,
+				job_id => $job_id,
+				serial => $serial,
+				channel_count => scalar(@channels),
+				message => $message,
+				started_at => read_obis_discovery_status_file()->{started_at} || time(),
+				finished_at => time(),
+			});
+			unlink(obis_discovery_cancel_file()) if (-e obis_discovery_cancel_file());
+		}
+		unlink($watchdog_pid_file);
+		exit($test_exit);
 	}
-	if ($status eq "timeout") {
-		kill("TERM", $pid);
-		sleep(1);
-		kill("KILL", $pid) if (kill(0, $pid));
-		waitpid($pid, 0);
+	make_path($runtime_dir) if (!-d $runtime_dir);
+	if (open(my $pid_fh, ">", $watchdog_pid_file)) {
+		print $pid_fh "$pid\n";
+		close($pid_fh);
 	}
+	return "started:$pid\n" if ($background);
+
+	waitpid($pid, 0);
+	my $exit_code = ($? & 127) ? 128 + ($? & 127) : $? >> 8;
+	my $status = $exit_code == 124 ? "timeout" : "exit=$exit_code";
 
 	my $output = "";
 	if (-e $console_log && open(my $fh, "<", $console_log)) {
@@ -696,6 +1021,59 @@ sub run_vzlogger_obis_test
 	return $output || "vzlogger discovery run produced no console output.\n";
 }
 
+sub repeated_obis_channel_count
+{
+	my ($log_file) = @_;
+	return 0 if (!$log_file || !-e $log_file);
+	my %counts;
+	open(my $fh, "<", $log_file) or return 0;
+	while (my $line = <$fh>) {
+		while ($line =~ /ObisIdentifier:((?:\d+-\d+:)?[A-Za-z0-9]+\.\d+\.\d+)(?:\*\d+)?/g) {
+			my $identifier = normalize_obis_identifier($1);
+			next if (!$identifier || is_discovery_excluded_identifier($identifier));
+			$counts{$identifier}++;
+		}
+	}
+	close($fh);
+	return 0 if (!keys(%counts));
+	foreach my $count (values(%counts)) {
+		return 0 if ($count < 2);
+	}
+	return scalar(keys(%counts));
+}
+
+sub terminate_obis_test_group
+{
+	my ($pid) = @_;
+	return if (!$pid || $pid !~ /\A\d+\z/);
+	kill("TERM", -int($pid));
+	for (my $i = 0; $i < 20; $i++) {
+		my $done = waitpid(int($pid), WNOHANG);
+		return if ($done == int($pid) || $done == -1);
+		select(undef, undef, undef, 0.1);
+	}
+	kill("KILL", -int($pid));
+	waitpid(int($pid), 0);
+}
+
+sub wait_status_exit_code
+{
+	my ($status) = @_;
+	return 128 + ($status & 127) if ($status & 127);
+	return $status >> 8;
+}
+
+sub obis_watchdog_running
+{
+	my ($pid) = @_;
+	return 0 if (!$pid || $pid !~ /\A\d+\z/ || !kill(0, int($pid)));
+	open(my $cmdline_fh, "<", "/proc/$pid/cmdline") or return 0;
+	local $/;
+	my $cmdline = <$cmdline_fh>;
+	close($cmdline_fh);
+	return ($cmdline || "") =~ /\A\Q$lbpplugindir-vzlogger-obis-watchdog\E(?:\0|\s|\z)/ ? 1 : 0;
+}
+
 sub channels_from_vzlogger_log
 {
 	my ($log_file) = @_;
@@ -705,7 +1083,7 @@ sub channels_from_vzlogger_log
 	my %seen;
 	if (open(my $fh, "<", $log_file)) {
 		while (my $line = <$fh>) {
-			while ($line =~ /ObisIdentifier:([A-Za-z0-9]+-\d+:[A-Za-z0-9]+\.\d+\.\d+)(?:\*\d+)?/g) {
+			while ($line =~ /ObisIdentifier:((?:\d+-\d+:)?[A-Za-z0-9]+\.\d+\.\d+)(?:\*\d+)?/g) {
 				my $identifier = normalize_obis_identifier($1);
 				next if (!$identifier || $seen{$identifier} || is_discovery_excluded_identifier($identifier));
 				push @channels, {
@@ -725,7 +1103,171 @@ sub protocol_for_meter
 	my ($meter) = @_;
 	return "sml" if (defined($meter) && $meter =~ /sml\z/i);
 	return "d0" if (defined($meter) && ($meter =~ /d0\z/i || $meter =~ /do\z/i));
+	return "oms" if (defined($meter) && $meter =~ /oms\z/i);
 	return "";
+}
+
+sub normalized_meter_mode
+{
+	my ($meter, $manual_protocol) = @_;
+	$meter ||= "0";
+	return $meter if ($meter =~ /\A(?:0|sml|d0|oms|user)\z/);
+	if ($meter eq "manual") {
+		my $mapped = protocol_for_meter($manual_protocol);
+		return $mapped || "user";
+	}
+	return "sml" if ($meter =~ /sml\z/i);
+	return "d0" if ($meter =~ /(?:d0|do)\z/i);
+	return "oms" if ($meter =~ /oms\z/i);
+	return "user";
+}
+
+sub first_config_value
+{
+	my ($section, @keys) = @_;
+	foreach my $key (@keys) {
+		my $value = config_scalar_value("$section.$key");
+		return $value if (defined($value) && $value ne "");
+	}
+	return undef;
+}
+
+sub config_scalar_value
+{
+	my ($key) = @_;
+	my @values = $plugin_cfg->param($key);
+	return "" if (!@values);
+	return "" if (!defined($values[0]) || ref($values[0]));
+	return "$values[0]";
+}
+
+sub configured_parity_optional
+{
+	my ($section) = @_;
+	my $mode = config_scalar_value("$section.PARITYMODE");
+	return lc($mode) if (defined($mode) && $mode =~ /\A(?:8n1|7e1|7o1|7n1)\z/i);
+	my $legacy = serial_mode(
+		$plugin_cfg->param("$section.DATABITS"),
+		$plugin_cfg->param("$section.PARITY"),
+		$plugin_cfg->param("$section.STOPBITS")
+	);
+	return lc($legacy) if (first_config_value($section, "DATABITS", "PARITY", "STOPBITS"));
+	return "";
+}
+
+sub set_optional_text
+{
+	my ($target, $key, $value) = @_;
+	return if (!defined($value) || ref($value) || $value eq "");
+	$value =~ s/[\r\n]//g;
+	$target->{$key} = $value if ($value ne "");
+}
+
+sub set_optional_integer
+{
+	my ($target, $key, $value, $allow_negative) = @_;
+	return if (!defined($value) || ref($value) || $value eq "");
+	my $pattern = $allow_negative ? qr/\A-?\d+\z/ : qr/\A\d+\z/;
+	$target->{$key} = int($value) if ($value =~ $pattern);
+}
+
+sub set_optional_enum
+{
+	my ($target, $key, $value, $pattern) = @_;
+	return if (!defined($value) || ref($value) || $value eq "");
+	$target->{$key} = lc($value) if ($value =~ $pattern);
+}
+
+sub set_optional_boolean
+{
+	my ($target, $key, $value) = @_;
+	return if (!defined($value) || ref($value) || $value !~ /\A[01]\z/);
+	$target->{$key} = $value eq "1" ? JSON::PP::true : JSON::PP::false;
+}
+
+sub user_meter_source_file
+{
+	my ($serial) = @_;
+	return "$lbpconfigdir/vzlogger_meter_" . safe_filename($serial) . ".jsonc";
+}
+
+sub save_user_meter_source
+{
+	my ($serial, $source) = @_;
+	$source = "" if (!defined($source));
+	return 0 if (length($source) > 65536);
+	make_path($lbpconfigdir) if (!-d $lbpconfigdir);
+	my $file = user_meter_source_file($serial);
+	my $tmp = "$file.$$";
+	open(my $fh, ">", $tmp) or return 0;
+	print $fh $source;
+	close($fh);
+	rename($tmp, $file) or do { unlink($tmp); return 0; };
+	return 1;
+}
+
+sub read_user_meter_source
+{
+	my ($serial) = @_;
+	my $file = user_meter_source_file($serial);
+	return "" if (!-e $file || -s $file > 65536);
+	open(my $fh, "<", $file) or return "";
+	local $/;
+	my $source = <$fh>;
+	close($fh);
+	return $source;
+}
+
+sub validate_user_meter_source
+{
+	my ($serial) = @_;
+	my $file = user_meter_source_file($serial);
+	return (undef, "JSONC source file does not exist", "") if (!-e $file);
+	return (undef, "JSONC source exceeds 64 KiB", "") if (-s $file > 65536);
+	my $source = read_user_meter_source($serial);
+	my $meter = eval { JSON::PP->new->utf8->relaxed(1)->decode($source) };
+	if ($@) {
+		my $error = format_json_error($source, $@);
+		return (undef, $error || "Invalid JSONC", "");
+	}
+	return (undef, "The JSONC source must contain one meter object", "") if (ref($meter) ne "HASH");
+	return (undef, "Root sections such as meters, mqtt, local, push or retry are not allowed", "") if (grep { exists($meter->{$_}) } qw(meters mqtt local push retry verbosity log));
+	return (undef, "The meter object requires a non-empty protocol string", "") if (!defined($meter->{protocol}) || ref($meter->{protocol}) || $meter->{protocol} eq "");
+	if (exists($meter->{channels})) {
+		return (undef, "channels must be an array", "") if (ref($meter->{channels}) ne "ARRAY");
+		foreach my $channel (@{$meter->{channels}}) {
+			return (undef, "Every channels entry must be an object", "") if (ref($channel) ne "HASH");
+		}
+	}
+	my $warning = "";
+	if (defined($meter->{device}) && !ref($meter->{device}) && $meter->{device} =~ m{\A/} && !-e $meter->{device}) {
+		$warning = "Configured device '$meter->{device}' does not exist.";
+	}
+	return ($meter, "", $warning);
+}
+
+sub format_json_error
+{
+	my ($source, $error) = @_;
+	$error ||= "Invalid JSONC";
+	$error =~ s/\s+at\s+\S+\s+line\s+\d+\.?\s*\z//;
+	if ($error =~ /character offset\s+(\d+)/i) {
+		my $offset = $1;
+		my $prefix = substr($source || "", 0, $offset);
+		my $line = 1 + ($prefix =~ tr/\n/\n/);
+		my $last_newline = rindex($prefix, "\n");
+		my $column = length($prefix) - $last_newline;
+		$error .= " (line $line, column $column)";
+	}
+	return $error;
+}
+
+sub vzlogger_supports_protocol
+{
+	my ($protocol) = @_;
+	return 0 if (!command_exists("vzlogger"));
+	my $help = `vzlogger -h 2>&1`;
+	return $help =~ /^\s*\Q$protocol\E\s+/mi ? 1 : 0;
 }
 
 sub default_baudrate
@@ -836,23 +1378,67 @@ sub build_head_rows
 {
 	my (@heads) = @_;
 	my @rows;
+	my $oms_supported = vzlogger_supports_protocol("oms");
 	foreach my $device (@heads) {
 		my $serial = $device;
 		$serial =~ s%/dev/serial/smartmeter/%%g;
+		my $stored_meter = $plugin_cfg->param("$serial.METER") || "0";
+		my $mode = normalized_meter_mode($stored_meter, $plugin_cfg->param("$serial.PROTOCOL"));
 		my %enabled_obis = enabled_obis_channels($serial);
 		my @available_obis = available_obis_channels($serial);
+		my ($json_error, $device_warning) = ("", "");
+		if ($mode eq "user") {
+			my $unused_meter;
+			($unused_meter, $json_error, $device_warning) = validate_user_meter_source($serial);
+		}
+		my $oms_warning = ($mode eq "oms" && !$oms_supported) ?
+			($L{'VZLOGGER.METER_WARNING_OMS_UNAVAILABLE'} || "The installed vzLogger does not support OMS.") : "";
+		my $warning_text = $json_error || $device_warning || $oms_warning;
+		$warning_text = ($L{'VZLOGGER.METER_WARNING_INVALID_JSON'} || "Custom meter configuration is invalid") . ": " . $json_error if ($json_error);
+		$warning_text = ($L{'VZLOGGER.METER_WARNING_DEVICE'} || "Configured device is unavailable") . ": " . $device_warning if (!$json_error && $device_warning);
+		my $warning_kind = $json_error ? "user" : $device_warning ? "user" : $oms_warning ? "oms" : "";
+		my %protocol_labels = (
+			"0" => ($L{'FORMTABLEROWS.PLEASESELECT'} || "Please select"),
+			sml => "SML",
+			d0 => "D0",
+			oms => "OMS",
+			user => ($L{'VZLOGGER.PROTOCOL_USER'} || "Custom (JSON)"),
+		);
+		my $baudrate = first_config_value($serial, "BAUDRATE");
+		$baudrate = undef if ($mode eq "sml" && config_scalar_value("$serial.BAUDRATESET") ne "1" && $stored_meter ne "manual");
+		$baudrate = default_baudrate($stored_meter) if (!defined($baudrate) && $mode eq "d0" && $stored_meter ne "d0");
+		$baudrate = "" if (!defined($baudrate));
 		push @rows, {
 			NAME => $plugin_cfg->param("$serial.NAME") || $serial,
 			SERIAL => $serial,
 			DEVICE => $plugin_cfg->param("$serial.DEVICE") || $device,
-			METER => $plugin_cfg->param("$serial.METER") || "0",
-			PROTOCOL => $plugin_cfg->param("$serial.PROTOCOL") || "",
-			STARTBAUDRATE => $plugin_cfg->param("$serial.STARTBAUDRATE") || "",
-			BAUDRATE => $plugin_cfg->param("$serial.BAUDRATE") || "",
-			TIMEOUT => $plugin_cfg->param("$serial.TIMEOUT") || "",
-			DATABITS => $plugin_cfg->param("$serial.DATABITS") || "",
-			STOPBITS => $plugin_cfg->param("$serial.STOPBITS") || "",
-			PARITY => $plugin_cfg->param("$serial.PARITY") || "",
+			METER => $mode,
+			PROTOCOL_LABEL => $protocol_labels{$mode},
+			METER_ENABLED => clean_boolean(config_scalar_value("$serial.ENABLED"), 1),
+			ALLOWSKIP => clean_boolean(config_scalar_value("$serial.ALLOWSKIP"), 1),
+			AGGTIME => config_scalar_value("$serial.AGGTIME"),
+			INTERVAL => config_scalar_value("$serial.INTERVAL"),
+			PULLSEQ => first_config_value($serial, "PULLSEQ") // "",
+			BAUDRATE => $baudrate,
+			PARITYMODE => ($mode eq "sml" && config_scalar_value("$serial.PARITYSET") ne "1" && $stored_meter ne "manual") ? "" : configured_parity_optional($serial),
+			USELOCALTIME => clean_boolean(config_scalar_value("$serial.USELOCALTIME"), 0),
+			DUMPFILE => first_config_value($serial, "DUMPFILE") // "",
+			ACKSEQ => first_config_value($serial, "ACKSEQ") // "",
+			BAUDRATEREAD => first_config_value($serial, "BAUDRATEREAD", "STARTBAUDRATE") // "",
+			WAITSYNC => first_config_value($serial, "WAITSYNC") // "",
+			READTIMEOUT => first_config_value($serial, "READTIMEOUT", "TIMEOUT") // "",
+			BAUDRATECHANGEDELAY => first_config_value($serial, "BAUDRATECHANGEDELAY") // "",
+			OMSKEY => first_config_value($serial, "OMSKEY") // "",
+			MBUSDEBUG => clean_boolean(config_scalar_value("$serial.MBUSDEBUG"), 0),
+			USER_JSON => read_user_meter_source($serial),
+			HAS_WARNING => $warning_text ? 1 : 0,
+			SHOW_WARNING_DETAIL => ($json_error || $device_warning) ? 1 : 0,
+			WARNING_TEXT => $warning_text,
+			WARNING_KIND => $warning_kind,
+			COLLAPSED => ($json_error || (($q->{obis_serial} || "") eq $serial)) ? "false" : "true",
+			OMS_SUPPORTED => $oms_supported ? 1 : 0,
+			OMS_UNSUPPORTED => $oms_supported ? 0 : 1,
+			OBIS_DISABLED => ($mode eq "oms" && !$oms_supported) ? "disabled" : "",
 			OBIS_CUSTOM => $plugin_cfg->param("$serial.OBISCUSTOM") || "",
 			OBIS_CHANNELS => [
 				map {
@@ -956,7 +1542,7 @@ sub normalize_obis_identifier
 	return "" if (!defined($value));
 	$value =~ s/^\s+|\s+$//g;
 	$value =~ s/\*\d+\z//;
-	return $value if ($value =~ /\A\d+-\d+:[A-Za-z0-9]+\.\d+\.\d+\z/);
+	return $value if ($value =~ /\A(?:\d+-\d+:)?[A-Za-z0-9]+\.\d+\.\d+\z/);
 	return "";
 }
 
@@ -1055,6 +1641,11 @@ sub obis_sort_parts
 		my ($a, $b, $c_part, $d, $e) = ($1, $2, $3, $4, $5);
 		my $c = ($c_part =~ /\A\d+\z/) ? int($c_part) : 900 + ord(uc(substr($c_part, 0, 1)));
 		return (int($a), int($b), $c, int($d), int($e));
+	}
+	if ($identifier =~ /\A([A-Za-z0-9]+)\.(\d+)\.(\d+)\z/) {
+		my ($c_part, $d, $e) = ($1, $2, $3);
+		my $c = ($c_part =~ /\A\d+\z/) ? int($c_part) : 900 + ord(uc(substr($c_part, 0, 1)));
+		return (0, 0, $c, int($d), int($e));
 	}
 	return (999, 999, 999, 999, 999);
 }

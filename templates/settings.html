@@ -102,6 +102,67 @@
 	.settings-table > tbody > tr > td:nth-child(4) font { font-size: 100%; }
 	.compact-settings > tbody > tr > td { padding-top: 2px; padding-bottom: 2px; }
 	.compact-settings h4 { margin: 8px 0 3px 0; }
+	.meter-panel { margin: 8px 0; }
+	.meter-panel .ui-collapsible-content { padding: 8px 10px; }
+	.meter-panel .meter-summary-device { font-weight: normal; opacity: .8; }
+	.meter-warning-icon {
+		display: inline-block;
+		margin-left: .45em;
+		color: #b00020;
+		font-weight: bold;
+		font-size: 1.15em;
+	}
+	.meter-warning-message {
+		margin: 0 0 8px 0;
+		padding: 8px 10px;
+		border: 1px solid #b00020;
+		border-radius: 4px;
+		background: #f8d7da;
+		color: #721c24;
+	}
+	.meter-json-editor { min-height: 18em; font-family: monospace; white-space: pre; }
+	.meter-doc-links { margin-top: .45em; }
+	.obis-search-overlay {
+		display: none;
+		position: fixed;
+		inset: 0;
+		z-index: 10000;
+		align-items: center;
+		justify-content: center;
+		padding: 20px;
+		background: rgba(0, 0, 0, .45);
+	}
+	.obis-search-overlay.is-visible { display: flex; }
+	.obis-search-dialog {
+		box-sizing: border-box;
+		width: 100%;
+		max-width: 420px;
+		padding: 24px;
+		border: 1px solid #777;
+		border-radius: 8px;
+		background: #fff;
+		box-shadow: 0 8px 28px rgba(0, 0, 0, .35);
+		color: #222;
+		text-align: center;
+	}
+	.obis-search-spinner {
+		width: 38px;
+		height: 38px;
+		margin: 0 auto 14px;
+		border: 4px solid #d4d4d4;
+		border-top-color: #2b6dad;
+		border-radius: 50%;
+		animation: obis-search-spin .8s linear infinite;
+	}
+	.obis-search-title { font-size: 1.15em; font-weight: bold; }
+	.obis-search-message { margin-top: 8px; line-height: 1.4; }
+	.obis-search-actions { margin-top: 18px; }
+	.obis-search-actions .ui-btn { margin: 0 auto; }
+	.obis-search-dialog [hidden] { display: none !important; }
+	@keyframes obis-search-spin { to { transform: rotate(360deg); } }
+	@media (prefers-reduced-motion: reduce) {
+		.obis-search-spinner { animation-duration: 1.6s; }
+	}
 	@media (max-width: 700px) {
 		.service-panel td { display: block; width: auto !important; }
 		.service-panel .service-spacer { display: none; }
@@ -356,102 +417,46 @@
 		<td colspan=4><a data-icon="refresh" data-role="button" data-inline="true" data-mini="true" href="./index.cgi?rescan=1"><TMPL_VAR NAME=T::VZLOGGER.RESCAN_IR_HEADS></a></td>
 	</tr>
 	<TMPL_LOOP NAME=ROWS>
-	<tr>
-		<td colspan=4><h3><TMPL_VAR NAME=SERIAL></h3></td>
-	</tr>
-	<tr>
-		<td><label for="<TMPL_VAR NAME=SERIAL>_name"><TMPL_VAR NAME=T::FORMTABLEROWS.NAME></label></td>
-		<td><input id="<TMPL_VAR NAME=SERIAL>_name" name="<TMPL_VAR NAME=SERIAL>_name" type="text" value="<TMPL_VAR NAME=NAME>"></td>
-		<td>&nbsp;</td>
-		<td><font size="-1"><TMPL_VAR NAME=DEVICE></font></td>
-	</tr>
-	<tr>
-		<td><label for="<TMPL_VAR NAME=SERIAL>_meter"><TMPL_VAR NAME=T::FORMTABLEROWS.METER></label></td>
-		<td>
-			<select id="<TMPL_VAR NAME=SERIAL>_meter" name="<TMPL_VAR NAME=SERIAL>_meter" data-mini="true" data-native-menu="true">
-				<option value="0"><TMPL_VAR NAME=T::FORMTABLEROWS.PLEASESELECT></option>
-				<option value="manual"><TMPL_VAR NAME=T::FORMTABLEROWS.MANUAL></option>
-				<option value="genericd0">Generic D0-Protocol</option>
-				<option value="genericsml">Generic SML-Protocol</option>
-				<option value="emhed300sml">EMH ED300(S) (SML-Protocol)</option>
-				<option value="emhehzksml">EMH eHZ-K / eHZ-IW8E2A (SML-Protocol)</option>
-				<option value="iskra173d0">Iskra MT173 (D0-Protocol)</option>
-				<option value="iskra173sml">Iskra MT173 (SML-Protocol)</option>
-				<option value="iskra174d0">Iskra MT174 (D0-Protocol)</option>
-				<option value="iskra174sml">Iskra MT174 (SML-Protocol)</option>
-				<option value="iskra175d0">Iskra MT175 (D0-Protocol)</option>
-				<option value="iskra175sml">Iskra MT175 (SML-Protocol)</option>
-				<option value="iskra382d0">Iskra MT382 (D0-Protocol)</option>
-				<option value="iskra631sml">Iskra MT631 (SML-Protocol)</option>
-				<option value="iskra681sml">Iskra MT681 (SML-Protocol)</option>
-				<option value="iskra691sml">Iskra MT691 (SML-Protocol)</option>
-				<option value="itronace3000type260d0">Itron ACE3000 Type 260 (D0-Protocol)</option>
-				<option value="landisgyre320d0">Landis &amp; Gyre E320 (D0-Protocol)</option>
-				<option value="landisgyre350d0">Landis &amp; Gyre E350 (D0-Protocol)</option>
-				<option value="landisgyret550d0">Landis &amp; Gyre T550 (D0-Protocol)</option>
-				<option value="pafal20ec3grd0">Pafal 20ec3gr (D0-Protocol)</option>
-				<option value="siemenstd3511d0">Siemens TD-3511 (D0-Protocol)</option>
-				<option value="siemensuh50do">Siemens UH50 (D0-Protocol)</option>
-				<option value="sagemcomt211d0f">Sagemcom S211/T211 Flanders (D0-Protocol)</option>
-				<option value="sagemcomt211d0">Sagemcom S211/T211 (D0-Protocol)</option>
-			</select>
-		</td>
-		<td>&nbsp;</td>
-		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.METER_PRESET_HELP></font></td>
-	</tr>
-	<tr>
-		<td><label for="<TMPL_VAR NAME=SERIAL>_protocol"><TMPL_VAR NAME=T::VZLOGGER.MANUAL_PROTOCOL></label></td>
-		<td>
-			<select id="<TMPL_VAR NAME=SERIAL>_protocol" name="<TMPL_VAR NAME=SERIAL>_protocol" data-mini="true" data-native-menu="true">
-				<option value=""><TMPL_VAR NAME=T::VZLOGGER.PRESET_DEFAULT></option>
-				<option value="genericsml">SML</option>
-				<option value="genericd0">D0</option>
-			</select>
-			<input name="<TMPL_VAR NAME=SERIAL>_startbaudrate" type="text" placeholder="<TMPL_VAR NAME=T::FORMTABLEROWS.STARTBAUDRATE>" value="<TMPL_VAR NAME=STARTBAUDRATE>">
-			<input name="<TMPL_VAR NAME=SERIAL>_baudrate" type="text" placeholder="<TMPL_VAR NAME=T::FORMTABLEROWS.BAUDRATE>" value="<TMPL_VAR NAME=BAUDRATE>">
-			<input name="<TMPL_VAR NAME=SERIAL>_timeout" type="text" placeholder="<TMPL_VAR NAME=T::FORMTABLEROWS.TIMEOUT>" value="<TMPL_VAR NAME=TIMEOUT>">
-			<input name="<TMPL_VAR NAME=SERIAL>_databits" type="text" placeholder="<TMPL_VAR NAME=T::FORMTABLEROWS.DATABITS>" value="<TMPL_VAR NAME=DATABITS>">
-			<input name="<TMPL_VAR NAME=SERIAL>_stopbits" type="text" placeholder="<TMPL_VAR NAME=T::FORMTABLEROWS.STOPBITS>" value="<TMPL_VAR NAME=STOPBITS>">
-			<select name="<TMPL_VAR NAME=SERIAL>_parity" data-mini="true" data-native-menu="true">
-				<option value=""><TMPL_VAR NAME=T::VZLOGGER.PARITY_DEFAULT></option>
-				<option value="none"><TMPL_VAR NAME=T::VZLOGGER.PARITY_NONE></option>
-				<option value="even"><TMPL_VAR NAME=T::VZLOGGER.PARITY_EVEN></option>
-				<option value="odd"><TMPL_VAR NAME=T::VZLOGGER.PARITY_ODD></option>
-			</select>
-		</td>
-		<td>&nbsp;</td>
-		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MANUAL_VALUES_HELP></font></td>
-	</tr>
-	<tr>
-		<td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS></td>
-		<td>
-			<button type="submit" name="submitaction" value="read-obis" onclick="document.getElementById('obis_serial').value='<TMPL_VAR NAME=SERIAL>';" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search"><TMPL_VAR NAME=T::VZLOGGER.READ_OBIS_CHANNELS></button>
-			<TMPL_IF NAME=OBIS_CHANNELS_EMPTY>
-				<p><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_EMPTY></p>
-			</TMPL_IF>
-			<TMPL_LOOP NAME=OBIS_CHANNELS>
-				<label>
-					<input type="checkbox" name="<TMPL_VAR NAME=FIELD_NAME>" value="<TMPL_VAR NAME=IDENTIFIER>" <TMPL_VAR NAME=CHECKED>>
-					<TMPL_VAR NAME=IDENTIFIER> - <TMPL_VAR NAME=NAME>
-				</label>
-			</TMPL_LOOP>
-		</td>
-		<td>&nbsp;</td>
-		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_HELP></font></td>
-	</tr>
-	<tr>
-		<td><label for="<TMPL_VAR NAME=SERIAL>_obis_custom"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CUSTOM></label></td>
-		<td>
-			<textarea id="<TMPL_VAR NAME=SERIAL>_obis_custom" name="<TMPL_VAR NAME=SERIAL>_obis_custom" rows="4"><TMPL_VAR NAME=OBIS_CUSTOM></textarea>
-		</td>
-		<td>&nbsp;</td>
-		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CUSTOM_HELP></font></td>
-	</tr>
-	<script>
-		$("#<TMPL_VAR NAME=SERIAL>_meter").val("<TMPL_VAR NAME=METER>");
-		$("#<TMPL_VAR NAME=SERIAL>_protocol").val("<TMPL_VAR NAME=PROTOCOL>");
-		$("select[name='<TMPL_VAR NAME=SERIAL>_parity']").val("<TMPL_VAR NAME=PARITY>");
-	</script>
+	<tr><td colspan="4">
+		<div id="meter_<TMPL_VAR NAME=SERIAL>" class="meter-panel" data-role="collapsible" data-mini="true" data-collapsed="<TMPL_VAR NAME=COLLAPSED>" data-warning-kind="<TMPL_VAR NAME=WARNING_KIND>" data-oms-supported="<TMPL_VAR NAME=OMS_SUPPORTED>" data-current-mode="<TMPL_VAR NAME=METER>" data-meter-enabled="<TMPL_VAR NAME=METER_ENABLED>" data-allowskip="<TMPL_VAR NAME=ALLOWSKIP>" data-parity="<TMPL_VAR NAME=PARITYMODE>" data-local-time="<TMPL_VAR NAME=USELOCALTIME>" data-wait-sync="<TMPL_VAR NAME=WAITSYNC>" data-mbus-debug="<TMPL_VAR NAME=MBUSDEBUG>">
+			<h3>
+				<TMPL_VAR NAME=NAME ESCAPE=HTML>
+				<span class="meter-summary-device">– <TMPL_VAR NAME=DEVICE ESCAPE=HTML> – <span class="meter-protocol-summary"><TMPL_VAR NAME=PROTOCOL_LABEL ESCAPE=HTML></span></span>
+				<TMPL_IF NAME=HAS_WARNING><span class="meter-warning-icon" title="<TMPL_VAR NAME=WARNING_TEXT ESCAPE=HTML>" aria-label="<TMPL_VAR NAME=WARNING_TEXT ESCAPE=HTML>">!</span></TMPL_IF>
+			</h3>
+			<TMPL_IF NAME=SHOW_WARNING_DETAIL><div class="meter-primary-warning meter-warning-message" role="alert"><TMPL_VAR NAME=WARNING_TEXT ESCAPE=HTML></div></TMPL_IF>
+			<TMPL_IF NAME=OMS_UNSUPPORTED><div class="meter-oms-runtime-warning meter-warning-message" role="alert"><TMPL_VAR NAME=T::VZLOGGER.METER_WARNING_OMS_UNAVAILABLE></div></TMPL_IF>
+			<table border="0" class="settings-table compact-settings">
+			<tr><td><label for="<TMPL_VAR NAME=SERIAL>_name"><TMPL_VAR NAME=T::FORMTABLEROWS.NAME></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_name" name="<TMPL_VAR NAME=SERIAL>_name" type="text" value="<TMPL_VAR NAME=NAME ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_NAME_HELP></td></tr>
+			<tr><td><TMPL_VAR NAME=T::VZLOGGER.METER_DEVICE></td><td><code><TMPL_VAR NAME=DEVICE ESCAPE=HTML></code></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_DEVICE_HELP></td></tr>
+			<tr><td><label for="<TMPL_VAR NAME=SERIAL>_meter"><TMPL_VAR NAME=T::VZLOGGER.METER_PROTOCOL></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_meter" name="<TMPL_VAR NAME=SERIAL>_meter" data-mini="true" data-native-menu="true" onchange="update_meter_protocol(this.id.substring(0, this.id.length - 6));"><option value="0"><TMPL_VAR NAME=T::FORMTABLEROWS.PLEASESELECT></option><option value="sml">SML</option><option value="d0">D0</option><option value="oms">OMS</option><option value="user"><TMPL_VAR NAME=T::VZLOGGER.PROTOCOL_USER></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_PROTOCOL_HELP></td></tr>
+			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_enabled"><TMPL_VAR NAME=T::VZLOGGER.METER_ENABLED></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_enabled" name="<TMPL_VAR NAME=SERIAL>_enabled" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_ENABLED_HELP></td></tr>
+			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_allowskip"><TMPL_VAR NAME=T::VZLOGGER.METER_ALLOWSKIP></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_allowskip" name="<TMPL_VAR NAME=SERIAL>_allowskip" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_ALLOWSKIP_HELP></td></tr>
+			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_aggtime"><TMPL_VAR NAME=T::VZLOGGER.METER_AGGTIME></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_aggtime" name="<TMPL_VAR NAME=SERIAL>_aggtime" type="number" value="<TMPL_VAR NAME=AGGTIME>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_AGGTIME_HELP></td></tr>
+
+			<tr class="meter-field" data-meter-field="interval" data-protocols="sml d0"><td><label for="<TMPL_VAR NAME=SERIAL>_interval"><TMPL_VAR NAME=T::VZLOGGER.METER_INTERVAL></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_interval" name="<TMPL_VAR NAME=SERIAL>_interval" type="number" value="<TMPL_VAR NAME=INTERVAL>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_INTERVAL_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="pullseq" data-protocols="sml d0"><td><label for="<TMPL_VAR NAME=SERIAL>_pullseq"><TMPL_VAR NAME=T::VZLOGGER.METER_PULLSEQ></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_pullseq" name="<TMPL_VAR NAME=SERIAL>_pullseq" type="text" value="<TMPL_VAR NAME=PULLSEQ ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_PULLSEQ_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="baudrate" data-protocols="sml d0 oms"><td><label for="<TMPL_VAR NAME=SERIAL>_baudrate"><TMPL_VAR NAME=T::VZLOGGER.METER_BAUDRATE></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_baudrate" name="<TMPL_VAR NAME=SERIAL>_baudrate" type="number" min="1" value="<TMPL_VAR NAME=BAUDRATE>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_BAUDRATE_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="parity" data-protocols="sml d0"><td><label for="<TMPL_VAR NAME=SERIAL>_paritymode"><TMPL_VAR NAME=T::VZLOGGER.METER_PARITY></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_paritymode" name="<TMPL_VAR NAME=SERIAL>_paritymode" data-mini="true" data-native-menu="true"><option value=""><TMPL_VAR NAME=T::VZLOGGER.METER_AUTO_EMPTY></option><option value="8n1">8N1</option><option value="7e1">7E1</option><option value="7o1">7O1</option><option value="7n1">7N1</option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_PARITY_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="use_local_time" data-protocols="sml oms"><td><label for="<TMPL_VAR NAME=SERIAL>_uselocaltime"><TMPL_VAR NAME=T::VZLOGGER.METER_USE_LOCAL_TIME></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_uselocaltime" name="<TMPL_VAR NAME=SERIAL>_uselocaltime" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_USE_LOCAL_TIME_HELP></td></tr>
+
+			<tr class="meter-field" data-meter-field="dump_file" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_dumpfile"><TMPL_VAR NAME=T::VZLOGGER.METER_DUMP_FILE></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_dumpfile" name="<TMPL_VAR NAME=SERIAL>_dumpfile" type="text" value="<TMPL_VAR NAME=DUMPFILE ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_DUMP_FILE_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="ackseq" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_ackseq"><TMPL_VAR NAME=T::VZLOGGER.METER_ACKSEQ></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_ackseq" name="<TMPL_VAR NAME=SERIAL>_ackseq" type="text" value="<TMPL_VAR NAME=ACKSEQ ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_ACKSEQ_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="baudrate_read" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_baudrateread"><TMPL_VAR NAME=T::VZLOGGER.METER_BAUDRATE_READ></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_baudrateread" name="<TMPL_VAR NAME=SERIAL>_baudrateread" type="number" min="1" value="<TMPL_VAR NAME=BAUDRATEREAD>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_BAUDRATE_READ_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="wait_sync" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_waitsync"><TMPL_VAR NAME=T::VZLOGGER.METER_WAIT_SYNC></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_waitsync" name="<TMPL_VAR NAME=SERIAL>_waitsync" data-mini="true" data-native-menu="true"><option value=""><TMPL_VAR NAME=T::VZLOGGER.METER_AUTO_EMPTY></option><option value="off">off</option><option value="end">end</option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_WAIT_SYNC_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="read_timeout" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_readtimeout"><TMPL_VAR NAME=T::VZLOGGER.METER_READ_TIMEOUT></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_readtimeout" name="<TMPL_VAR NAME=SERIAL>_readtimeout" type="number" min="0" value="<TMPL_VAR NAME=READTIMEOUT>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_READ_TIMEOUT_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="baudrate_change_delay" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_baudratechangedelay"><TMPL_VAR NAME=T::VZLOGGER.METER_BAUDRATE_CHANGE_DELAY></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_baudratechangedelay" name="<TMPL_VAR NAME=SERIAL>_baudratechangedelay" type="number" min="0" value="<TMPL_VAR NAME=BAUDRATECHANGEDELAY>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_BAUDRATE_CHANGE_DELAY_HELP></td></tr>
+
+			<tr class="meter-field" data-meter-field="key" data-protocols="oms"><td><label for="<TMPL_VAR NAME=SERIAL>_omskey"><TMPL_VAR NAME=T::VZLOGGER.METER_OMS_KEY></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_omskey" name="<TMPL_VAR NAME=SERIAL>_omskey" type="password" autocomplete="off" maxlength="32" value="<TMPL_VAR NAME=OMSKEY ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_OMS_KEY_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="mbus_debug" data-protocols="oms"><td><label for="<TMPL_VAR NAME=SERIAL>_mbusdebug"><TMPL_VAR NAME=T::VZLOGGER.METER_MBUS_DEBUG></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_mbusdebug" name="<TMPL_VAR NAME=SERIAL>_mbusdebug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_MBUS_DEBUG_HELP></td></tr>
+
+			<tr class="meter-user-settings"><td><label for="<TMPL_VAR NAME=SERIAL>_userjson"><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON></label></td><td><textarea class="meter-json-editor" id="<TMPL_VAR NAME=SERIAL>_userjson" name="<TMPL_VAR NAME=SERIAL>_userjson" maxlength="65536"><TMPL_VAR NAME=USER_JSON ESCAPE=HTML></textarea><div class="meter-doc-links"><a href="https://wiki.volkszaehler.org/software/controller/vzlogger/vzlogger_conf_parameter" target="_blank" rel="noopener"><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON_DOCS></a> · <a href="https://github.com/volkszaehler/vzlogger/tree/master/etc" target="_blank" rel="noopener"><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON_EXAMPLES></a></div></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON_HELP></td></tr>
+
+			<tr class="meter-obis-settings"><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS></td><td><button class="obis-discovery" type="button" onclick="start_obis_discovery('<TMPL_VAR NAME=SERIAL>');" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search" <TMPL_VAR NAME=OBIS_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.READ_OBIS_CHANNELS></button><TMPL_IF NAME=OBIS_CHANNELS_EMPTY><p><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_EMPTY></p></TMPL_IF><TMPL_LOOP NAME=OBIS_CHANNELS><label><input type="checkbox" name="<TMPL_VAR NAME=FIELD_NAME>" value="<TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML>" <TMPL_VAR NAME=CHECKED>><TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML> - <TMPL_VAR NAME=NAME ESCAPE=HTML></label></TMPL_LOOP></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_HELP></td></tr>
+			<tr class="meter-obis-settings"><td><label for="<TMPL_VAR NAME=SERIAL>_obis_custom"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CUSTOM></label></td><td><textarea id="<TMPL_VAR NAME=SERIAL>_obis_custom" name="<TMPL_VAR NAME=SERIAL>_obis_custom" rows="4"><TMPL_VAR NAME=OBIS_CUSTOM ESCAPE=HTML></textarea></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CUSTOM_HELP></td></tr>
+			</table>
+		</div>
+	</td></tr>
 	</TMPL_LOOP>
 	<tr>
 		<td colspan="4">
@@ -505,8 +510,161 @@
 	</tr>
 	</table>
 	</form>
+	<div id="obis_search_overlay" class="obis-search-overlay" role="dialog" aria-modal="true" aria-labelledby="obis_search_title" aria-describedby="obis_search_message" aria-hidden="true" tabindex="-1">
+		<div class="obis-search-dialog">
+			<div class="obis-search-spinner" aria-hidden="true"></div>
+			<div id="obis_search_title" class="obis-search-title"><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_RUNNING></div>
+			<div id="obis_search_message" class="obis-search-message" role="status" aria-live="polite"><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_WAIT></div>
+			<div class="obis-search-actions"><button id="obis_search_cancel" type="button" data-role="button" data-inline="true" data-mini="true" data-icon="delete" onclick="cancel_obis_discovery();"><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_CANCEL></button></div>
+			<span id="obis_search_running_text" hidden><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_RUNNING></span>
+			<span id="obis_search_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_WAIT></span>
+			<span id="obis_search_cancelling_text" hidden><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_CANCELLING></span>
+			<span id="obis_search_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_FAILED></span>
+		</div>
+	</div>
 
 	<script>
+		var obis_job_id = "";
+		var obis_job_serial = "";
+		var obis_poll_timer = null;
+		var obis_poll_failures = 0;
+
+		function obis_text(id) {
+			var element = document.getElementById(id);
+			return element ? element.textContent : "";
+		}
+
+		function show_obis_search_overlay() {
+			var overlay = document.getElementById("obis_search_overlay");
+			if (!overlay) return;
+			document.querySelector(".obis-search-spinner").style.display = "block";
+			document.getElementById("obis_search_title").textContent = obis_text("obis_search_running_text");
+			document.getElementById("obis_search_message").textContent = obis_text("obis_search_wait_text");
+			document.getElementById("obis_search_cancel").disabled = false;
+			overlay.classList.add("is-visible");
+			overlay.setAttribute("aria-hidden", "false");
+			document.getElementById("vzlogger_form").setAttribute("aria-busy", "true");
+			overlay.focus();
+		}
+
+		function reset_obis_search_overlay() {
+			if (obis_poll_timer) window.clearTimeout(obis_poll_timer);
+			obis_poll_timer = null;
+			var overlay = document.getElementById("obis_search_overlay");
+			if (overlay) {
+				overlay.classList.remove("is-visible");
+				overlay.setAttribute("aria-hidden", "true");
+			}
+			var form = document.getElementById("vzlogger_form");
+			if (form) form.removeAttribute("aria-busy");
+			obis_job_id = "";
+			obis_job_serial = "";
+			obis_poll_failures = 0;
+		}
+
+		function obis_ajax_url(action) {
+			return "./index.cgi?ajax=1&ajaxaction=" + encodeURIComponent(action) + "&_=" + Date.now();
+		}
+
+		function start_obis_discovery(serial) {
+			var form = document.getElementById("vzlogger_form");
+			if (!form || (form.reportValidity && !form.reportValidity())) return;
+			document.getElementById("obis_serial").value = serial;
+			obis_job_serial = serial;
+			show_obis_search_overlay();
+			var data = new FormData(form);
+			data.append("ajax", "1");
+			data.append("ajaxaction", "obis-start");
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
+				.then(function (response) { return response.json(); })
+				.then(function (status) {
+					if (!status.ok || !status.job_id) throw new Error(status.message || obis_text("obis_search_failed_text"));
+					obis_job_id = status.job_id;
+					obis_job_serial = status.serial || serial;
+					poll_obis_discovery();
+				})
+				.catch(obis_discovery_failed);
+		}
+
+		function poll_obis_discovery() {
+			fetch(obis_ajax_url("obis-status"), { credentials: "same-origin", cache: "no-store" })
+				.then(function (response) { return response.json(); })
+				.then(function (status) {
+					obis_poll_failures = 0;
+					if (status.state == "completed") {
+						var serial = status.serial || obis_job_serial;
+						window.location.href = "./index.cgi?form=vzlogger&obis_serial=" + encodeURIComponent(serial);
+						return;
+					}
+					if (status.state == "cancelled") {
+						reset_obis_search_overlay();
+						return;
+					}
+					if (status.state == "failed") {
+						throw new Error(status.message || obis_text("obis_search_failed_text"));
+					}
+					if (status.state == "cancelling") {
+						document.getElementById("obis_search_message").textContent = obis_text("obis_search_cancelling_text");
+						document.getElementById("obis_search_cancel").disabled = true;
+					}
+					obis_job_id = status.job_id || obis_job_id;
+					obis_job_serial = status.serial || obis_job_serial;
+					obis_poll_timer = window.setTimeout(poll_obis_discovery, 1000);
+				})
+				.catch(function (error) {
+					obis_poll_failures++;
+					if (obis_poll_failures < 3) {
+						obis_poll_timer = window.setTimeout(poll_obis_discovery, 1000);
+						return;
+					}
+					obis_discovery_failed(error);
+				});
+		}
+
+		function cancel_obis_discovery() {
+			if (!obis_job_id) return;
+			document.getElementById("obis_search_message").textContent = obis_text("obis_search_cancelling_text");
+			document.getElementById("obis_search_cancel").disabled = true;
+			var data = new FormData();
+			data.append("ajax", "1");
+			data.append("ajaxaction", "obis-cancel");
+			data.append("job_id", obis_job_id);
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
+				.then(function (response) { return response.json(); })
+				.then(function (status) {
+					if (!status.ok) throw new Error(status.message || obis_text("obis_search_failed_text"));
+					if (!obis_poll_timer) poll_obis_discovery();
+				})
+				.catch(obis_discovery_failed);
+		}
+
+		function obis_discovery_failed(error) {
+			var message = error && error.message ? error.message : obis_text("obis_search_failed_text");
+			reset_obis_search_overlay();
+			window.alert(obis_text("obis_search_failed_text") + "\n\n" + message);
+		}
+
+		function resume_obis_discovery() {
+			fetch(obis_ajax_url("obis-status"), { credentials: "same-origin", cache: "no-store" })
+				.then(function (response) { return response.json(); })
+				.then(function (status) {
+					if (["starting", "running", "cancelling"].indexOf(status.state) < 0) return;
+					obis_job_id = status.job_id || "";
+					obis_job_serial = status.serial || "";
+					show_obis_search_overlay();
+					if (status.state == "cancelling") {
+						document.getElementById("obis_search_message").textContent = obis_text("obis_search_cancelling_text");
+						document.getElementById("obis_search_cancel").disabled = true;
+					}
+					obis_poll_timer = window.setTimeout(poll_obis_discovery, 1000);
+				});
+		}
+
+		window.addEventListener("pageshow", function () {
+			reset_obis_search_overlay();
+			resume_obis_discovery();
+		});
+
 		$("#read").val("<TMPL_VAR READ>");
 		$("#implementation").val("<TMPL_VAR IMPLEMENTATION>");
 		$("#sendudp").val("<TMPL_VAR SENDUDP>");
@@ -561,6 +719,50 @@
 			set_control_disabled("#udpport", udp_disabled);
 			$("#labeludpport").toggleClass("ui-disabled", udp_disabled);
 		}
+
+		function update_meter_protocol(serial) {
+			var panelElement = document.getElementById("meter_" + serial);
+			var selectElement = document.getElementById(serial + "_meter");
+			if (!panelElement || !selectElement) return;
+			var panel = $(panelElement);
+			var mode = selectElement.value;
+			panel.find(".meter-field").each(function () {
+				var protocols = (this.getAttribute("data-protocols") || "").split(/\s+/);
+				$(this).toggle(protocols.indexOf(mode) >= 0);
+			});
+			var fieldOrder = {
+				sml: ["interval", "pullseq", "baudrate", "parity", "use_local_time"],
+				d0: ["interval", "dump_file", "pullseq", "ackseq", "baudrate", "baudrate_read", "parity", "wait_sync", "read_timeout", "baudrate_change_delay"],
+				oms: ["baudrate", "key", "mbus_debug", "use_local_time"]
+			};
+			var userAnchor = panel.find(".meter-user-settings").first();
+			(fieldOrder[mode] || []).forEach(function (field) {
+				userAnchor.before(panel.find('.meter-field[data-meter-field="' + field + '"]'));
+			});
+			panel.find(".meter-user-settings").toggle(mode == "user");
+			panel.find(".meter-common-field").toggle(["sml", "d0", "oms"].indexOf(mode) >= 0);
+			panel.find(".meter-obis-settings").toggle(["sml", "d0", "oms"].indexOf(mode) >= 0);
+			var omsUnsupported = mode == "oms" && panel.attr("data-oms-supported") != "1";
+			set_control_disabled(panel.find(".obis-discovery"), omsUnsupported);
+			panel.find(".meter-oms-runtime-warning").toggle(omsUnsupported);
+			var selectedOption = selectElement.options[selectElement.selectedIndex];
+			panel.find(".meter-protocol-summary").text(selectedOption ? selectedOption.text : "");
+			var warningKind = panel.attr("data-warning-kind") || "";
+			var showWarning = !warningKind || warningKind == mode;
+			panel.find(".meter-warning-icon, .meter-primary-warning").toggle(showWarning);
+		}
+
+		$(".meter-panel").each(function () {
+			var serial = this.id.substring("meter_".length);
+			document.getElementById(serial + "_meter").value = this.getAttribute("data-current-mode") || "0";
+			document.getElementById(serial + "_enabled").value = this.getAttribute("data-meter-enabled") || "1";
+			document.getElementById(serial + "_allowskip").value = this.getAttribute("data-allowskip") || "1";
+			document.getElementById(serial + "_paritymode").value = this.getAttribute("data-parity") || "8n1";
+			document.getElementById(serial + "_uselocaltime").value = this.getAttribute("data-local-time") || "0";
+			document.getElementById(serial + "_waitsync").value = this.getAttribute("data-wait-sync") || "off";
+			document.getElementById(serial + "_mbusdebug").value = this.getAttribute("data-mbus-debug") || "0";
+			update_meter_protocol(serial);
+		});
 	</script>
 </TMPL_IF>
 

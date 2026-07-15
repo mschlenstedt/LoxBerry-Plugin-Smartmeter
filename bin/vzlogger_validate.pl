@@ -106,8 +106,11 @@ sub validate_config
 			next;
 		}
 
-		push @errors, "$prefix.protocol must be sml or d0." if (!defined($meter->{protocol}) || $meter->{protocol} !~ /\A(?:sml|d0)\z/);
-		push @errors, "$prefix.device is missing." if (!defined($meter->{device}) || $meter->{device} eq "");
+		push @errors, "$prefix.protocol must be a non-empty string." if (!defined($meter->{protocol}) || ref($meter->{protocol}) || $meter->{protocol} eq "");
+		push @errors, "$prefix.protocol oms is not supported by the installed vzLogger." if (defined($meter->{protocol}) && !ref($meter->{protocol}) && $meter->{protocol} eq "oms" && !vzlogger_supports_protocol("oms"));
+		if (!exists($meter->{channels})) {
+			next;
+		}
 		push @errors, "$prefix.channels must be an array." if (ref($meter->{channels}) ne "ARRAY");
 		next if (ref($meter->{channels}) ne "ARRAY");
 		push @warnings, "$prefix has no channels." if (!@{$meter->{channels}});
@@ -145,7 +148,7 @@ sub validate_mapping
 		}
 		push @errors, "Mapping entry $uuid has no serial." if (!defined($entry->{serial}) || $entry->{serial} eq "");
 		push @errors, "Mapping entry $uuid has no name." if (!defined($entry->{name}) || $entry->{name} eq "");
-		push @errors, "Mapping entry $uuid has no identifier." if (!defined($entry->{identifier}) || $entry->{identifier} eq "");
+		push @warnings, "Mapping entry $uuid has no identifier." if (!defined($entry->{identifier}) || $entry->{identifier} eq "");
 	}
 }
 
@@ -153,6 +156,23 @@ sub is_port
 {
 	my ($value) = @_;
 	return defined($value) && $value =~ /\A\d+\z/ && $value > 0 && $value <= 65535;
+}
+
+sub vzlogger_supports_protocol
+{
+	my ($protocol) = @_;
+	return 0 if (!command_exists("vzlogger"));
+	my $help = `vzlogger -h 2>&1`;
+	return $help =~ /^\s*\Q$protocol\E\s+/mi ? 1 : 0;
+}
+
+sub command_exists
+{
+	my ($command) = @_;
+	foreach my $dir (split(/:/, $ENV{PATH} || "")) {
+		return 1 if (-x "$dir/$command");
+	}
+	return 0;
 }
 
 sub vzlogger_mode_enabled

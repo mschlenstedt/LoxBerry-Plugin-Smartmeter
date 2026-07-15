@@ -41,55 +41,43 @@ foreach my $config_key (sort keys %flat_config) {
 	next if ($config_key !~ /\.SERIAL\z/);
 
 	my $section = $flat_config{$config_key};
-	my $device = $plugin_cfg->param("$section.DEVICE") || next;
 	my $meter = $plugin_cfg->param("$section.METER") || "0";
-	next if ($meter eq "0");
-
-	my $protocol_name = $meter eq "manual" ? ($plugin_cfg->param("$section.PROTOCOL") || "") : $meter;
-	my $protocol = protocol_for_meter($protocol_name);
-	next if (!$protocol);
-
 	my $serial = $plugin_cfg->param("$section.SERIAL") || $section;
-	my $meter_config = {
-		enabled => $vzlogger_mode ? JSON::PP::true : JSON::PP::false,
-		allowskip => JSON::PP::true,
-		aggtime => -1,
-		protocol => $protocol,
-		device => $device,
-	};
+	my $mode = normalized_meter_mode($meter, $plugin_cfg->param("$section.PROTOCOL"));
+	next if ($mode eq "0");
 
-	if ($protocol eq "sml") {
-		$meter_config->{interval} = -1;
+	my $meter_config;
+	if ($mode eq "user") {
+		my ($custom_meter, $error) = read_user_meter_json($serial);
+		if ($error) {
+			warn "Skipped invalid custom meter '$serial': $error\n";
+			next;
+		}
+		$meter_config = $custom_meter;
+		enrich_user_channels($meter_config, $serial, \%channel_mapping, \$channel_index);
 	} else {
-		$meter_config->{interval} = -1;
-		$meter_config->{read_timeout} = clean_number($plugin_cfg->param("$section.TIMEOUT"), 10);
-		$meter_config->{baudrate} = clean_number($plugin_cfg->param("$section.BAUDRATE"), default_baudrate($protocol_name));
-		$meter_config->{baudrate_read} = clean_number($plugin_cfg->param("$section.STARTBAUDRATE"), 300);
-		$meter_config->{parity} = serial_mode(
-			$plugin_cfg->param("$section.DATABITS"),
-			$plugin_cfg->param("$section.PARITY"),
-			$plugin_cfg->param("$section.STOPBITS")
-		);
-	}
+		my $device = $plugin_cfg->param("$section.DEVICE") || next;
+		$meter_config = standard_meter_config($section, $mode, $device, $vzlogger_mode);
 
-	my @channels;
-	foreach my $channel (configured_channels($section)) {
-		my $uuid = stable_uuid("$psubfolder:$serial:$channel->{identifier}");
-		push @channels, {
-			api => "null",
-			uuid => $uuid,
-			identifier => $channel->{identifier},
-		};
-		$channel_mapping{$uuid} = {
-			serial => $serial,
-			name => $channel->{name},
-			identifier => $channel->{identifier},
-			channel => "chn$channel_index",
-			channel_index => $channel_index,
-		};
-		$channel_index++;
+		my @channels;
+		foreach my $channel (configured_channels($section)) {
+			my $uuid = stable_uuid("$psubfolder:$serial:$channel->{identifier}");
+			push @channels, {
+				api => "null",
+				uuid => $uuid,
+				identifier => $channel->{identifier},
+			};
+			$channel_mapping{$uuid} = {
+				serial => $serial,
+				name => $channel->{name},
+				identifier => $channel->{identifier},
+				channel => "chn$channel_index",
+				channel_index => $channel_index,
+			};
+			$channel_index++;
+		}
+		$meter_config->{channels} = \@channels;
 	}
-	$meter_config->{channels} = \@channels;
 	push @meters, $meter_config;
 }
 
@@ -115,7 +103,8 @@ my %optional_mqtt_values = (
 	keypass => $mqtt->{keypass},
 );
 foreach my $key (keys %optional_mqtt_values) {
-	$mqtt_config->{$key} = $optional_mqtt_values{$key} if ($optional_mqtt_values{$key} ne "");
+	my $value = $optional_mqtt_values{$key};
+	$mqtt_config->{$key} = $value if (defined($value) && $value ne "");
 }
 
 my $config = {
@@ -136,7 +125,7 @@ my $config = {
 write_ordered_vzlogger_json($target_file, $config);
 write_json($mapping_file, \%channel_mapping);
 
-print "Generated $target_file with " . scalar(@meters) . " enabled meter(s).\n";
+print "Generated $target_file with " . scalar(@meters) . " configured meter(s).\n";
 exit 0;
 
 sub read_mqtt_settings
@@ -201,11 +190,211 @@ sub write_json
 	close($fh);
 }
 
+sub normalized_meter_mode
+{
+	my ($meter, $manual_protocol) = @_;
+	$meter ||= "0";
+	return $meter if ($meter =~ /\A(?:0|sml|d0|oms|user)\z/);
+	if ($meter eq "manual") {
+		my $mapped = protocol_for_meter($manual_protocol);
+		return $mapped || "user";
+	}
+	return "sml" if ($meter =~ /sml\z/i);
+	return "d0" if ($meter =~ /(?:d0|do)\z/i);
+	return "oms" if ($meter =~ /oms\z/i);
+	return "user";
+}
+
+sub standard_meter_config
+{
+	my ($section, $protocol, $device, $implementation_enabled) = @_;
+	my $meter_enabled = clean_boolean(config_scalar_value("$section.ENABLED"), 1);
+	my $allowskip = clean_boolean(config_scalar_value("$section.ALLOWSKIP"), 1);
+	my $meter = {
+		enabled => ($implementation_enabled && $meter_enabled) ? JSON::PP::true : JSON::PP::false,
+		allowskip => $allowskip ? JSON::PP::true : JSON::PP::false,
+		protocol => $protocol,
+		device => $device,
+	};
+	set_optional_integer($meter, "aggtime", config_scalar_value("$section.AGGTIME"), 1);
+
+	if ($protocol eq "sml") {
+		set_optional_integer($meter, "interval", config_scalar_value("$section.INTERVAL"), 1);
+		set_optional_text($meter, "pullseq", config_scalar_value("$section.PULLSEQ"));
+		my $legacy_manual = config_scalar_value("$section.METER") eq "manual";
+		set_optional_integer($meter, "baudrate", config_scalar_value("$section.BAUDRATE"), 0) if ($legacy_manual || config_scalar_value("$section.BAUDRATESET") eq "1");
+		set_optional_enum($meter, "parity", configured_parity_optional($section), qr/\A(?:8n1|7e1|7o1|7n1)\z/i) if ($legacy_manual || config_scalar_value("$section.PARITYSET") eq "1");
+		set_optional_boolean($meter, "use_local_time", config_scalar_value("$section.USELOCALTIME"));
+	} elsif ($protocol eq "d0") {
+		set_optional_integer($meter, "interval", config_scalar_value("$section.INTERVAL"), 1);
+		set_optional_text($meter, "dump_file", config_scalar_value("$section.DUMPFILE"));
+		set_optional_text($meter, "pullseq", config_scalar_value("$section.PULLSEQ"));
+		set_optional_text($meter, "ackseq", config_scalar_value("$section.ACKSEQ"));
+		set_optional_integer($meter, "baudrate", config_scalar_value("$section.BAUDRATE"), 0);
+		set_optional_integer($meter, "baudrate_read", first_config_value($section, "BAUDRATEREAD", "STARTBAUDRATE"), 0);
+		set_optional_enum($meter, "parity", configured_parity_optional($section), qr/\A(?:8n1|7e1|7o1|7n1)\z/i);
+		set_optional_enum($meter, "wait_sync", config_scalar_value("$section.WAITSYNC"), qr/\A(?:off|end)\z/);
+		set_optional_integer($meter, "read_timeout", first_config_value($section, "READTIMEOUT", "TIMEOUT"), 0);
+		set_optional_integer($meter, "baudrate_change_delay", config_scalar_value("$section.BAUDRATECHANGEDELAY"), 0);
+	} elsif ($protocol eq "oms") {
+		set_optional_integer($meter, "baudrate", config_scalar_value("$section.BAUDRATE"), 0);
+		set_optional_enum($meter, "key", config_scalar_value("$section.OMSKEY"), qr/\A[A-Fa-f0-9]{32}\z/);
+		set_optional_boolean($meter, "mbus_debug", config_scalar_value("$section.MBUSDEBUG"));
+		set_optional_boolean($meter, "use_local_time", config_scalar_value("$section.USELOCALTIME"));
+	}
+	return $meter;
+}
+
+sub config_scalar_value
+{
+	my ($key) = @_;
+	my @values = $plugin_cfg->param($key);
+	return "" if (!@values);
+	return "" if (!defined($values[0]) || ref($values[0]));
+	return "$values[0]";
+}
+
+sub set_optional_text
+{
+	my ($target, $key, $value) = @_;
+	return if (!defined($value) || ref($value) || $value eq "");
+	$value =~ s/[\r\n]//g;
+	$target->{$key} = $value if ($value ne "");
+}
+
+sub set_optional_integer
+{
+	my ($target, $key, $value, $allow_negative) = @_;
+	return if (!defined($value) || ref($value) || $value eq "");
+	my $pattern = $allow_negative ? qr/\A-?\d+\z/ : qr/\A\d+\z/;
+	$target->{$key} = int($value) if ($value =~ $pattern);
+}
+
+sub set_optional_enum
+{
+	my ($target, $key, $value, $pattern) = @_;
+	return if (!defined($value) || ref($value) || $value eq "");
+	$target->{$key} = lc($value) if ($value =~ $pattern);
+}
+
+sub set_optional_boolean
+{
+	my ($target, $key, $value) = @_;
+	return if (!defined($value) || ref($value) || $value !~ /\A[01]\z/);
+	$target->{$key} = $value eq "1" ? JSON::PP::true : JSON::PP::false;
+}
+
+sub user_meter_file
+{
+	my ($serial) = @_;
+	$serial =~ s/[^A-Za-z0-9_.:-]/_/g;
+	return "$plugin_config_dir/vzlogger_meter_" . ($serial || "unknown") . ".jsonc";
+}
+
+sub read_user_meter_json
+{
+	my ($serial) = @_;
+	my $file = user_meter_file($serial);
+	return (undef, "JSONC source file does not exist") if (!-e $file);
+	return (undef, "JSONC source exceeds 64 KiB") if (-s $file > 65536);
+	open(my $fh, "<", $file) or return (undef, "Could not read JSONC source: $!");
+	local $/;
+	my $source = <$fh>;
+	close($fh);
+	my $meter = eval { JSON::PP->new->utf8->relaxed(1)->decode($source) };
+	if ($@) {
+		my $error = $@;
+		$error =~ s/\s+at\s+\S+\s+line\s+\d+\.?\s*\z//;
+		return (undef, $error || "Invalid JSONC");
+	}
+	return (undef, "The JSONC source must contain one meter object") if (ref($meter) ne "HASH");
+	return (undef, "Root sections such as meters, mqtt, local, push or retry are not allowed") if (grep { exists($meter->{$_}) } qw(meters mqtt local push retry verbosity log));
+	return (undef, "The meter object requires a non-empty protocol string") if (!defined($meter->{protocol}) || ref($meter->{protocol}) || $meter->{protocol} eq "");
+	if (exists($meter->{channels})) {
+		return (undef, "channels must be an array") if (ref($meter->{channels}) ne "ARRAY");
+		foreach my $channel (@{$meter->{channels}}) {
+			return (undef, "Every channels entry must be an object") if (ref($channel) ne "HASH");
+		}
+	}
+	return ($meter, "");
+}
+
+sub enrich_user_channels
+{
+	my ($meter, $serial, $mapping, $index_ref) = @_;
+	return if (!exists($meter->{channels}));
+	my $meter_channel_index = 0;
+	foreach my $channel (@{$meter->{channels}}) {
+		my $identifier = defined($channel->{identifier}) && !ref($channel->{identifier}) ? "$channel->{identifier}" : "";
+		my $index = ${$index_ref};
+		$channel->{uuid} = stable_uuid("$psubfolder:$serial:$meter_channel_index:$identifier") if (!defined($channel->{uuid}) || ref($channel->{uuid}) || $channel->{uuid} eq "");
+		$channel->{api} = "null" if (!exists($channel->{api}));
+		my $uuid = defined($channel->{uuid}) && !ref($channel->{uuid}) ? "$channel->{uuid}" : "";
+		if ($uuid ne "") {
+			$mapping->{$uuid} = {
+				serial => $serial,
+				name => user_channel_name($channel, $identifier, $meter_channel_index),
+				identifier => $identifier,
+				channel => "chn$index",
+				channel_index => $index,
+			};
+		}
+		${$index_ref}++;
+		$meter_channel_index++;
+	}
+}
+
+sub user_channel_name
+{
+	my ($channel, $identifier, $index) = @_;
+	return "$channel->{name}" if (defined($channel->{name}) && !ref($channel->{name}) && $channel->{name} ne "");
+	return obis_cache_name($identifier) if (normalize_obis_identifier($identifier));
+	return "Channel_$index" if (!defined($identifier) || $identifier eq "");
+	my $name = $identifier;
+	$name =~ s/[^A-Za-z0-9]+/_/g;
+	$name =~ s/^_+|_+$//g;
+	return $name || "Channel_$index";
+}
+
+sub first_config_value
+{
+	my ($section, @keys) = @_;
+	foreach my $key (@keys) {
+		my $value = config_scalar_value("$section.$key");
+		return $value if (defined($value) && $value ne "");
+	}
+	return undef;
+}
+
+sub configured_parity_optional
+{
+	my ($section) = @_;
+	my $mode = config_scalar_value("$section.PARITYMODE");
+	return lc($mode) if (defined($mode) && $mode =~ /\A(?:8n1|7e1|7o1|7n1)\z/i);
+	my $legacy = serial_mode(
+		$plugin_cfg->param("$section.DATABITS"),
+		$plugin_cfg->param("$section.PARITY"),
+		$plugin_cfg->param("$section.STOPBITS")
+	);
+	return lc($legacy) if ($legacy && first_config_value($section, "DATABITS", "PARITY", "STOPBITS"));
+	return "";
+}
+
+sub clean_text_allow_empty
+{
+	my ($value) = @_;
+	return "" if (!defined($value));
+	$value =~ s/[\r\n]//g;
+	return $value;
+}
+
 sub protocol_for_meter
 {
 	my ($meter) = @_;
+	return "" if (!defined($meter));
 	return "sml" if ($meter =~ /sml\z/i);
 	return "d0" if ($meter =~ /d0\z/i || $meter =~ /do\z/i);
+	return "oms" if ($meter =~ /oms\z/i);
 	return "";
 }
 
@@ -340,7 +529,7 @@ sub ordered_keys
 		root => [qw(retry verbosity log local mqtt meters)],
 		local => [qw(enabled port index timeout buffer)],
 		mqtt => [qw(enabled host port keepalive topic id user pass retain rawAndAgg qos timestamp cafile capath certfile keyfile keypass)],
-		meter => [qw(enabled allowskip protocol device aggtime interval read_timeout baudrate baudrate_read parity channels)],
+		meter => [qw(enabled allowskip aggtime protocol device interval host dump_file pullseq ackseq baudrate baudrate_read parity wait_sync read_timeout baudrate_change_delay key mbus_debug use_local_time channels)],
 		channel => [qw(api uuid identifier)],
 	);
 	my @preferred = @{$orders{$context} || []};
@@ -467,7 +656,7 @@ sub normalize_obis_identifier
 	return "" if (!defined($value));
 	$value =~ s/^\s+|\s+$//g;
 	$value =~ s/\*\d+\z//;
-	return $value if ($value =~ /\A\d+-\d+:[A-Za-z0-9]+\.\d+\.\d+\z/);
+	return $value if ($value =~ /\A(?:\d+-\d+:)?[A-Za-z0-9]+\.\d+\.\d+\z/);
 	return "";
 }
 
@@ -547,6 +736,11 @@ sub obis_sort_parts
 		my ($a, $b, $c_part, $d, $e) = ($1, $2, $3, $4, $5);
 		my $c = ($c_part =~ /\A\d+\z/) ? int($c_part) : 900 + ord(uc(substr($c_part, 0, 1)));
 		return (int($a), int($b), $c, int($d), int($e));
+	}
+	if ($identifier =~ /\A([A-Za-z0-9]+)\.(\d+)\.(\d+)\z/) {
+		my ($a_part, $b, $c) = ($1, $2, $3);
+		my $a = ($a_part =~ /\A\d+\z/) ? int($a_part) : 900 + ord(uc(substr($a_part, 0, 1)));
+		return (0, 0, $a, int($b), int($c));
 	}
 	return (999, 999, 999, 999, 999);
 }

@@ -5,6 +5,7 @@ use warnings;
 
 use Config::Simple;
 use File::Path qw(make_path);
+use JSON::PP;
 use LoxBerry::System;
 
 my $home = $lbhomedir;
@@ -14,6 +15,8 @@ my $plugin_config_file = "$home/config/plugins/$psubfolder/smartmeter.cfg";
 my $config_file = "$home/config/plugins/$psubfolder/vzlogger.conf";
 my $mapping_file = "$home/config/plugins/$psubfolder/vzlogger_channels.json";
 my $runtime_dir = "/var/run/shm/$psubfolder";
+my $obis_watchdog_pid_file = "$runtime_dir/vzlogger_obis_watchdog.pid";
+my $obis_status_file = "$runtime_dir/vzlogger_obis_status.json";
 my $plugin_log_dir = "$home/log/plugins/$psubfolder";
 my $control_log_file = "$plugin_log_dir/vzlogger_control.log";
 my $vzlogger_log_file = "$plugin_log_dir/vzlogger.log";
@@ -207,6 +210,7 @@ sub stop_bridge
 
 sub restart_vzlogger
 {
+	stop_orphaned_obis_discovery_processes();
 	if (!command_exists("systemctl")) {
 		print "systemctl not available. Generated config only.\n";
 		return;
@@ -258,6 +262,7 @@ sub prepare_vzlogger_log_file
 
 sub start_vzlogger
 {
+	stop_orphaned_obis_discovery_processes();
 	if (!command_exists("systemctl")) {
 		print "systemctl not available.\n";
 		return;
@@ -281,6 +286,7 @@ sub start_vzlogger
 sub stop_vzlogger
 {
 	my ($disable) = @_;
+	stop_orphaned_obis_discovery_processes();
 	return if (!command_exists("systemctl"));
 	if (!service_installed("vzlogger")) {
 		print "vzlogger service is not installed.\n";
@@ -292,6 +298,111 @@ sub stop_vzlogger
 		print "Disabled vzlogger autostart.\n" if ($disable_rc == 0);
 	}
 	run_privileged("reset failed state for vzlogger", systemctl_command(), "reset-failed", "vzlogger") if ($rc == 0);
+}
+
+sub stop_orphaned_obis_discovery_processes
+{
+	return if (($ENV{SMARTMETER_OBIS_WATCHDOG} || "") eq "1");
+	my $stopped_watchdog = 0;
+	if (-e $obis_watchdog_pid_file && open(my $pid_fh, "<", $obis_watchdog_pid_file)) {
+		my @watchdog_pids = <$pid_fh>;
+		close($pid_fh);
+		my $watchdog_pid = $watchdog_pids[0];
+		my $test_group_pid = $watchdog_pids[1];
+		chomp($watchdog_pid) if (defined($watchdog_pid));
+		chomp($test_group_pid) if (defined($test_group_pid));
+		if (obis_watchdog_running($watchdog_pid) && int($watchdog_pid) != $$) {
+			kill("TERM", -int($test_group_pid)) if ($test_group_pid && $test_group_pid =~ /\A\d+\z/);
+			$stopped_watchdog = kill("TERM", -int($watchdog_pid)) ? 1 : 0;
+			log_control("terminated active OBIS discovery watchdog pid=$watchdog_pid") if ($stopped_watchdog);
+			select(undef, undef, undef, 0.5);
+			kill("KILL", -int($test_group_pid)) if ($test_group_pid && $test_group_pid =~ /\A\d+\z/);
+			kill("KILL", -int($watchdog_pid));
+		}
+		unlink($obis_watchdog_pid_file);
+	}
+
+	my $config_prefix = "$home/config/plugins/$psubfolder/vzLogger_IrTest_";
+	my @pids;
+	opendir(my $proc, "/proc") or return;
+	foreach my $entry (readdir($proc)) {
+		next if ($entry !~ /\A\d+\z/ || $entry == $$);
+		open(my $status_fh, "<", "/proc/$entry/status") or next;
+		my $parent_pid = -1;
+		while (my $line = <$status_fh>) {
+			if ($line =~ /\APPid:\s+(\d+)/) {
+				$parent_pid = int($1);
+				last;
+			}
+		}
+		close($status_fh);
+		next if ($parent_pid != 1);
+
+		open(my $cmdline_fh, "<", "/proc/$entry/cmdline") or next;
+		local $/;
+		my $cmdline = <$cmdline_fh>;
+		close($cmdline_fh);
+		my @args = grep { defined($_) && $_ ne "" } split(/\0/, $cmdline || "");
+		next if (!@args || $args[0] !~ m{(?:\A|/)vzlogger\z});
+		my $matches_plugin_test = 0;
+		for (my $i = 0; $i < $#args; $i++) {
+			if ($args[$i] eq "-c" && $args[$i + 1] =~ /\A\Q$config_prefix\E[A-Za-z0-9_.:-]+\.conf\z/) {
+				$matches_plugin_test = 1;
+				last;
+			}
+		}
+		next if (!$matches_plugin_test);
+		if (kill("TERM", int($entry))) {
+			push @pids, int($entry);
+			log_control("terminated orphaned OBIS discovery process pid=$entry");
+		}
+	}
+	closedir($proc);
+	return if (!@pids && !$stopped_watchdog);
+
+	if (@pids) {
+		select(undef, undef, undef, 0.5);
+		foreach my $pid (@pids) {
+			if (kill(0, $pid)) {
+				kill("KILL", $pid);
+				log_control("killed unresponsive orphaned OBIS discovery process pid=$pid");
+			}
+		}
+	}
+	my $count = scalar(@pids) + ($stopped_watchdog ? 1 : 0);
+	mark_obis_discovery_cancelled("OBIS discovery was stopped by service action '$action'.");
+	print "Stopped $count vzLogger OBIS discovery process(es).\n";
+}
+
+sub mark_obis_discovery_cancelled
+{
+	my ($message) = @_;
+	return if (!-e $obis_status_file || !open(my $read_fh, "<", $obis_status_file));
+	local $/;
+	my $json = <$read_fh>;
+	close($read_fh);
+	my $status = eval { JSON::PP->new->utf8->decode($json || "") };
+	return if (ref($status) ne "HASH" || ($status->{state} || "") !~ /\A(?:starting|running|cancelling)\z/);
+	$status->{state} = "cancelled";
+	$status->{ok} = JSON::PP::true;
+	$status->{message} = $message;
+	$status->{finished_at} = time();
+	my $tmp = "$obis_status_file.$$";
+	return if (!open(my $write_fh, ">", $tmp));
+	print $write_fh JSON::PP->new->utf8->canonical->encode($status);
+	close($write_fh);
+	rename($tmp, $obis_status_file);
+}
+
+sub obis_watchdog_running
+{
+	my ($pid) = @_;
+	return 0 if (!$pid || $pid !~ /\A\d+\z/ || !kill(0, int($pid)));
+	open(my $cmdline_fh, "<", "/proc/$pid/cmdline") or return 0;
+	local $/;
+	my $cmdline = <$cmdline_fh>;
+	close($cmdline_fh);
+	return ($cmdline || "") =~ /\A\Q$psubfolder-vzlogger-obis-watchdog\E(?:\0|\s|\z)/ ? 1 : 0;
 }
 
 sub enable_vzlogger_autostart
