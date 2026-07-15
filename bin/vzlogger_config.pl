@@ -25,7 +25,12 @@ Config::Simple->import_from($config_file, \%flat_config);
 
 my $mqtt = read_mqtt_settings();
 my $base_topic = sanitize_topic($plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter");
+my $local_enabled = clean_boolean($plugin_cfg->param("VZLOGGER.LOCALENABLED"), 1);
 my $local_port = clean_number($plugin_cfg->param("VZLOGGER.LOCALPORT"), 18080);
+my $local_index = clean_boolean($plugin_cfg->param("VZLOGGER.LOCALINDEX"), 1);
+my $local_timeout = clean_number($plugin_cfg->param("VZLOGGER.LOCALTIMEOUT"), 30);
+my $local_buffer = clean_integer($plugin_cfg->param("VZLOGGER.LOCALBUFFER"), -1);
+my $retry = clean_number($plugin_cfg->param("VZLOGGER.RETRY"), 30);
 my $vzlogger_mode = ($plugin_cfg->param("MAIN.IMPLEMENTATION") || "") eq "vzlogger";
 
 my @meters;
@@ -88,33 +93,47 @@ foreach my $config_key (sort keys %flat_config) {
 	push @meters, $meter_config;
 }
 
+my $mqtt_config = {
+	enabled => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTENABLED"), 1) ? JSON::PP::true : JSON::PP::false,
+	host => $mqtt->{host},
+	port => $mqtt->{port},
+	keepalive => clean_number($plugin_cfg->param("VZLOGGER.MQTTKEEPALIVE"), 30),
+	topic => "$base_topic/vzlogger",
+	retain => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTRETAIN"), 1) ? JSON::PP::true : JSON::PP::false,
+	rawAndAgg => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTRAWANDAGG"), 0) ? JSON::PP::true : JSON::PP::false,
+	qos => clean_qos($plugin_cfg->param("VZLOGGER.MQTTQOS"), 0),
+	timestamp => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP"), 1) ? JSON::PP::true : JSON::PP::false,
+};
+my %optional_mqtt_values = (
+	id => clean_text($plugin_cfg->param("VZLOGGER.MQTTID"), ""),
+	user => $mqtt->{user},
+	pass => $mqtt->{pass},
+	cafile => $mqtt->{cafile},
+	capath => $mqtt->{capath},
+	certfile => $mqtt->{certfile},
+	keyfile => $mqtt->{keyfile},
+	keypass => $mqtt->{keypass},
+);
+foreach my $key (keys %optional_mqtt_values) {
+	$mqtt_config->{$key} = $optional_mqtt_values{$key} if ($optional_mqtt_values{$key} ne "");
+}
+
 my $config = {
+	retry => $retry,
 	verbosity => $debug_enabled ? $log_level : 0,
 	log => $log_file,
-	retry => 30,
 	local => {
-		enabled => JSON::PP::true,
+		enabled => $local_enabled ? JSON::PP::true : JSON::PP::false,
 		port => $local_port,
-		index => JSON::PP::true,
-		timeout => 30,
-		buffer => 0,
+		index => $local_index ? JSON::PP::true : JSON::PP::false,
+		timeout => $local_timeout,
+		buffer => $local_buffer,
 	},
-	mqtt => {
-		enabled => JSON::PP::true,
-		host => $mqtt->{host},
-		port => $mqtt->{port},
-		topic => "$base_topic/vzlogger",
-		user => $mqtt->{user},
-		pass => $mqtt->{pass},
-		keepalive => 30,
-		retain => JSON::PP::true,
-		qos => 0,
-		timestamp => JSON::PP::true,
-	},
+	mqtt => $mqtt_config,
 	meters => \@meters,
 };
 
-write_json($target_file, $config);
+write_ordered_vzlogger_json($target_file, $config);
 write_json($mapping_file, \%channel_mapping);
 
 print "Generated $target_file with " . scalar(@meters) . " enabled meter(s).\n";
@@ -128,23 +147,36 @@ sub read_mqtt_settings
 		port => 1883,
 		user => "",
 		pass => "",
+		cafile => "",
+		capath => "",
+		certfile => "",
+		keyfile => "",
+		keypass => "",
 	);
 
-	return \%settings if (!-e $general_json);
+	if (-e $general_json && open(my $fh, "<", $general_json)) {
+		local $/;
+		my $json_text = <$fh>;
+		close($fh);
+		my $general = eval { JSON::PP->new->utf8->decode($json_text) };
+		if (!$@ && ref($general) && ref($general->{Mqtt})) {
+			my $mqtt = $general->{Mqtt};
+			$settings{host} = first_value($mqtt, qw(Host Hostname Broker Brokerhost Server IpAddress Ipaddress)) || $settings{host};
+			$settings{port} = clean_number(first_value($mqtt, qw(Port Brokerport Mqttport)), $settings{port});
+			$settings{user} = first_value($mqtt, qw(Brokeruser Brokerusername User Username Login)) || "";
+			$settings{pass} = first_value($mqtt, qw(Brokerpass Brokerpassword Pass Password)) || "";
+		}
+	}
 
-	open(my $fh, "<", $general_json) or return \%settings;
-	local $/;
-	my $json_text = <$fh>;
-	close($fh);
-
-	my $general = eval { JSON::PP->new->utf8->decode($json_text) };
-	return \%settings if ($@ || !ref($general) || !ref($general->{Mqtt}));
-
-	my $mqtt = $general->{Mqtt};
-	$settings{host} = first_value($mqtt, qw(Host Hostname Broker Brokerhost Server IpAddress Ipaddress)) || $settings{host};
-	$settings{port} = clean_number(first_value($mqtt, qw(Port Brokerport Mqttport)), $settings{port});
-	$settings{user} = first_value($mqtt, qw(Brokeruser Brokerusername User Username Login)) || "";
-	$settings{pass} = first_value($mqtt, qw(Brokerpass Brokerpassword Pass Password)) || "";
+	$settings{host} = clean_text($plugin_cfg->param("VZLOGGER.MQTTHOST"), $settings{host});
+	$settings{port} = clean_number($plugin_cfg->param("VZLOGGER.MQTTPORT"), $settings{port});
+	$settings{cafile} = clean_text($plugin_cfg->param("VZLOGGER.MQTTCAFILE"), "");
+	$settings{capath} = clean_text($plugin_cfg->param("VZLOGGER.MQTTCAPATH"), "");
+	$settings{certfile} = clean_text($plugin_cfg->param("VZLOGGER.MQTTCERTFILE"), "");
+	$settings{keyfile} = clean_text($plugin_cfg->param("VZLOGGER.MQTTKEYFILE"), "");
+	$settings{keypass} = clean_text($plugin_cfg->param("VZLOGGER.MQTTKEYPASS"), "");
+	$settings{user} = clean_text($plugin_cfg->param("VZLOGGER.MQTTUSER"), $settings{user});
+	$settings{pass} = clean_text($plugin_cfg->param("VZLOGGER.MQTTPASS"), $settings{pass});
 
 	return \%settings;
 }
@@ -256,6 +288,105 @@ sub default_channels
 		{ identifier => "1-0:96.50.1", name => "Manufacturer_ID_OBIS_96.50.1" },
 		{ identifier => "1-0:96.1.0", name => "Server_ID_OBIS_96.1.0" },
 	);
+}
+
+sub write_ordered_vzlogger_json
+{
+	my ($file, $data) = @_;
+	my ($dir) = $file =~ m{\A(.*)/[^/]+\z};
+	make_path($dir) if ($dir && !-d $dir);
+
+	open(my $fh, ">", $file) or die "Could not write $file: $!\n";
+	print $fh encode_ordered_json($data, "root", 0), "\n";
+	close($fh);
+}
+
+sub encode_ordered_json
+{
+	my ($value, $context, $level) = @_;
+	my $ref = ref($value);
+
+	if ($ref eq "HASH") {
+		my @keys = ordered_keys($context, $value);
+		return "{}" if (!@keys);
+
+		my @lines;
+		foreach my $key (@keys) {
+			my $key_json = JSON::PP->new->utf8->allow_nonref->encode($key);
+			my $child_context = child_context($context, $key);
+			push @lines, ("  " x ($level + 1)) . $key_json . ": " .
+				encode_ordered_json($value->{$key}, $child_context, $level + 1);
+		}
+		return "{\n" . join(",\n", @lines) . "\n" . ("  " x $level) . "}";
+	}
+
+	if ($ref eq "ARRAY") {
+		return "[]" if (!@{$value});
+		my $item_context = $context eq "meters" ? "meter" :
+			$context eq "channels" ? "channel" : "default";
+		my @items = map {
+			("  " x ($level + 1)) . encode_ordered_json($_, $item_context, $level + 1)
+		} @{$value};
+		return "[\n" . join(",\n", @items) . "\n" . ("  " x $level) . "]";
+	}
+
+	return JSON::PP->new->utf8->allow_nonref->encode($value);
+}
+
+sub ordered_keys
+{
+	my ($context, $data) = @_;
+	my %orders = (
+		root => [qw(retry verbosity log local mqtt meters)],
+		local => [qw(enabled port index timeout buffer)],
+		mqtt => [qw(enabled host port keepalive topic id user pass retain rawAndAgg qos timestamp cafile capath certfile keyfile keypass)],
+		meter => [qw(enabled allowskip protocol device aggtime interval read_timeout baudrate baudrate_read parity channels)],
+		channel => [qw(api uuid identifier)],
+	);
+	my @preferred = @{$orders{$context} || []};
+	my %seen;
+	my @keys = grep { exists($data->{$_}) && !$seen{$_}++ } @preferred;
+	push @keys, grep { !$seen{$_}++ } sort keys %{$data};
+	return @keys;
+}
+
+sub child_context
+{
+	my ($context, $key) = @_;
+	return "local" if ($context eq "root" && $key eq "local");
+	return "mqtt" if ($context eq "root" && $key eq "mqtt");
+	return "meters" if ($context eq "root" && $key eq "meters");
+	return "channels" if ($context eq "meter" && $key eq "channels");
+	return "default";
+}
+
+sub clean_integer
+{
+	my ($value, $default) = @_;
+	return int($value) if (defined($value) && $value =~ /\A-?\d+\z/);
+	return $default;
+}
+
+sub clean_boolean
+{
+	my ($value, $default) = @_;
+	return int($value) if (defined($value) && $value =~ /\A[01]\z/);
+	return $default;
+}
+
+sub clean_qos
+{
+	my ($value, $default) = @_;
+	return int($value) if (defined($value) && $value =~ /\A[01]\z/);
+	return $default;
+}
+
+sub clean_text
+{
+	my ($value, $default) = @_;
+	return $default if (!defined($value) || $value eq "");
+	$value =~ s/[\r\n]//g;
+	return $value;
 }
 
 sub clean_log_level

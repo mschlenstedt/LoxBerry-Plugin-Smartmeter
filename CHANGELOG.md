@@ -4,8 +4,14 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
+- Separate runtime control into always-visible vzLogger and SmartMeter-bridge service panels, keep each debug-log control beside its service log action, place vzLogger log level in its service row, and move bridge update, HTTP-cache, and UDP options into a compact collapsed bridge-settings section with consistent vzLogger/MQTT dependency handling and a correctly re-enabled UDP port field.
+- Add a collapsed MQTT section grouped into connection/publishing, user/password authentication, and certificate authentication; show effective LoxBerry broker, port, and user values without duplicating unchanged values as plugin overrides, omit empty optional MQTT keys from `vzlogger.conf`, and never return stored passwords in GUI HTML or unmasked diagnostics.
+- Generate `vzlogger.conf` in the documented section and parameter order instead of alphabetically sorting JSON keys, beginning with root `retry`, `verbosity`, and `log`.
+- Add the vzLogger root `retry` setting to a collapsed advanced service section and preserve the configured value whenever `vzlogger.conf` is regenerated.
+- Align configuration and help columns across all vzLogger sections, enlarge the help column, and use the service-panel help-text size consistently.
+- Add a collapsed **vzLogger HTTP service (local)** section with configurable `enabled`, `port`, `index`, `timeout`, and `buffer` values in the generated configuration.
 - Start the system `vzlogger` service directly with the generated plugin configuration through a SmartMeter-managed systemd drop-in instead of copying the file to `/etc/vzlogger.conf`; remove the override again when switching to Legacy mode or uninstalling the plugin.
-- Set the generated local vzLogger HTTP ring buffer to `0` so the live JSON endpoint exposes the current readings instead of retaining ten tuples per channel.
+- Set the generated local vzLogger HTTP ring buffer default to the documented value `-1`, retaining one tuple per channel while keeping the live JSON response compact.
 - Structure the rendered vzLogger live-data page by I/R reading head and configured channel, show channel number, OBIS identifier and mapped name, add readable local times next to raw timestamps, and reload channel metadata only when its generated mapping changes.
 - Add dynamic vzLogger OBIS channel discovery: the GUI can read available channels through a temporary vzLogger test configuration with only the selected I/R head, empty `channels`, disabled MQTT, verbose logging, and per-head log parsing, cache the result per I/R head, keep unchecked discovered channels visible on later page loads, omit legacy-calculated power channels and previously configured but undiscovered channels after a successful read, and generate `vzlogger.conf` from selected discovered channels plus the additional OBIS fallback field.
 - Keep the OBIS discovery result message concise in the web UI while writing the temporary vzLogger test output to the control log, and avoid noisy SML parser array-to-string notices during legacy reads.

@@ -56,6 +56,59 @@
 	.implementation-tabs .ui-btn { min-height: 2.8em; padding: .6em .8em; font-size: 1.08em; line-height: 1.2; text-align: center; white-space: normal; overflow-wrap: anywhere; border-right-width: 1px !important; }
 	.inline-link { margin-right: 1em; }
 	.vzlogger-live-links { margin-top: 0.4em; }
+	.service-panel {
+		border: 1px solid #bbb;
+		border-radius: 6px;
+		background: rgba(255,255,255,0.55);
+		padding: 12px 14px;
+		margin: 0 0 12px 0;
+	}
+	.service-panel h3 { margin: 0 0 4px 0; }
+	.service-panel-description { margin: 0 0 10px 0; color: #444; }
+	.service-panel table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+	.service-panel td { padding: 4px 6px; vertical-align: top; }
+	.service-panel .service-label { width: 18%; }
+	.service-panel .service-controls { width: 52%; }
+	.service-panel .service-spacer { width: 3%; }
+	.service-panel .service-help { width: 27%; font-size: 90%; line-height: 1.35; }
+	.service-action-line {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 8px;
+		margin-top: 3px;
+	}
+	.service-action-line .ui-btn,
+	.service-action-line .ui-select,
+	.service-action-line .ui-flipswitch { margin: 0; }
+	.service-inline-setting {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		white-space: nowrap;
+	}
+	.service-inline-setting label { margin: 0; }
+	.service-inline-setting .ui-select { min-width: 190px; }
+	.settings-table {
+		width: 100%;
+		border-collapse: collapse;
+		table-layout: fixed;
+	}
+	.settings-table > tbody > tr > td { padding: 5px 6px; vertical-align: top; }
+	.settings-table > tbody > tr > td:nth-child(1) { width: 18%; }
+	.settings-table > tbody > tr > td:nth-child(2) { width: 52%; }
+	.settings-table > tbody > tr > td:nth-child(3) { width: 3%; }
+	.settings-table > tbody > tr > td:nth-child(4) { width: 27%; font-size: 90%; line-height: 1.35; }
+	.settings-table > tbody > tr > td:nth-child(4) font { font-size: 100%; }
+	.compact-settings > tbody > tr > td { padding-top: 2px; padding-bottom: 2px; }
+	.compact-settings h4 { margin: 8px 0 3px 0; }
+	@media (max-width: 700px) {
+		.service-panel td { display: block; width: auto !important; }
+		.service-panel .service-spacer { display: none; }
+		.settings-table { table-layout: auto; }
+		.settings-table > tbody > tr > td { display: block; width: auto !important; }
+		.settings-table > tbody > tr > td:nth-child(3) { display: none; }
+	}
 
 </style>
 
@@ -77,140 +130,227 @@
 		<pre style="background-color: rgba(255,255,200,0.4); border: 1px solid #888; padding: 10px;"><TMPL_VAR VZLOGGER_MESSAGE></pre>
 	</TMPL_IF>
 
-	<table border=0 width="100%" cellpadding="10">
+	<h2><TMPL_VAR NAME=T::VZLOGGER.OPERATION></h2>
+	<div class="service-panel">
+		<h3><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_SERVICE></h3>
+		<p class="service-panel-description"><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_SERVICE_DESCRIPTION></p>
+		<table border="0">
+		<tr>
+			<td class="service-label"><label for="implementation"><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_MODE></label></td>
+			<td class="service-controls"><select id="implementation" name="implementation" data-role="flipswitch" onChange="update_vzlogger_controls();"><option value="legacy"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="vzlogger"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+			<td class="service-spacer">&nbsp;</td>
+			<td class="service-help"><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_MODE_HELP></td>
+		</tr>
+		<tr>
+			<td class="service-label"><TMPL_VAR NAME=T::VZLOGGER.STATUS></td>
+			<td class="service-controls">
+				<span class="service-status <TMPL_VAR VZLOGGER_SERVICE_STATUS_CLASS>"><TMPL_VAR VZLOGGER_SERVICE_STATUS></span>
+				<div class="service-action-line">
+					<button type="submit" name="submitaction" value="restart-vzlogger" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" <TMPL_VAR VZLOGGER_SERVICE_CONTROL_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE></button>
+					<TMPL_IF VZLOGGER_SERVICE_RUNNING><button type="submit" name="submitaction" value="stop-vzlogger" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="delete" <TMPL_VAR VZLOGGER_SERVICE_CONTROL_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE></button><TMPL_ELSE><button type="submit" name="submitaction" value="start-vzlogger" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="power" <TMPL_VAR VZLOGGER_SERVICE_CONTROL_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE></button></TMPL_IF>
+					<a href="<TMPL_VAR VZLOGGER_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR VZLOGGER_LOG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_LOG></a>
+					<span class="service-inline-setting"><label for="vzlogger_service_debug"><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG></label><select id="vzlogger_service_debug" name="vzlogger_service_debug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></span>
+					<span class="service-inline-setting"><label for="vzlogger_loglevel"><TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL></label><select id="vzlogger_loglevel" name="vzlogger_loglevel" data-inline="true" data-mini="true"><option value="0">0 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_0></option><option value="1">1 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_1></option><option value="3">3 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_3></option><option value="5">5 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_5></option><option value="10">10 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_10></option><option value="15">15 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_15></option></select></span>
+				</div>
+				<div class="vzlogger-live-links"><a class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_LIVEURL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_LIVE_READINGS></a><a class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_RENDERED_URL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_RENDERED_READINGS></a></div>
+			</td>
+			<td class="service-spacer">&nbsp;</td>
+			<td class="service-help"><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_SERVICE_CONTROL_HELP><br><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_DEBUG_HELP><br><TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_HELP></td>
+		</tr>
+		</table>
+	</div>
+
+	<div class="service-panel">
+		<h3><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_SERVICE></h3>
+		<p class="service-panel-description"><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_SERVICE_DESCRIPTION></p>
+		<table border="0">
+		<tr>
+			<td class="service-label"><label for="read"><TMPL_VAR NAME=T::VZLOGGER.READ_METERS></label></td>
+			<td class="service-controls"><select onChange="update_bridge_controls();" id="read" name="read" data-role="flipswitch" <TMPL_VAR BRIDGE_ACTIVATION_DISABLED>><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+			<td class="service-spacer">&nbsp;</td>
+			<td class="service-help"><TMPL_VAR NAME=T::VZLOGGER.READ_METERS_HELP></td>
+		</tr>
+		<tr>
+			<td class="service-label"><TMPL_VAR NAME=T::VZLOGGER.STATUS></td>
+			<td class="service-controls">
+				<span class="service-status <TMPL_VAR BRIDGE_SERVICE_STATUS_CLASS>"><TMPL_VAR BRIDGE_SERVICE_STATUS></span>
+				<div class="service-action-line">
+					<button class="bridge-service-control" type="submit" name="submitaction" value="restart-bridge" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" <TMPL_VAR BRIDGE_SERVICE_CONTROL_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE></button>
+					<TMPL_IF BRIDGE_SERVICE_RUNNING><button type="submit" name="submitaction" value="stop-bridge" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="delete"><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE></button><TMPL_ELSE><button class="bridge-service-control" type="submit" name="submitaction" value="start-bridge" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="power" <TMPL_VAR BRIDGE_SERVICE_CONTROL_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE></button></TMPL_IF>
+					<a href="<TMPL_VAR BRIDGE_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR BRIDGE_LOG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_LOG></a>
+					<span class="service-inline-setting"><label for="vzlogger_debug"><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG></label><select id="vzlogger_debug" name="vzlogger_debug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></span>
+				</div>
+			</td>
+			<td class="service-spacer">&nbsp;</td>
+			<td class="service-help"><TMPL_VAR BRIDGE_AVAILABILITY_HELP><br><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG_HELP><br>/opt/loxberry/log/plugins/smartmeter-v2/vzlogger_mqtt_bridge.log</td>
+		</tr>
+		</table>
+	</div>
+
+	<table border="0" class="settings-table">
+	<tr><td colspan="4"><h2><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_CONFIGURATION></h2><p><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_CONFIGURATION_HELP></p></td></tr>
 	<tr>
-		<td width="20%"><label for="implementation"><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_MODE></label></td>
-		<td width="55%">
-			<select id="implementation" name="implementation" data-role="flipswitch" onChange="update_vzlogger_controls();">
-				<option value="legacy"><TMPL_VAR NAME=T::GENERIC.OFF></option>
-				<option value="vzlogger"><TMPL_VAR NAME=T::GENERIC.ON></option>
-			</select>
-		</td>
-		<td width="5%">&nbsp;</td>
-		<td width="20%"><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_MODE_HELP></font></td>
-	</tr>
-	<tr>
-		<td><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_SERVICE></td>
-		<td>
-			<span class="service-status <TMPL_VAR VZLOGGER_SERVICE_STATUS_CLASS>"><TMPL_VAR VZLOGGER_SERVICE_STATUS></span><br>
-			<button type="submit" name="submitaction" value="restart-vzlogger" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" <TMPL_VAR VZLOGGER_SERVICE_CONTROL_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE></button>
-			<TMPL_IF VZLOGGER_SERVICE_RUNNING>
-				<button type="submit" name="submitaction" value="stop-vzlogger" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="delete" <TMPL_VAR VZLOGGER_SERVICE_CONTROL_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE></button>
-			<TMPL_ELSE>
-				<button type="submit" name="submitaction" value="start-vzlogger" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="power" <TMPL_VAR VZLOGGER_SERVICE_CONTROL_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE></button>
-			</TMPL_IF>
-			<a href="<TMPL_VAR VZLOGGER_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR VZLOGGER_LOG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_LOG></a>
-			<label style="display:inline-block" for="vzlogger_service_debug"><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG></label>
-			<select id="vzlogger_service_debug" name="vzlogger_service_debug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select>
-			<label style="display:inline-block" for="vzlogger_loglevel"><TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL></label>
-			<select id="vzlogger_loglevel" name="vzlogger_loglevel" data-inline="true" data-mini="true">
-				<option value="0">0 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_0></option>
-				<option value="1">1 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_1></option>
-				<option value="3">3 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_3></option>
-				<option value="5">5 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_5></option>
-				<option value="10">10 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_10></option>
-				<option value="15">15 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_15></option>
-			</select>
-			<div class="vzlogger-live-links">
-				<a class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_LIVEURL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_LIVE_READINGS></a>
-				<a class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_RENDERED_URL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_RENDERED_READINGS></a>
+		<td colspan="4">
+			<div data-role="collapsible" data-collapsed="true" data-mini="true">
+				<h3><TMPL_VAR NAME=T::VZLOGGER.ADVANCED_SERVICE_SETTINGS></h3>
+				<table border="0" class="settings-table compact-settings">
+				<tr>
+					<td width="18%"><label for="vzlogger_retry"><TMPL_VAR NAME=T::VZLOGGER.RETRY></label></td>
+					<td><input id="vzlogger_retry" name="vzlogger_retry" type="text" data-validation="number" data-validation-allowing="range[0;86400]" value="<TMPL_VAR VZLOGGER_RETRY>" data-mini="true"></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.RETRY_HELP></font></td>
+				</tr>
+				</table>
 			</div>
 		</td>
-		<td>&nbsp;</td>
-		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_DEBUG_HELP><br>/opt/loxberry/log/plugins/smartmeter-v2/vzlogger.log</font></td>
 	</tr>
 	<tr>
-		<td><label for="vzlogger_localport"><TMPL_VAR NAME=T::VZLOGGER.HTTP_PORT></label></td>
-		<td>
-			<input id="vzlogger_localport" name="vzlogger_localport" type="text" data-validation="number" value="<TMPL_VAR VZLOGGER_LOCALPORT>"
-				data-validation-allowing="range[1024;65000]" data-mini="true">
+		<td colspan="4">
+			<div data-role="collapsible" data-collapsed="true" data-mini="true">
+				<h3><TMPL_VAR NAME=T::VZLOGGER.LOCAL_SETTINGS></h3>
+				<p><TMPL_VAR NAME=T::VZLOGGER.LOCAL_SETTINGS_HELP></p>
+				<table border="0" class="settings-table compact-settings">
+				<tr>
+					<td width="20%"><label for="vzlogger_localenabled"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_ENABLED></label></td>
+					<td width="55%"><select id="vzlogger_localenabled" name="vzlogger_localenabled" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+					<td width="5%">&nbsp;</td>
+					<td width="20%"><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_ENABLED_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_localport"><TMPL_VAR NAME=T::VZLOGGER.HTTP_PORT></label></td>
+					<td><input id="vzlogger_localport" name="vzlogger_localport" type="text" data-validation="number" value="<TMPL_VAR VZLOGGER_LOCALPORT>" data-validation-allowing="range[1024;65000]" data-mini="true"></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.HTTP_PORT_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_localindex"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_INDEX></label></td>
+					<td><select id="vzlogger_localindex" name="vzlogger_localindex" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_INDEX_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_localtimeout"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_TIMEOUT></label></td>
+					<td><input id="vzlogger_localtimeout" name="vzlogger_localtimeout" type="text" data-validation="number" data-validation-allowing="range[0;86400]" value="<TMPL_VAR VZLOGGER_LOCALTIMEOUT>" data-mini="true"></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_TIMEOUT_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_localbuffer"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_BUFFER></label></td>
+					<td><input id="vzlogger_localbuffer" name="vzlogger_localbuffer" type="text" data-validation="custom" data-validation-regexp="^-?\d+$" value="<TMPL_VAR VZLOGGER_LOCALBUFFER>" data-mini="true"></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_BUFFER_HELP></font></td>
+				</tr>
+				</table>
+			</div>
 		</td>
-		<td>&nbsp;</td>
-		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.HTTP_PORT_HELP></font></td>
 	</tr>
 	<tr>
-		<td><label for="mqtttopic"><TMPL_VAR NAME=T::VZLOGGER.MQTT_BASE_TOPIC></label></td>
-		<td>
-			<input id="mqtttopic" name="mqtttopic" type="text" class="textfield" value="<TMPL_VAR MQTTTOPIC>"
-				data-validation="custom" data-validation-regexp="^[^#+]+$">
+		<td colspan="4">
+			<div data-role="collapsible" data-collapsed="true" data-mini="true">
+				<h3><TMPL_VAR NAME=T::VZLOGGER.MQTT_SETTINGS></h3>
+				<p><TMPL_VAR NAME=T::VZLOGGER.MQTT_SETTINGS_HELP></p>
+				<table border="0" class="settings-table compact-settings">
+				<tr><td colspan="4"><h4><TMPL_VAR NAME=T::VZLOGGER.MQTT_CONNECTION_SETTINGS></h4></td></tr>
+				<tr>
+					<td width="20%"><label for="vzlogger_mqttenabled"><TMPL_VAR NAME=T::VZLOGGER.MQTT_ENABLED></label></td>
+					<td width="55%"><select id="vzlogger_mqttenabled" name="vzlogger_mqttenabled" data-role="flipswitch" onChange="update_mqtt_controls();"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+					<td width="5%">&nbsp;</td>
+					<td width="20%"><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_ENABLED_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqtthost"><TMPL_VAR NAME=T::VZLOGGER.MQTT_HOST></label></td>
+					<td><input id="vzlogger_mqtthost" name="vzlogger_mqtthost" type="text" value="<TMPL_VAR VZLOGGER_MQTTHOST>" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_HOST_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttport"><TMPL_VAR NAME=T::VZLOGGER.MQTT_PORT></label></td>
+					<td><input id="vzlogger_mqttport" name="vzlogger_mqttport" type="text" value="<TMPL_VAR VZLOGGER_MQTTPORT>" data-validation="number" data-validation-optional="true" data-validation-allowing="range[1;65535]" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_PORT_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttkeepalive"><TMPL_VAR NAME=T::VZLOGGER.MQTT_KEEPALIVE></label></td>
+					<td><input id="vzlogger_mqttkeepalive" name="vzlogger_mqttkeepalive" type="text" value="<TMPL_VAR VZLOGGER_MQTTKEEPALIVE>" data-validation="number" data-validation-allowing="range[0;65535]" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_KEEPALIVE_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="mqtttopic"><TMPL_VAR NAME=T::VZLOGGER.MQTT_BASE_TOPIC></label></td>
+					<td><input id="mqtttopic" name="mqtttopic" type="text" class="textfield" value="<TMPL_VAR MQTTTOPIC>" data-validation="custom" data-validation-regexp="^[^#+]+$"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_BASE_TOPIC_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttid"><TMPL_VAR NAME=T::VZLOGGER.MQTT_ID></label></td>
+					<td><input id="vzlogger_mqttid" name="vzlogger_mqttid" type="text" value="<TMPL_VAR VZLOGGER_MQTTID>" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_ID_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttretain"><TMPL_VAR NAME=T::VZLOGGER.MQTT_RETAIN></label></td>
+					<td><select id="vzlogger_mqttretain" name="vzlogger_mqttretain" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_RETAIN_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttrawandagg"><TMPL_VAR NAME=T::VZLOGGER.MQTT_RAW_AND_AGG></label></td>
+					<td><select id="vzlogger_mqttrawandagg" name="vzlogger_mqttrawandagg" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_RAW_AND_AGG_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttqos"><TMPL_VAR NAME=T::VZLOGGER.MQTT_QOS></label></td>
+					<td><select id="vzlogger_mqttqos" name="vzlogger_mqttqos" data-mini="true" data-native-menu="true"><option value="0">0</option><option value="1">1</option></select></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_QOS_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqtttimestamp"><TMPL_VAR NAME=T::VZLOGGER.MQTT_TIMESTAMP></label></td>
+					<td><select id="vzlogger_mqtttimestamp" name="vzlogger_mqtttimestamp" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_TIMESTAMP_HELP></font></td>
+				</tr>
+				<tr><td colspan="4"><h4><TMPL_VAR NAME=T::VZLOGGER.MQTT_USER_AUTH></h4></td></tr>
+				<tr>
+					<td><label for="vzlogger_mqttuser"><TMPL_VAR NAME=T::VZLOGGER.MQTT_USER></label></td>
+					<td><input id="vzlogger_mqttuser" name="vzlogger_mqttuser" type="text" value="<TMPL_VAR VZLOGGER_MQTTUSER>" autocomplete="username" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_USER_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttpass"><TMPL_VAR NAME=T::VZLOGGER.MQTT_PASSWORD></label></td>
+					<td>
+						<input id="vzlogger_mqttpass" name="vzlogger_mqttpass" type="password" value="" autocomplete="new-password" placeholder="<TMPL_VAR VZLOGGER_MQTTPASS_STATUS>" data-mini="true">
+						<label for="vzlogger_mqttpass_reset"><input id="vzlogger_mqttpass_reset" name="vzlogger_mqttpass_reset" type="checkbox" value="1" data-mini="true"><TMPL_VAR NAME=T::VZLOGGER.MQTT_PASSWORD_RESET></label>
+					</td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_PASSWORD_HELP></font></td>
+				</tr>
+				<tr><td colspan="4"><h4><TMPL_VAR NAME=T::VZLOGGER.MQTT_CERT_AUTH></h4></td></tr>
+				<tr>
+					<td><label for="vzlogger_mqttcafile"><TMPL_VAR NAME=T::VZLOGGER.MQTT_CAFILE></label></td>
+					<td><input id="vzlogger_mqttcafile" name="vzlogger_mqttcafile" type="text" value="<TMPL_VAR VZLOGGER_MQTTCAFILE>" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_CAFILE_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttcapath"><TMPL_VAR NAME=T::VZLOGGER.MQTT_CAPATH></label></td>
+					<td><input id="vzlogger_mqttcapath" name="vzlogger_mqttcapath" type="text" value="<TMPL_VAR VZLOGGER_MQTTCAPATH>" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_CAPATH_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttcertfile"><TMPL_VAR NAME=T::VZLOGGER.MQTT_CERTFILE></label></td>
+					<td><input id="vzlogger_mqttcertfile" name="vzlogger_mqttcertfile" type="text" value="<TMPL_VAR VZLOGGER_MQTTCERTFILE>" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_CERTFILE_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttkeyfile"><TMPL_VAR NAME=T::VZLOGGER.MQTT_KEYFILE></label></td>
+					<td><input id="vzlogger_mqttkeyfile" name="vzlogger_mqttkeyfile" type="text" value="<TMPL_VAR VZLOGGER_MQTTKEYFILE>" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_KEYFILE_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttkeypass"><TMPL_VAR NAME=T::VZLOGGER.MQTT_KEYPASS></label></td>
+					<td>
+						<input id="vzlogger_mqttkeypass" name="vzlogger_mqttkeypass" type="password" value="" autocomplete="new-password" placeholder="<TMPL_VAR NAME=T::VZLOGGER.MQTT_PASSWORD_UNCHANGED>" data-mini="true">
+						<label for="vzlogger_mqttkeypass_reset"><input id="vzlogger_mqttkeypass_reset" name="vzlogger_mqttkeypass_reset" type="checkbox" value="1" data-mini="true"><TMPL_VAR NAME=T::VZLOGGER.MQTT_KEYPASS_RESET></label>
+					</td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_KEYPASS_HELP></font></td>
+				</tr>
+				</table>
+			</div>
 		</td>
-		<td>&nbsp;</td>
-		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_BASE_TOPIC_HELP></font></td>
 	</tr>
 	<tr>
-		<td colspan=4><h2><TMPL_VAR NAME=T::VZLOGGER.METER_READING></h2><p><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_DESCRIPTION></p></td>
-	</tr>
-	<tr>
-		<td width="20%"><label for="read"><TMPL_VAR NAME=T::VZLOGGER.READ_METERS></label></td>
-		<td width="55%">
-			<select onChange="disable_cron();" id="read" name="read" data-role="flipswitch">
-				<option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option>
-				<option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option>
-			</select>
-		</td>
-		<td width="5%">&nbsp;</td>
-		<td width="20%"><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.READ_METERS_HELP></font></td>
-	</tr>
-	<tr>
-		<td><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_SERVICE></td>
-		<td>
-			<span class="service-status <TMPL_VAR BRIDGE_SERVICE_STATUS_CLASS>"><TMPL_VAR BRIDGE_SERVICE_STATUS></span><br>
-			<button type="submit" name="submitaction" value="restart-bridge" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" <TMPL_VAR BRIDGE_SERVICE_CONTROL_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE></button>
-			<TMPL_IF BRIDGE_SERVICE_RUNNING><button type="submit" name="submitaction" value="stop-bridge" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="delete"><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE></button><TMPL_ELSE><button type="submit" name="submitaction" value="start-bridge" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="power" <TMPL_VAR BRIDGE_SERVICE_CONTROL_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE></button></TMPL_IF>
-			<a href="<TMPL_VAR BRIDGE_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR BRIDGE_LOG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_LOG></a>
-			<label style="display:inline-block" for="vzlogger_debug"><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG></label>
-			<select id="vzlogger_debug" name="vzlogger_debug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select>
-		</td><td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG_HELP><br>/opt/loxberry/log/plugins/smartmeter-v2/vzlogger_mqtt_bridge.log</font></td>
-	</tr>
-	<tr>
-		<td><label for="vzlogger_udpinterval"><TMPL_VAR NAME=T::VZLOGGER.UPDATE_CYCLE></label></td>
-		<td>
-			<select id="vzlogger_udpinterval" name="vzlogger_udpinterval" data-mini="true" data-native-menu="true">
-				<TMPL_LOOP NAME=VZLOGGER_UDPINTERVAL_OPTIONS>
-					<option value="<TMPL_VAR NAME=VALUE>" <TMPL_VAR NAME=SELECTED>><TMPL_VAR NAME=LABEL></option>
-				</TMPL_LOOP>
-			</select>
-		</td>
-		<td>&nbsp;</td>
-		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.UPDATE_CYCLE_HELP></font></td>
-	</tr>
-	<tr>
-		<td colspan=4><h3><TMPL_VAR NAME=T::VZLOGGER.HTTP_CACHE></h3></td>
-	</tr>
-	<tr>
-		<td><TMPL_VAR NAME=T::VZLOGGER.HTTP_CACHE_STATUS></td>
-		<td>
-			<span><TMPL_VAR NAME=HTTP_CACHE_STATUS></span><br>
-			<a class="inline-link <TMPL_VAR HTTP_CACHE_DISABLED>" href="<TMPL_VAR HTTP_CACHE_URL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_HTTP_CACHE></a>
-		</td>
-		<td>&nbsp;</td>
-		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.HTTP_CACHE_HELP></font></td>
-	</tr>
-	<tr>
-		<td colspan=4><h3><TMPL_VAR NAME=T::VZLOGGER.UDP_OPTIONS></h3></td>
-	</tr>
-	<tr>
-		<td><label for="sendudp"><TMPL_VAR NAME=T::VZLOGGER.SEND_UDP></label></td>
-		<td>
-			<select onChange="disable_udp();" id="sendudp" name="sendudp" data-role="flipswitch">
-				<option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option>
-				<option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option>
-			</select>
-		</td>
-		<td>&nbsp;</td>
-		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.SEND_UDP_HELP></font></td>
-	</tr>
-	<tr>
-		<td><label id="labeludpport" for="udpport"><TMPL_VAR NAME=T::VZLOGGER.PORT></label></td>
-		<td>
-			<input id="udpport" name="udpport" type="text" data-validation="number" value="<TMPL_VAR UDPPORT>"
-				data-validation-allowing="range[1;65000]">
-		</td>
-		<td>&nbsp;</td>
-		<td>&nbsp;</td>
-	</tr>
-	<tr>
-		<td colspan=4><h2><TMPL_VAR NAME=T::VZLOGGER.IR_HEADS></h2></td>
+		<td colspan=4><h2><TMPL_VAR NAME=T::VZLOGGER.IR_HEADS></h2><p><TMPL_VAR NAME=T::VZLOGGER.IR_HEADS_HELP></p></td>
 	</tr>
 	<tr>
 		<td colspan=4><a data-icon="refresh" data-role="button" data-inline="true" data-mini="true" href="./index.cgi?rescan=1"><TMPL_VAR NAME=T::VZLOGGER.RESCAN_IR_HEADS></a></td>
@@ -314,6 +454,42 @@
 	</script>
 	</TMPL_LOOP>
 	<tr>
+		<td colspan="4">
+			<div data-role="collapsible" data-collapsed="true" data-mini="true">
+				<h3><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_SETTINGS></h3>
+				<p><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_SETTINGS_HELP></p>
+				<table border="0" class="settings-table compact-settings">
+				<tr>
+					<td width="20%"><label for="vzlogger_udpinterval"><TMPL_VAR NAME=T::VZLOGGER.UPDATE_CYCLE></label></td>
+					<td width="55%"><select id="vzlogger_udpinterval" name="vzlogger_udpinterval" data-mini="true" data-native-menu="true"><TMPL_LOOP NAME=VZLOGGER_UDPINTERVAL_OPTIONS><option value="<TMPL_VAR NAME=VALUE>" <TMPL_VAR NAME=SELECTED>><TMPL_VAR NAME=LABEL></option></TMPL_LOOP></select></td>
+					<td width="5%">&nbsp;</td>
+					<td width="20%"><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.UPDATE_CYCLE_HELP></font></td>
+				</tr>
+				<tr><td colspan="4"><h4><TMPL_VAR NAME=T::VZLOGGER.HTTP_CACHE></h4></td></tr>
+				<tr>
+					<td><TMPL_VAR NAME=T::VZLOGGER.HTTP_CACHE_STATUS></td>
+					<td><span><TMPL_VAR NAME=HTTP_CACHE_STATUS></span><br><a class="inline-link <TMPL_VAR HTTP_CACHE_DISABLED>" href="<TMPL_VAR HTTP_CACHE_URL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_HTTP_CACHE></a></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.HTTP_CACHE_HELP></font></td>
+				</tr>
+				<tr><td colspan="4"><h4><TMPL_VAR NAME=T::VZLOGGER.UDP_OPTIONS></h4></td></tr>
+				<tr>
+					<td><label for="sendudp"><TMPL_VAR NAME=T::VZLOGGER.SEND_UDP></label></td>
+					<td><select onChange="disable_udp();" id="sendudp" name="sendudp" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.SEND_UDP_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label id="labeludpport" for="udpport"><TMPL_VAR NAME=T::VZLOGGER.PORT></label></td>
+					<td><input id="udpport" name="udpport" type="text" data-validation="number" value="<TMPL_VAR UDPPORT>" data-validation-allowing="range[1;65000]"></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.UDP_PORT_HELP></font></td>
+				</tr>
+				</table>
+			</div>
+		</td>
+	</tr>
+	<tr>
 		<td><TMPL_VAR NAME=T::VZLOGGER.GENERATED_CONFIG></td>
 		<td colspan=3><code><TMPL_VAR VZLOGGER_CONFIG></code></td>
 	</tr>
@@ -337,6 +513,13 @@
 		$("#vzlogger_debug").val("<TMPL_VAR VZLOGGER_DEBUG>");
 		$("#vzlogger_service_debug").val("<TMPL_VAR VZLOGGER_SERVICE_DEBUG>");
 		$("#vzlogger_loglevel").val("<TMPL_VAR VZLOGGER_LOGLEVEL>");
+		$("#vzlogger_localenabled").val("<TMPL_VAR VZLOGGER_LOCALENABLED>");
+		$("#vzlogger_localindex").val("<TMPL_VAR VZLOGGER_LOCALINDEX>");
+		$("#vzlogger_mqttenabled").val("<TMPL_VAR VZLOGGER_MQTTENABLED>");
+		$("#vzlogger_mqttretain").val("<TMPL_VAR VZLOGGER_MQTTRETAIN>");
+		$("#vzlogger_mqttrawandagg").val("<TMPL_VAR VZLOGGER_MQTTRAWANDAGG>");
+		$("#vzlogger_mqttqos").val("<TMPL_VAR VZLOGGER_MQTTQOS>");
+		$("#vzlogger_mqtttimestamp").val("<TMPL_VAR VZLOGGER_MQTTTIMESTAMP>");
 		$("#vzlogger_udpinterval").val("<TMPL_VAR VZLOGGER_UDPINTERVAL>");
 		disable_cron();
 		disable_udp();
@@ -345,24 +528,38 @@
 			update_vzlogger_controls();
 		}
 
+		function set_control_disabled(selector, disabled) {
+			var controls = $(selector);
+			controls.prop("disabled", disabled).toggleClass("ui-disabled", disabled);
+			controls.each(function() {
+				$(this).closest(".ui-input-text, .ui-select, .ui-flipswitch, .ui-checkbox").toggleClass("ui-disabled", disabled);
+			});
+		}
+
 		function update_vzlogger_controls() {
 			var vzlogger_disabled = $("#implementation").val() != "vzlogger";
-			var bridge_disabled = $("#read").val() == "0";
-			$("#vzlogger_localport, #vzlogger_service_debug, #vzlogger_loglevel").toggleClass("ui-disabled", vzlogger_disabled);
-			$("#vzlogger_localport, #vzlogger_service_debug, #vzlogger_loglevel").prop("disabled", vzlogger_disabled);
-			$("#vzlogger_udpinterval, #sendudp, #udpport, #vzlogger_debug").toggleClass("ui-disabled", bridge_disabled);
-			$("#vzlogger_udpinterval, #sendudp, #udpport, #vzlogger_debug").prop("disabled", bridge_disabled);
+			set_control_disabled("#vzlogger_localenabled, #vzlogger_localport, #vzlogger_localindex, #vzlogger_localtimeout, #vzlogger_localbuffer, #vzlogger_service_debug, #vzlogger_loglevel, #vzlogger_retry, #vzlogger_mqttenabled", vzlogger_disabled);
+			update_mqtt_controls();
+		}
+
+		function update_mqtt_controls() {
+			var mqtt_disabled = $("#implementation").val() != "vzlogger" || $("#vzlogger_mqttenabled").val() == "0";
+			set_control_disabled("#vzlogger_mqtthost, #vzlogger_mqttport, #vzlogger_mqttcafile, #vzlogger_mqttcapath, #vzlogger_mqttcertfile, #vzlogger_mqttkeyfile, #vzlogger_mqttkeypass, #vzlogger_mqttkeypass_reset, #vzlogger_mqttkeepalive, #mqtttopic, #vzlogger_mqttid, #vzlogger_mqttuser, #vzlogger_mqttpass, #vzlogger_mqttpass_reset, #vzlogger_mqttretain, #vzlogger_mqttrawandagg, #vzlogger_mqttqos, #vzlogger_mqtttimestamp", mqtt_disabled);
+			update_bridge_controls();
+		}
+
+		function update_bridge_controls() {
+			var bridge_available = $("#implementation").val() == "vzlogger" && $("#vzlogger_mqttenabled").val() == "1";
+			var bridge_disabled = !bridge_available || $("#read").val() == "0";
+			set_control_disabled("#read", !bridge_available);
+			set_control_disabled(".bridge-service-control, #vzlogger_udpinterval, #sendudp, #vzlogger_debug", bridge_disabled);
 			disable_udp();
 		}
 
 		function disable_udp() {
-			if ($("#read").val() == "0" || $("#sendudp").val() == "0") {
-				$("#udpport").addClass("ui-disabled");
-				$("#labeludpport").addClass("ui-disabled");
-			} else {
-				$("#udpport").removeClass("ui-disabled");
-				$("#labeludpport").removeClass("ui-disabled");
-			}
+			var udp_disabled = $("#implementation").val() != "vzlogger" || $("#vzlogger_mqttenabled").val() == "0" || $("#read").val() == "0" || $("#sendudp").val() == "0";
+			set_control_disabled("#udpport", udp_disabled);
+			$("#labeludpport").toggleClass("ui-disabled", udp_disabled);
 		}
 	</script>
 </TMPL_IF>

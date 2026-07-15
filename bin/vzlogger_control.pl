@@ -335,7 +335,11 @@ sub vzlogger_mode_enabled
 
 sub bridge_enabled
 {
-	return vzlogger_mode_enabled() && read_enabled();
+	return 0 if (!vzlogger_mode_enabled() || !read_enabled());
+	my $cfg = Config::Simple->new($plugin_config_file);
+	return 0 if (!$cfg);
+	my $mqtt_enabled = $cfg->param("VZLOGGER.MQTTENABLED");
+	return !defined($mqtt_enabled) || $mqtt_enabled eq "1";
 }
 
 sub install_bridge_service
@@ -498,7 +502,7 @@ sub create_debug_log
 	print_command($fh, "journalctl -u vzlogger", "journalctl", "-u", "vzlogger", "-n", "80", "--no-pager");
 	print_command($fh, "journalctl -u $bridge_service", "journalctl", "-u", $bridge_service, "-n", "80", "--no-pager");
 
-	print_file($fh, "Plugin config", $plugin_config_file, 0);
+	print_file($fh, "Plugin config", $plugin_config_file, 1);
 	print_file($fh, "Generated vzLogger config", $config_file, 1);
 	print_file($fh, "Channel mapping", $mapping_file, 0);
 	print_file($fh, "Control action log", $control_log_file, 0, 200);
@@ -573,7 +577,8 @@ sub print_file
 
 sub redact_sensitive
 {
-	$_[0] =~ s/("pass"\s*:\s*")[^"]*/$1***REDACTED***/ig;
+	$_[0] =~ s/("(?:key)?pass"\s*:\s*")[^"]*/$1***REDACTED***/ig;
+	$_[0] =~ s/(\bMQTT(?:KEY)?PASS\s*=\s*).*/$1***REDACTED***/ig;
 	$_[0] =~ s/(\bpass(?:word)?\s*=\s*).*/$1***REDACTED***/ig;
 	$_[0] =~ s/(\s-P\s+)(?:"[^"]*"|'[^']*'|\S+)/$1***REDACTED***/g;
 }
@@ -642,7 +647,12 @@ sub print_mqtt_capture
 	print $fh "Subscribe topic: $topic\n";
 	print $fh "Broker: $mqtt->{host}:$mqtt->{port}\n";
 	print $fh "Capture duration: 10 seconds\n";
-	my @command = ("timeout", "10", "mosquitto_sub", "-h", $mqtt->{host}, "-p", $mqtt->{port}, "-t", $topic, "-F", "%t %p");
+	my @command = ("timeout", "10", "mosquitto_sub", "-h", $mqtt->{host}, "-p", $mqtt->{port}, "-t", $topic, "-F", "%t %p", "-q", $mqtt->{qos});
+	push @command, ("-k", $mqtt->{keepalive}) if ($mqtt->{keepalive} > 0);
+	push @command, ("--cafile", $mqtt->{cafile}) if ($mqtt->{cafile});
+	push @command, ("--capath", $mqtt->{capath}) if ($mqtt->{capath});
+	push @command, ("--cert", $mqtt->{certfile}) if ($mqtt->{certfile});
+	push @command, ("--key", $mqtt->{keyfile}) if ($mqtt->{keyfile});
 	push @command, ("-u", $mqtt->{user}) if ($mqtt->{user});
 	push @command, ("-P", $mqtt->{pass}) if ($mqtt->{pass});
 	my $pid = open(my $mqtt_fh, "-|", @command);
@@ -668,25 +678,60 @@ sub read_mqtt_settings
 		port => 1883,
 		user => "",
 		pass => "",
+		cafile => "",
+		capath => "",
+		certfile => "",
+		keyfile => "",
+		qos => 0,
+		keepalive => 30,
 	);
 
-	return \%settings if (!-e $general_json);
-	open(my $fh, "<", $general_json) or return \%settings;
-	local $/;
-	my $json_text = <$fh>;
-	close($fh);
-
-	eval { require JSON::PP; };
-	return \%settings if ($@);
-	my $general = eval { JSON::PP->new->utf8->decode($json_text) };
-	return \%settings if ($@ || !ref($general) || !ref($general->{Mqtt}));
-
-	my $mqtt = $general->{Mqtt};
-	$settings{host} = first_value($mqtt, qw(Host Hostname Broker Brokerhost Server IpAddress Ipaddress)) || $settings{host};
-	$settings{port} = clean_number(first_value($mqtt, qw(Port Brokerport Mqttport)), $settings{port});
-	$settings{user} = first_value($mqtt, qw(Brokeruser Brokerusername User Username Login)) || "";
-	$settings{pass} = first_value($mqtt, qw(Brokerpass Brokerpassword Pass Password)) || "";
+	if (-e $general_json && open(my $fh, "<", $general_json)) {
+		local $/;
+		my $json_text = <$fh>;
+		close($fh);
+		eval { require JSON::PP; };
+		if (!$@) {
+			my $general = eval { JSON::PP->new->utf8->decode($json_text) };
+			if (!$@ && ref($general) && ref($general->{Mqtt})) {
+				my $mqtt = $general->{Mqtt};
+				$settings{host} = first_value($mqtt, qw(Host Hostname Broker Brokerhost Server IpAddress Ipaddress)) || $settings{host};
+				$settings{port} = clean_number(first_value($mqtt, qw(Port Brokerport Mqttport)), $settings{port});
+				$settings{user} = first_value($mqtt, qw(Brokeruser Brokerusername User Username Login)) || "";
+				$settings{pass} = first_value($mqtt, qw(Brokerpass Brokerpassword Pass Password)) || "";
+			}
+		}
+	}
+	my $cfg = Config::Simple->new($plugin_config_file);
+	if ($cfg) {
+		$settings{host} = plugin_mqtt_text($cfg, "MQTTHOST", $settings{host});
+		$settings{port} = clean_number($cfg->param("VZLOGGER.MQTTPORT"), $settings{port});
+		$settings{cafile} = plugin_mqtt_text($cfg, "MQTTCAFILE", "");
+		$settings{capath} = plugin_mqtt_text($cfg, "MQTTCAPATH", "");
+		$settings{certfile} = plugin_mqtt_text($cfg, "MQTTCERTFILE", "");
+		$settings{keyfile} = plugin_mqtt_text($cfg, "MQTTKEYFILE", "");
+		$settings{user} = plugin_mqtt_text($cfg, "MQTTUSER", $settings{user});
+		$settings{pass} = plugin_mqtt_text($cfg, "MQTTPASS", $settings{pass});
+		$settings{qos} = clean_qos($cfg->param("VZLOGGER.MQTTQOS"), 0);
+		$settings{keepalive} = clean_number($cfg->param("VZLOGGER.MQTTKEEPALIVE"), 30);
+	}
 	return \%settings;
+}
+
+sub plugin_mqtt_text
+{
+	my ($cfg, $name, $default) = @_;
+	my $value = $cfg->param("VZLOGGER.$name");
+	return $default if (!defined($value) || $value eq "");
+	$value =~ s/[\r\n]//g;
+	return $value;
+}
+
+sub clean_qos
+{
+	my ($value, $default) = @_;
+	return int($value) if (defined($value) && $value =~ /\A[01]\z/);
+	return $default;
 }
 
 sub first_value

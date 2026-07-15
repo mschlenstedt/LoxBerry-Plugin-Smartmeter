@@ -156,8 +156,20 @@ sub form_vzlogger
 	}
 
 	my @rows = build_head_rows(@heads);
+	my $local_enabled = clean_boolean($plugin_cfg->param("VZLOGGER.LOCALENABLED"), 1);
 	my $local_port = $plugin_cfg->param("VZLOGGER.LOCALPORT") || 18080;
+	my $local_index = clean_boolean($plugin_cfg->param("VZLOGGER.LOCALINDEX"), 1);
+	my $local_timeout = clean_number($plugin_cfg->param("VZLOGGER.LOCALTIMEOUT"), 30);
+	my $local_buffer = clean_integer($plugin_cfg->param("VZLOGGER.LOCALBUFFER"), -1);
+	my $retry = clean_number($plugin_cfg->param("VZLOGGER.RETRY"), 30);
 	my $mqtttopic = $plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter";
+	my $loxberry_mqtt = read_loxberry_mqtt_settings();
+	my $effective_mqtt = effective_mqtt_settings($loxberry_mqtt);
+	my $mqtt_password_status = $plugin_cfg->param("VZLOGGER.MQTTPASS") ?
+		($L{'VZLOGGER.MQTT_PASSWORD_CUSTOM_STATUS'} || "Custom password stored") :
+		$loxberry_mqtt->{pass} ?
+		($L{'VZLOGGER.MQTT_PASSWORD_LOXBERRY_STATUS'} || "LoxBerry password is used") :
+		($L{'VZLOGGER.MQTT_PASSWORD_NONE_STATUS'} || "No password configured");
 
 	$template->param("FORM_VZLOGGER", 1);
 	$template->param("IMPLEMENTATION" => implementation_mode());
@@ -166,13 +178,33 @@ sub form_vzlogger
 	$template->param("SENDUDP" => $plugin_cfg->param("MAIN.SENDUDP") || 0);
 	$template->param("UDPPORT" => $plugin_cfg->param("MAIN.UDPPORT") || 7000);
 	$template->param("MQTTTOPIC" => $mqtttopic);
+	$template->param("VZLOGGER_LOCALENABLED" => $local_enabled);
 	$template->param("VZLOGGER_LOCALPORT" => $local_port);
+	$template->param("VZLOGGER_LOCALINDEX" => $local_index);
+	$template->param("VZLOGGER_LOCALTIMEOUT" => $local_timeout);
+	$template->param("VZLOGGER_LOCALBUFFER" => $local_buffer);
+	$template->param("VZLOGGER_RETRY" => $retry);
 	my $udp_interval = clean_udp_interval($plugin_cfg->param("VZLOGGER.UDPINTERVAL"), "5");
 	$template->param("VZLOGGER_UDPINTERVAL" => $udp_interval);
 	$template->param("VZLOGGER_UDPINTERVAL_OPTIONS" => udp_interval_options($udp_interval));
 	$template->param("VZLOGGER_DEBUG" => $plugin_cfg->param("VZLOGGER.DEBUG") || 0);
 	$template->param("VZLOGGER_SERVICE_DEBUG" => $plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || 0);
 	$template->param("VZLOGGER_LOGLEVEL" => clean_log_level($plugin_cfg->param("VZLOGGER.LOGLEVEL"), "0"));
+	$template->param("VZLOGGER_MQTTENABLED" => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTENABLED"), 1));
+	$template->param("VZLOGGER_MQTTHOST" => $effective_mqtt->{host});
+	$template->param("VZLOGGER_MQTTPORT" => $effective_mqtt->{port});
+	$template->param("VZLOGGER_MQTTCAFILE" => $plugin_cfg->param("VZLOGGER.MQTTCAFILE") || "");
+	$template->param("VZLOGGER_MQTTCAPATH" => $plugin_cfg->param("VZLOGGER.MQTTCAPATH") || "");
+	$template->param("VZLOGGER_MQTTCERTFILE" => $plugin_cfg->param("VZLOGGER.MQTTCERTFILE") || "");
+	$template->param("VZLOGGER_MQTTKEYFILE" => $plugin_cfg->param("VZLOGGER.MQTTKEYFILE") || "");
+	$template->param("VZLOGGER_MQTTKEEPALIVE" => clean_number($plugin_cfg->param("VZLOGGER.MQTTKEEPALIVE"), 30));
+	$template->param("VZLOGGER_MQTTID" => $plugin_cfg->param("VZLOGGER.MQTTID") || "");
+	$template->param("VZLOGGER_MQTTUSER" => $effective_mqtt->{user});
+	$template->param("VZLOGGER_MQTTPASS_STATUS" => $mqtt_password_status);
+	$template->param("VZLOGGER_MQTTRETAIN" => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTRETAIN"), 1));
+	$template->param("VZLOGGER_MQTTRAWANDAGG" => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTRAWANDAGG"), 0));
+	$template->param("VZLOGGER_MQTTQOS" => clean_qos($plugin_cfg->param("VZLOGGER.MQTTQOS"), 0));
+	$template->param("VZLOGGER_MQTTTIMESTAMP" => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP"), 1));
 	add_service_template_params();
 	$template->param("VZLOGGER_CONFIG" => "$lbpconfigdir/vzlogger.conf");
 	$template->param("VZLOGGER_LIVEURL" => "http://$ENV{HTTP_HOST}:$local_port/");
@@ -185,15 +217,22 @@ sub form_vzlogger
 sub add_service_template_params
 {
 	my $vzlogger_expected_active = implementation_mode() eq "vzlogger";
-	my $bridge_expected_active = $vzlogger_expected_active
-		&& (($plugin_cfg->param("MAIN.READ") || "0") eq "1");
+	my $mqtt_enabled = clean_boolean($plugin_cfg->param("VZLOGGER.MQTTENABLED"), 1);
+	my $bridge_available = $vzlogger_expected_active && $mqtt_enabled;
+	my $bridge_expected_active = $bridge_available && (($plugin_cfg->param("MAIN.READ") || "0") eq "1");
 	my $vzlogger_state = service_state("vzlogger");
 	my $bridge_state = service_state("smartmeter-v2-vzlogger-bridge");
+	my $bridge_unavailable = !$vzlogger_expected_active ?
+		($L{'VZLOGGER.BRIDGE_UNAVAILABLE_VZLOGGER'} || "Unavailable: vzLogger is disabled") :
+		!$mqtt_enabled ?
+		($L{'VZLOGGER.BRIDGE_UNAVAILABLE_MQTT'} || "Unavailable: MQTT is disabled") : "";
 
 	$template->param("VZLOGGER_SERVICE_CONTROL_DISABLED" => ($vzlogger_expected_active ? "" : "disabled"));
 	$template->param("BRIDGE_SERVICE_CONTROL_DISABLED" => ($bridge_expected_active ? "" : "disabled"));
+	$template->param("BRIDGE_ACTIVATION_DISABLED" => ($bridge_available ? "" : "disabled"));
 	$template->param("VZLOGGER_SERVICE_STATUS" => service_summary("vzlogger"));
-	$template->param("BRIDGE_SERVICE_STATUS" => service_summary("smartmeter-v2-vzlogger-bridge"));
+	$template->param("BRIDGE_SERVICE_STATUS" => ($bridge_unavailable || service_summary("smartmeter-v2-vzlogger-bridge")));
+	$template->param("BRIDGE_AVAILABILITY_HELP" => ($bridge_unavailable || ($L{'VZLOGGER.BRIDGE_SERVICE_CONTROL_HELP'} || "Manual control of the SmartMeter bridge.")));
 	$template->param("VZLOGGER_SERVICE_STATUS_CLASS" => service_status_class($vzlogger_state, $vzlogger_expected_active));
 	$template->param("BRIDGE_SERVICE_STATUS_CLASS" => service_status_class($bridge_state, $bridge_expected_active));
 	$template->param("VZLOGGER_SERVICE_RUNNING" => $vzlogger_state eq "active");
@@ -352,11 +391,32 @@ sub ensure_vzlogger_defaults
 	$plugin_cfg->param("MAIN.SENDUDP", "0") if (!defined $plugin_cfg->param("MAIN.SENDUDP"));
 	$plugin_cfg->param("MAIN.UDPPORT", "7000") if (!$plugin_cfg->param("MAIN.UDPPORT"));
 	$plugin_cfg->param("MAIN.MQTTTOPIC", "smartmeter") if (!$plugin_cfg->param("MAIN.MQTTTOPIC"));
+	$plugin_cfg->param("VZLOGGER.RETRY", "30") if (!defined $plugin_cfg->param("VZLOGGER.RETRY"));
+	$plugin_cfg->param("VZLOGGER.LOCALENABLED", "1") if (!defined $plugin_cfg->param("VZLOGGER.LOCALENABLED"));
 	$plugin_cfg->param("VZLOGGER.LOCALPORT", "18080") if (!$plugin_cfg->param("VZLOGGER.LOCALPORT"));
+	$plugin_cfg->param("VZLOGGER.LOCALINDEX", "1") if (!defined $plugin_cfg->param("VZLOGGER.LOCALINDEX"));
+	$plugin_cfg->param("VZLOGGER.LOCALTIMEOUT", "30") if (!defined $plugin_cfg->param("VZLOGGER.LOCALTIMEOUT"));
+	$plugin_cfg->param("VZLOGGER.LOCALBUFFER", "-1") if (!defined $plugin_cfg->param("VZLOGGER.LOCALBUFFER"));
 	$plugin_cfg->param("VZLOGGER.UDPINTERVAL", "5") if (!defined $plugin_cfg->param("VZLOGGER.UDPINTERVAL"));
 	$plugin_cfg->param("VZLOGGER.DEBUG", "0") if (!defined $plugin_cfg->param("VZLOGGER.DEBUG"));
 	$plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG", "0") if (!defined $plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG"));
 	$plugin_cfg->param("VZLOGGER.LOGLEVEL", "0") if (!defined $plugin_cfg->param("VZLOGGER.LOGLEVEL"));
+	$plugin_cfg->param("VZLOGGER.MQTTENABLED", "1") if (!defined $plugin_cfg->param("VZLOGGER.MQTTENABLED"));
+	$plugin_cfg->param("VZLOGGER.MQTTHOST", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTHOST"));
+	$plugin_cfg->param("VZLOGGER.MQTTPORT", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTPORT"));
+	$plugin_cfg->param("VZLOGGER.MQTTCAFILE", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTCAFILE"));
+	$plugin_cfg->param("VZLOGGER.MQTTCAPATH", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTCAPATH"));
+	$plugin_cfg->param("VZLOGGER.MQTTCERTFILE", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTCERTFILE"));
+	$plugin_cfg->param("VZLOGGER.MQTTKEYFILE", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTKEYFILE"));
+	$plugin_cfg->param("VZLOGGER.MQTTKEYPASS", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTKEYPASS"));
+	$plugin_cfg->param("VZLOGGER.MQTTKEEPALIVE", "30") if (!defined $plugin_cfg->param("VZLOGGER.MQTTKEEPALIVE"));
+	$plugin_cfg->param("VZLOGGER.MQTTID", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTID"));
+	$plugin_cfg->param("VZLOGGER.MQTTUSER", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTUSER"));
+	$plugin_cfg->param("VZLOGGER.MQTTPASS", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTPASS"));
+	$plugin_cfg->param("VZLOGGER.MQTTRETAIN", "1") if (!defined $plugin_cfg->param("VZLOGGER.MQTTRETAIN"));
+	$plugin_cfg->param("VZLOGGER.MQTTRAWANDAGG", "0") if (!defined $plugin_cfg->param("VZLOGGER.MQTTRAWANDAGG"));
+	$plugin_cfg->param("VZLOGGER.MQTTQOS", "0") if (!defined $plugin_cfg->param("VZLOGGER.MQTTQOS"));
+	$plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP", "1") if (!defined $plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP"));
 	$plugin_cfg->save;
 }
 
@@ -401,18 +461,48 @@ sub save_vzlogger_form
 {
 	my (@heads) = @_;
 	$plugin_cfg->param("MAIN.IMPLEMENTATION", clean_config_value($q->{implementation}, qr/\A(?:legacy|vzlogger)\z/, implementation_mode()));
-	$plugin_cfg->param("MAIN.READ", clean_config_value($q->{read}, qr/\A[01]\z/, "0"));
+	$plugin_cfg->param("MAIN.READ", clean_config_value($q->{read}, qr/\A[01]\z/, defined($plugin_cfg->param("MAIN.READ")) ? $plugin_cfg->param("MAIN.READ") : "0"));
 	# Disabled form controls are not submitted. Preserve their saved values while
 	# meter reading is off instead of silently restoring defaults.
 	$plugin_cfg->param("MAIN.CRON", clean_config_value($q->{cron}, qr/\A(M|1|3|5|10|15|30|60)\z/, $plugin_cfg->param("MAIN.CRON") || "5"));
 	$plugin_cfg->param("MAIN.SENDUDP", clean_config_value($q->{sendudp}, qr/\A[01]\z/, $plugin_cfg->param("MAIN.SENDUDP") || "0"));
 	$plugin_cfg->param("MAIN.UDPPORT", clean_config_value($q->{udpport}, qr/\A\d+\z/, $plugin_cfg->param("MAIN.UDPPORT") || "7000"));
 	$plugin_cfg->param("MAIN.MQTTTOPIC", clean_config_value($q->{mqtttopic}, qr/\A[^#+]+\z/, $plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter"));
+	$plugin_cfg->param("VZLOGGER.RETRY", clean_config_value($q->{vzlogger_retry}, qr/\A\d+\z/, defined($plugin_cfg->param("VZLOGGER.RETRY")) ? $plugin_cfg->param("VZLOGGER.RETRY") : "30"));
+	$plugin_cfg->param("VZLOGGER.LOCALENABLED", clean_config_value($q->{vzlogger_localenabled}, qr/\A[01]\z/, defined($plugin_cfg->param("VZLOGGER.LOCALENABLED")) ? $plugin_cfg->param("VZLOGGER.LOCALENABLED") : "1"));
 	$plugin_cfg->param("VZLOGGER.LOCALPORT", clean_config_value($q->{vzlogger_localport}, qr/\A\d+\z/, $plugin_cfg->param("VZLOGGER.LOCALPORT") || "18080"));
+	$plugin_cfg->param("VZLOGGER.LOCALINDEX", clean_config_value($q->{vzlogger_localindex}, qr/\A[01]\z/, defined($plugin_cfg->param("VZLOGGER.LOCALINDEX")) ? $plugin_cfg->param("VZLOGGER.LOCALINDEX") : "1"));
+	$plugin_cfg->param("VZLOGGER.LOCALTIMEOUT", clean_config_value($q->{vzlogger_localtimeout}, qr/\A\d+\z/, defined($plugin_cfg->param("VZLOGGER.LOCALTIMEOUT")) ? $plugin_cfg->param("VZLOGGER.LOCALTIMEOUT") : "30"));
+	$plugin_cfg->param("VZLOGGER.LOCALBUFFER", clean_config_value($q->{vzlogger_localbuffer}, qr/\A-?\d+\z/, defined($plugin_cfg->param("VZLOGGER.LOCALBUFFER")) ? $plugin_cfg->param("VZLOGGER.LOCALBUFFER") : "-1"));
 	$plugin_cfg->param("VZLOGGER.UDPINTERVAL", clean_udp_interval($q->{vzlogger_udpinterval}, $plugin_cfg->param("VZLOGGER.UDPINTERVAL") || "5"));
 	$plugin_cfg->param("VZLOGGER.DEBUG", clean_config_value($q->{vzlogger_debug}, qr/\A[01]\z/, $plugin_cfg->param("VZLOGGER.DEBUG") || "0"));
 	$plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG", clean_config_value($q->{vzlogger_service_debug}, qr/\A[01]\z/, $plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0"));
 	$plugin_cfg->param("VZLOGGER.LOGLEVEL", clean_log_level($q->{vzlogger_loglevel}, $plugin_cfg->param("VZLOGGER.LOGLEVEL") || "0"));
+	$plugin_cfg->param("VZLOGGER.MQTTENABLED", clean_config_value($q->{vzlogger_mqttenabled}, qr/\A[01]\z/, defined($plugin_cfg->param("VZLOGGER.MQTTENABLED")) ? $plugin_cfg->param("VZLOGGER.MQTTENABLED") : "1"));
+	my $loxberry_mqtt = read_loxberry_mqtt_settings();
+	save_mqtt_override("MQTTHOST", $q->{vzlogger_mqtthost}, qr/\A[^\r\n]*\z/, $loxberry_mqtt->{host});
+	save_mqtt_override("MQTTPORT", $q->{vzlogger_mqttport}, qr/\A\d*\z/, $loxberry_mqtt->{port});
+	$plugin_cfg->param("VZLOGGER.MQTTCAFILE", clean_config_value($q->{vzlogger_mqttcafile}, qr/\A[^\r\n]*\z/, $plugin_cfg->param("VZLOGGER.MQTTCAFILE") || ""));
+	$plugin_cfg->param("VZLOGGER.MQTTCAPATH", clean_config_value($q->{vzlogger_mqttcapath}, qr/\A[^\r\n]*\z/, $plugin_cfg->param("VZLOGGER.MQTTCAPATH") || ""));
+	$plugin_cfg->param("VZLOGGER.MQTTCERTFILE", clean_config_value($q->{vzlogger_mqttcertfile}, qr/\A[^\r\n]*\z/, $plugin_cfg->param("VZLOGGER.MQTTCERTFILE") || ""));
+	$plugin_cfg->param("VZLOGGER.MQTTKEYFILE", clean_config_value($q->{vzlogger_mqttkeyfile}, qr/\A[^\r\n]*\z/, $plugin_cfg->param("VZLOGGER.MQTTKEYFILE") || ""));
+	if (($q->{vzlogger_mqttkeypass_reset} || "0") eq "1") {
+		$plugin_cfg->param("VZLOGGER.MQTTKEYPASS", "");
+	} elsif (defined($q->{vzlogger_mqttkeypass}) && $q->{vzlogger_mqttkeypass} ne "") {
+		$plugin_cfg->param("VZLOGGER.MQTTKEYPASS", clean_config_value($q->{vzlogger_mqttkeypass}, qr/\A[^\r\n]+\z/, $plugin_cfg->param("VZLOGGER.MQTTKEYPASS") || ""));
+	}
+	$plugin_cfg->param("VZLOGGER.MQTTKEEPALIVE", clean_config_value($q->{vzlogger_mqttkeepalive}, qr/\A\d+\z/, $plugin_cfg->param("VZLOGGER.MQTTKEEPALIVE") || "30"));
+	$plugin_cfg->param("VZLOGGER.MQTTID", clean_config_value($q->{vzlogger_mqttid}, qr/\A[^\r\n]*\z/, $plugin_cfg->param("VZLOGGER.MQTTID") || ""));
+	save_mqtt_override("MQTTUSER", $q->{vzlogger_mqttuser}, qr/\A[^\r\n]*\z/, $loxberry_mqtt->{user});
+	if (($q->{vzlogger_mqttpass_reset} || "0") eq "1") {
+		$plugin_cfg->param("VZLOGGER.MQTTPASS", "");
+	} elsif (defined($q->{vzlogger_mqttpass}) && $q->{vzlogger_mqttpass} ne "") {
+		$plugin_cfg->param("VZLOGGER.MQTTPASS", clean_config_value($q->{vzlogger_mqttpass}, qr/\A[^\r\n]+\z/, $plugin_cfg->param("VZLOGGER.MQTTPASS") || ""));
+	}
+	$plugin_cfg->param("VZLOGGER.MQTTRETAIN", clean_config_value($q->{vzlogger_mqttretain}, qr/\A[01]\z/, defined($plugin_cfg->param("VZLOGGER.MQTTRETAIN")) ? $plugin_cfg->param("VZLOGGER.MQTTRETAIN") : "1"));
+	$plugin_cfg->param("VZLOGGER.MQTTRAWANDAGG", clean_config_value($q->{vzlogger_mqttrawandagg}, qr/\A[01]\z/, defined($plugin_cfg->param("VZLOGGER.MQTTRAWANDAGG")) ? $plugin_cfg->param("VZLOGGER.MQTTRAWANDAGG") : "0"));
+	$plugin_cfg->param("VZLOGGER.MQTTQOS", clean_config_value($q->{vzlogger_mqttqos}, qr/\A[01]\z/, $plugin_cfg->param("VZLOGGER.MQTTQOS") || "0"));
+	$plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP", clean_config_value($q->{vzlogger_mqtttimestamp}, qr/\A[01]\z/, defined($plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP")) ? $plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP") : "1"));
 
 	foreach my $device (@heads) {
 		my $serial = $device;
@@ -547,7 +637,7 @@ sub write_vzlogger_obis_test_config
 			port => $local_port,
 			index => JSON::PP::true,
 			timeout => 30,
-			buffer => 0,
+			buffer => -1,
 		},
 		mqtt => {
 			enabled => JSON::PP::false,
@@ -666,6 +756,20 @@ sub clean_number
 {
 	my ($value, $default) = @_;
 	return int($value) if (defined($value) && $value =~ /\A\d+\z/);
+	return $default;
+}
+
+sub clean_integer
+{
+	my ($value, $default) = @_;
+	return int($value) if (defined($value) && $value =~ /\A-?\d+\z/);
+	return $default;
+}
+
+sub clean_boolean
+{
+	my ($value, $default) = @_;
+	return int($value) if (defined($value) && $value =~ /\A[01]\z/);
 	return $default;
 }
 
@@ -989,6 +1093,61 @@ sub timestamp
 	return sprintf("%04d%02d%02d-%02d%02d%02d", $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
 }
 
+sub read_loxberry_mqtt_settings
+{
+	my ($general_json) = @_;
+	$general_json ||= "$lbhomedir/config/system/general.json";
+	my %settings = (
+		host => "127.0.0.1",
+		port => 1883,
+		user => "",
+		pass => "",
+	);
+	return \%settings if (!-e $general_json || !open(my $fh, "<", $general_json));
+	local $/;
+	my $json_text = <$fh>;
+	close($fh);
+	my $general = eval { JSON::PP->new->utf8->decode($json_text) };
+	return \%settings if ($@ || !ref($general) || !ref($general->{Mqtt}));
+	my $mqtt = $general->{Mqtt};
+	$settings{host} = mqtt_first_value($mqtt, qw(Host Hostname Broker Brokerhost Server IpAddress Ipaddress)) || $settings{host};
+	$settings{port} = clean_number(mqtt_first_value($mqtt, qw(Port Brokerport Mqttport)), $settings{port});
+	$settings{user} = mqtt_first_value($mqtt, qw(Brokeruser Brokerusername User Username Login)) || "";
+	$settings{pass} = mqtt_first_value($mqtt, qw(Brokerpass Brokerpassword Pass Password)) || "";
+	return \%settings;
+}
+
+sub effective_mqtt_settings
+{
+	my ($loxberry_mqtt) = @_;
+	my %settings = %{$loxberry_mqtt};
+	foreach my $mapping ([host => "MQTTHOST"], [user => "MQTTUSER"]) {
+		my ($name, $key) = @{$mapping};
+		my $override = $plugin_cfg->param("VZLOGGER.$key");
+		$settings{$name} = $override if (defined($override) && $override ne "");
+	}
+	my $port_override = $plugin_cfg->param("VZLOGGER.MQTTPORT");
+	$settings{port} = clean_number($port_override, $settings{port}) if (defined($port_override) && $port_override ne "");
+	return \%settings;
+}
+
+sub save_mqtt_override
+{
+	my ($key, $value, $pattern, $loxberry_value) = @_;
+	return if (!defined($value) || $value !~ $pattern);
+	$value = "" if ($value eq "" || $value eq "$loxberry_value");
+	$plugin_cfg->param("VZLOGGER.$key", $value);
+}
+
+sub mqtt_first_value
+{
+	my ($hash, @keys) = @_;
+	foreach my $key (@keys) {
+		return $hash->{$key} if (defined($hash->{$key}) && $hash->{$key} ne "");
+	}
+	return;
+}
+
 sub clean_config_value
 {
 	my ($value, $pattern, $default) = @_;
@@ -1001,6 +1160,13 @@ sub clean_log_level
 {
 	my ($value, $default) = @_;
 	return $value if (defined($value) && $value =~ /\A(?:0|1|3|5|10|15)\z/);
+	return $default;
+}
+
+sub clean_qos
+{
+	my ($value, $default) = @_;
+	return int($value) if (defined($value) && $value =~ /\A[01]\z/);
 	return $default;
 }
 

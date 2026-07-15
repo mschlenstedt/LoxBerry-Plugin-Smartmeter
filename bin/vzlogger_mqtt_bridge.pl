@@ -71,7 +71,13 @@ my @command = (
 	"-p", $mqtt->{port},
 	"-t", $subscribe_topic,
 	"-F", "%t %p",
+	"-q", $mqtt->{qos},
 );
+push @command, ("-k", $mqtt->{keepalive}) if ($mqtt->{keepalive} > 0);
+push @command, ("--cafile", $mqtt->{cafile}) if ($mqtt->{cafile});
+push @command, ("--capath", $mqtt->{capath}) if ($mqtt->{capath});
+push @command, ("--cert", $mqtt->{certfile}) if ($mqtt->{certfile});
+push @command, ("--key", $mqtt->{keyfile}) if ($mqtt->{keyfile});
 push @command, ("-u", $mqtt->{user}) if ($mqtt->{user});
 push @command, ("-P", $mqtt->{pass}) if ($mqtt->{pass});
 
@@ -409,17 +415,47 @@ sub read_mqtt_settings
 		port => 1883,
 		user => "",
 		pass => "",
+		cafile => "",
+		capath => "",
+		certfile => "",
+		keyfile => "",
+		qos => clean_qos($plugin_cfg->param("VZLOGGER.MQTTQOS"), 0),
+		keepalive => clean_number($plugin_cfg->param("VZLOGGER.MQTTKEEPALIVE"), 30),
 	);
 
 	my $general = read_json($general_json);
-	return \%settings if (!ref($general) || !ref($general->{Mqtt}));
-
-	my $mqtt = $general->{Mqtt};
-	$settings{host} = first_value($mqtt, qw(Host Hostname Broker Brokerhost Server IpAddress Ipaddress)) || $settings{host};
-	$settings{port} = clean_number(first_value($mqtt, qw(Port Brokerport Mqttport)), $settings{port});
-	$settings{user} = first_value($mqtt, qw(Brokeruser Brokerusername User Username Login)) || "";
-	$settings{pass} = first_value($mqtt, qw(Brokerpass Brokerpassword Pass Password)) || "";
+	if (ref($general) && ref($general->{Mqtt})) {
+		my $mqtt = $general->{Mqtt};
+		$settings{host} = first_value($mqtt, qw(Host Hostname Broker Brokerhost Server IpAddress Ipaddress)) || $settings{host};
+		$settings{port} = clean_number(first_value($mqtt, qw(Port Brokerport Mqttport)), $settings{port});
+		$settings{user} = first_value($mqtt, qw(Brokeruser Brokerusername User Username Login)) || "";
+		$settings{pass} = first_value($mqtt, qw(Brokerpass Brokerpassword Pass Password)) || "";
+	}
+	$settings{host} = plugin_mqtt_text("MQTTHOST", $settings{host});
+	$settings{port} = clean_number($plugin_cfg->param("VZLOGGER.MQTTPORT"), $settings{port});
+	$settings{cafile} = plugin_mqtt_text("MQTTCAFILE", "");
+	$settings{capath} = plugin_mqtt_text("MQTTCAPATH", "");
+	$settings{certfile} = plugin_mqtt_text("MQTTCERTFILE", "");
+	$settings{keyfile} = plugin_mqtt_text("MQTTKEYFILE", "");
+	$settings{user} = plugin_mqtt_text("MQTTUSER", $settings{user});
+	$settings{pass} = plugin_mqtt_text("MQTTPASS", $settings{pass});
 	return \%settings;
+}
+
+sub plugin_mqtt_text
+{
+	my ($name, $default) = @_;
+	my $value = $plugin_cfg->param("VZLOGGER.$name");
+	return $default if (!defined($value) || $value eq "");
+	$value =~ s/[\r\n]//g;
+	return $value;
+}
+
+sub clean_qos
+{
+	my ($value, $default) = @_;
+	return int($value) if (defined($value) && $value =~ /\A[01]\z/);
+	return $default;
 }
 
 sub first_value
