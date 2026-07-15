@@ -18,6 +18,7 @@ my $plugin_log_dir = "$home/log/plugins/$psubfolder";
 my $control_log_file = "$plugin_log_dir/vzlogger_control.log";
 my $vzlogger_log_file = "$plugin_log_dir/vzlogger.log";
 my $bridge_service = "smartmeter-v2-vzlogger-bridge";
+my $vzlogger_override_file = "/etc/systemd/system/vzlogger.service.d/smartmeter-v2.conf";
 my $action = shift @ARGV || "status";
 
 make_path($runtime_dir) if (!-d $runtime_dir);
@@ -34,6 +35,7 @@ if ($action eq "apply") {
 	if (!vzlogger_mode_enabled()) {
 		stop_bridge();
 		stop_vzlogger(1);
+		install_vzlogger_service_override("remove");
 		print "vzLogger mode is disabled. Stopped vzLogger and bridge.\n";
 		exit 0;
 	}
@@ -108,6 +110,7 @@ if ($action eq "stop-bridge") {
 if ($action eq "disable-vzlogger") {
 	stop_bridge();
 	stop_vzlogger(1);
+	install_vzlogger_service_override("remove");
 	print "Stopped vzLogger and bridge.\n";
 	exit 0;
 }
@@ -118,6 +121,7 @@ if ($action eq "status") {
 	print "vzlogger package: " . package_state("vzlogger") . "\n";
 	print "Volkszaehler apt source: " . (-e "/etc/apt/sources.list.d/volkszaehler-volkszaehler-org-project.list" ? "configured" : "missing") . "\n";
 	print "vzlogger config: " . (-e $config_file ? $config_file : "missing") . "\n";
+	print "vzlogger service config: " . (-e $vzlogger_override_file ? $config_file : "system default") . "\n";
 	print "config validation: " . validation_state() . "\n";
 	print "vzlogger service: " . service_summary("vzlogger") . "\n";
 	print "MQTT bridge service: " . service_summary($bridge_service) . "\n";
@@ -214,15 +218,11 @@ sub restart_vzlogger
 	chmod(0777, $runtime_dir);
 	prepare_vzlogger_log_file();
 
-	if (-e $config_file) {
-		my $copy_rc = run_privileged("copy $config_file to /etc/vzlogger.conf", "/bin/cp", $config_file, "/etc/vzlogger.conf");
-		print "Copied config to /etc/vzlogger.conf.\n" if ($copy_rc == 0);
-		if ($copy_rc != 0) {
-			print "Could not copy config to /etc/vzlogger.conf. Run as root or copy it manually.\n";
-			print "Skipped vzlogger restart to avoid running with an outdated config.\n";
-			return;
-		}
-		run_privileged("mark /etc/vzlogger.conf as Smartmeter-managed", "/usr/bin/touch", "/etc/vzlogger.conf.smartmeter-v2");
+	my $override_rc = install_vzlogger_service_override("install");
+	if ($override_rc != 0) {
+		print "Could not configure vzlogger to use $config_file.\n";
+		print "Skipped vzlogger restart to avoid running with a different configuration.\n";
+		return;
 	}
 
 	enable_vzlogger_autostart();
@@ -267,6 +267,12 @@ sub start_vzlogger
 		return;
 	}
 	prepare_vzlogger_log_file();
+	my $override_rc = install_vzlogger_service_override("install");
+	if ($override_rc != 0) {
+		print "Could not configure vzlogger to use $config_file.\n";
+		print "Skipped vzlogger start to avoid running with a different configuration.\n";
+		return;
+	}
 	enable_vzlogger_autostart();
 	my $start_rc = run_privileged("start vzlogger", systemctl_command(), "start", "vzlogger");
 	print "Started vzlogger service.\n" if ($start_rc == 0);
@@ -337,6 +343,33 @@ sub install_bridge_service
 	my ($action) = @_;
 	my $script = "$bindir/install_vzlogger_bridge_service.sh";
 	return message_exit("Bridge service helper not found: $script", 1) if (!-e $script);
+
+	if ($> == 0) {
+		system("sh", $script, $home, $psubfolder, $action);
+		my $exit = $? >> 8;
+		log_control("exit=$exit: sh $script $home $psubfolder $action");
+		return $exit;
+	}
+
+	if (command_exists("sudo")) {
+		system("sudo", "-n", "/bin/sh", $script, $home, $psubfolder, $action);
+		my $exit = $? >> 8;
+		log_control("exit=$exit: sudo -n /bin/sh $script $home $psubfolder $action");
+		return $exit if ($exit == 0);
+		print "Could not run sudo non-interactively. Run as root: sh $script $home $psubfolder $action\n";
+		return $exit || 1;
+	}
+
+	print "Root privileges are required. Run as root: sh $script $home $psubfolder $action\n";
+	log_control("root required: sh $script $home $psubfolder $action");
+	return 2;
+}
+
+sub install_vzlogger_service_override
+{
+	my ($action) = @_;
+	my $script = "$bindir/install_vzlogger_service_override.sh";
+	return message_exit("vzLogger service override helper not found: $script", 1) if (!-e $script);
 
 	if ($> == 0) {
 		system("sh", $script, $home, $psubfolder, $action);
@@ -451,6 +484,7 @@ sub create_debug_log
 	print $fh "vzlogger package: " . package_state("vzlogger") . "\n";
 	print $fh "Volkszaehler apt source: " . (-e "/etc/apt/sources.list.d/volkszaehler-volkszaehler-org-project.list" ? "configured" : "missing") . "\n";
 	print $fh "vzlogger config: " . (-e $config_file ? $config_file : "missing") . "\n";
+	print $fh "vzlogger service config: " . (-e $vzlogger_override_file ? $config_file : "system default") . "\n";
 	print $fh "config validation: " . validation_state() . "\n";
 	print $fh "vzlogger service: " . service_summary("vzlogger") . "\n";
 	print $fh "MQTT bridge service: " . service_summary($bridge_service) . "\n";
@@ -459,6 +493,7 @@ sub create_debug_log
 	print_section($fh, "Command Output");
 	print_command($fh, "vzlogger --version", "vzlogger", "--version");
 	print_command($fh, "systemctl status vzlogger", "systemctl", "status", "vzlogger", "--no-pager");
+	print_command($fh, "systemctl cat vzlogger", "systemctl", "cat", "vzlogger", "--no-pager");
 	print_command($fh, "systemctl status $bridge_service", "systemctl", "status", $bridge_service, "--no-pager");
 	print_command($fh, "journalctl -u vzlogger", "journalctl", "-u", "vzlogger", "-n", "80", "--no-pager");
 	print_command($fh, "journalctl -u $bridge_service", "journalctl", "-u", $bridge_service, "-n", "80", "--no-pager");

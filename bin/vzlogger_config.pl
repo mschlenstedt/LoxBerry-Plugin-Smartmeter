@@ -14,6 +14,7 @@ my $psubfolder = $lbpplugindir;
 my $config_file = "$home/config/plugins/$psubfolder/smartmeter.cfg";
 my $target_file = "$home/config/plugins/$psubfolder/vzlogger.conf";
 my $mapping_file = "$home/config/plugins/$psubfolder/vzlogger_channels.json";
+my $plugin_config_dir = "$home/config/plugins/$psubfolder";
 my $plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file\n";
 my $debug_enabled = ($plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0") eq "1";
 my $log_level = int(clean_log_level($plugin_cfg->param("VZLOGGER.LOGLEVEL"), 0));
@@ -73,7 +74,6 @@ foreach my $config_key (sort keys %flat_config) {
 			api => "null",
 			uuid => $uuid,
 			identifier => $channel->{identifier},
-			middleware => "http://127.0.0.1/middleware.php",
 		};
 		$channel_mapping{$uuid} = {
 			serial => $serial,
@@ -97,7 +97,7 @@ my $config = {
 		port => $local_port,
 		index => JSON::PP::true,
 		timeout => 30,
-		buffer => -10,
+		buffer => 0,
 	},
 	mqtt => {
 		enabled => JSON::PP::true,
@@ -272,7 +272,7 @@ sub configured_channels
 	my %enabled = map { $_ => 1 } config_list_values("$section.OBISCHANNELS");
 
 	my @channels;
-	foreach my $channel (default_channels()) {
+	foreach my $channel (available_channels($section)) {
 		push @channels, $channel if (!$has_configured_channels || $enabled{$channel->{identifier}});
 	}
 
@@ -286,6 +286,27 @@ sub configured_channels
 		$seen{$identifier} = 1;
 	}
 	return @channels;
+}
+
+sub available_channels
+{
+	my ($section) = @_;
+	my $serial = $plugin_cfg->param("$section.SERIAL") || $section;
+	my @channels = read_obis_discovery_cache($serial);
+	return sort_obis_channels(@channels) if (obis_discovery_cache_exists($serial));
+
+	my %seen;
+	foreach my $identifier (config_list_values("$section.OBISCHANNELS")) {
+		$identifier = normalize_obis_identifier($identifier);
+		next if (!$identifier || $seen{$identifier});
+		push @channels, {
+			identifier => $identifier,
+			name => obis_cache_name($identifier),
+		};
+		$seen{$identifier} = 1;
+	}
+
+	return sort_obis_channels(@channels);
 }
 
 sub config_list_values
@@ -306,7 +327,7 @@ sub custom_channels
 		my $identifier = normalize_obis_identifier($line);
 		push @channels, $identifier if ($identifier);
 	}
-	return @channels;
+	return sort_obis_channels(@channels);
 }
 
 sub normalize_obis_identifier
@@ -315,7 +336,7 @@ sub normalize_obis_identifier
 	return "" if (!defined($value));
 	$value =~ s/^\s+|\s+$//g;
 	$value =~ s/\*\d+\z//;
-	return $value if ($value =~ /\A\d+-\d+:\d+\.\d+\.\d+\z/);
+	return $value if ($value =~ /\A\d+-\d+:[A-Za-z0-9]+\.\d+\.\d+\z/);
 	return "";
 }
 
@@ -330,4 +351,71 @@ sub obis_cache_name
 	$name =~ s/[^0-9A-Za-z]+/_/g;
 	$name =~ s/^_+|_+$//g;
 	return "Custom_OBIS_$name";
+}
+
+sub read_obis_discovery_cache
+{
+	my ($serial) = @_;
+	my $file = obis_discovery_cache_file($serial);
+	return () if (!-e $file);
+
+	my @channels;
+	my %seen;
+	if (open(my $fh, "<", $file)) {
+		while (my $line = <$fh>) {
+			chomp($line);
+			my ($identifier, $name) = split(/\t/, $line, 2);
+			$identifier = normalize_obis_identifier($identifier);
+			next if (!$identifier || $seen{$identifier});
+			push @channels, {
+				identifier => $identifier,
+				name => $name || obis_cache_name($identifier),
+			};
+			$seen{$identifier} = 1;
+		}
+		close($fh);
+	}
+	return @channels;
+}
+
+sub obis_discovery_cache_file
+{
+	my ($serial) = @_;
+	$serial =~ s/[^A-Za-z0-9_.:-]/_/g;
+	return "$plugin_config_dir/obis_channels_$serial.cache";
+}
+
+sub obis_discovery_cache_exists
+{
+	my ($serial) = @_;
+	return -e obis_discovery_cache_file($serial);
+}
+
+sub sort_obis_channels
+{
+	return sort { compare_obis_identifier($a->{identifier}, $b->{identifier}) } @_;
+}
+
+sub compare_obis_identifier
+{
+	my ($left, $right) = @_;
+	my @left_parts = obis_sort_parts($left);
+	my @right_parts = obis_sort_parts($right);
+	for (my $i = 0; $i < @left_parts && $i < @right_parts; $i++) {
+		my $cmp = $left_parts[$i] <=> $right_parts[$i];
+		return $cmp if ($cmp);
+	}
+	return ($left || "") cmp ($right || "");
+}
+
+sub obis_sort_parts
+{
+	my ($identifier) = @_;
+	return (999, 999, 999, 999, 999) if (!defined($identifier));
+	if ($identifier =~ /\A(\d+)-(\d+):([A-Za-z0-9]+)\.(\d+)\.(\d+)\z/) {
+		my ($a, $b, $c_part, $d, $e) = ($1, $2, $3, $4, $5);
+		my $c = ($c_part =~ /\A\d+\z/) ? int($c_part) : 900 + ord(uc(substr($c_part, 0, 1)));
+		return (int($a), int($b), $c, int($d), int($e));
+	}
+	return (999, 999, 999, 999, 999);
 }

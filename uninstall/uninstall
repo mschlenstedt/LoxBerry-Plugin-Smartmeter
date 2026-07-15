@@ -10,6 +10,8 @@ CONFIG_DIR="$5/config/plugins/$3"
 VZLOGGER_MARKER="$CONFIG_DIR/vzlogger.installed-by-plugin"
 VZLOGGER_CONFIG="/etc/vzlogger.conf"
 VZLOGGER_CONFIG_MARKER="/etc/vzlogger.conf.smartmeter-v2"
+VZLOGGER_DROPIN_DIR="/etc/systemd/system/vzlogger.service.d"
+VZLOGGER_DROPIN="$VZLOGGER_DROPIN_DIR/smartmeter-v2.conf"
 RUNTIME_DIR="/var/run/shm/$3"
 SOURCE_LIST="/etc/apt/sources.list.d/volkszaehler-volkszaehler-org-project.list"
 KEYRING="/usr/share/keyrings/volkszaehler-volkszaehler-org-project-archive-keyring.gpg"
@@ -32,6 +34,12 @@ if command -v systemctl >/dev/null 2>&1; then
     systemctl stop vzlogger.service >/dev/null 2>&1 || true
     systemctl disable vzlogger.service >/dev/null 2>&1 || true
     systemctl reset-failed vzlogger.service >/dev/null 2>&1 || true
+fi
+
+if [ -f "$VZLOGGER_DROPIN" ]; then
+    echo "<INFO> Removing Smartmeter vzLogger service override"
+    rm -f "$VZLOGGER_DROPIN"
+    rmdir "$VZLOGGER_DROPIN_DIR" >/dev/null 2>&1 || true
 fi
 
 if [ -f "$VZLOGGER_CONFIG_MARKER" ]; then

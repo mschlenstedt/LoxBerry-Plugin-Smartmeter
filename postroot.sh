@@ -11,6 +11,7 @@ CONFIG_FILE="$ARGV5/config/plugins/$ARGV3/smartmeter.cfg"
 BRIDGE_SERVICE="smartmeter-v2-vzlogger-bridge.service"
 BRIDGE_INSTALLER="$ARGV5/bin/plugins/$ARGV3/install_vzlogger_bridge_service.sh"
 VZLOGGER_CONTROL="$ARGV5/bin/plugins/$ARGV3/vzlogger_control.pl"
+VZLOGGER_OVERRIDE_INSTALLER="$ARGV5/bin/plugins/$ARGV3/install_vzlogger_service_override.sh"
 PREUPGRADE_ACTIVE_FILE="$ARGV5/config/plugins/$ARGV3/vzlogger.preupgrade-service-active"
 SMARTMETER_LOG_DIR="$ARGV5/log/plugins/$ARGV3"
 SMARTMETER_LOG_FILE="$SMARTMETER_LOG_DIR/smartmeter.log"
@@ -97,6 +98,11 @@ if [ "$implementation" = "vzlogger" ] && has_configured_vzlogger_meter; then
 fi
 
 rm -f "$PREUPGRADE_ACTIVE_FILE"
+
+if [ -f "$VZLOGGER_OVERRIDE_INSTALLER" ]; then
+	/bin/sh "$VZLOGGER_OVERRIDE_INSTALLER" "$ARGV5" "$ARGV3" remove || \
+		echo "<WARNING> Could not remove SmartMeter vzLogger service override"
+fi
 
 if command -v systemctl >/dev/null 2>&1; then
 	if systemctl list-unit-files "$BRIDGE_SERVICE" >/dev/null 2>&1; then

@@ -1,5 +1,3 @@
-loxberry ALL = NOPASSWD: /bin/cp REPLACELBPCONFIGDIR/vzlogger.conf /etc/vzlogger.conf
-loxberry ALL = NOPASSWD: /usr/bin/touch /etc/vzlogger.conf.smartmeter-v2
 loxberry ALL = NOPASSWD: /bin/systemctl start vzlogger
 loxberry ALL = NOPASSWD: /bin/systemctl stop vzlogger
 loxberry ALL = NOPASSWD: /bin/systemctl restart vzlogger
@@ -10,3 +8,5 @@ loxberry ALL = NOPASSWD: /bin/systemctl restart smartmeter-v2-vzlogger-bridge
 loxberry ALL = NOPASSWD: /bin/systemctl reset-failed smartmeter-v2-vzlogger-bridge
 loxberry ALL = NOPASSWD: /bin/sh REPLACELBPBINDIR/install_vzlogger_bridge_service.sh REPLACELBHOMEDIR REPLACELBPPLUGINDIR install
 loxberry ALL = NOPASSWD: /bin/sh REPLACELBPBINDIR/install_vzlogger_bridge_service.sh REPLACELBHOMEDIR REPLACELBPPLUGINDIR remove
+loxberry ALL = NOPASSWD: /bin/sh REPLACELBPBINDIR/install_vzlogger_service_override.sh REPLACELBHOMEDIR REPLACELBPPLUGINDIR install
+loxberry ALL = NOPASSWD: /bin/sh REPLACELBPBINDIR/install_vzlogger_service_override.sh REPLACELBHOMEDIR REPLACELBPPLUGINDIR remove

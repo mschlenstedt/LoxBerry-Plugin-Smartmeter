@@ -46,15 +46,15 @@ Pro Lesekopf koennen bekannte OBIS-Kanaele ausgewaehlt und weitere zaehlerspezif
 
 ### Anwenden
 
-Mit **Speichern und anwenden** wird die Konfiguration erzeugt und geprüft, nach `/etc/vzlogger.conf` kopiert, der `vzlogger`-Dienst für den Start nach einem LoxBerry-Neustart aktiviert und `vzlogger` neu gestartet. Wenn **Bridge-Service aktiv** eingeschaltet ist, wird zusätzlich die MQTT-Bridge als systemd-Service installiert und gestartet; andernfalls wird nur die Bridge gestoppt.
+Mit **Speichern und anwenden** wird die Konfiguration erzeugt und geprüft. Das Plugin richtet fuer den `vzlogger`-Dienst einen systemd-Drop-in ein, der vzLogger direkt mit `/opt/loxberry/config/plugins/smartmeter-v2/vzlogger.conf` startet. Danach wird der Dienst fuer den Start nach einem LoxBerry-Neustart aktiviert und neu gestartet. Wenn **Bridge-Service aktiv** eingeschaltet ist, wird zusätzlich die MQTT-Bridge als systemd-Service installiert und gestartet; andernfalls wird nur die Bridge gestoppt.
 
-Wenn der Legacy-Modus aktiv ist, stoppt das Anwenden vzLogger und die Bridge.
+Wenn der Legacy-Modus aktiv ist, stoppt das Anwenden vzLogger und die Bridge und entfernt den Plugin-Drop-in wieder. Eine fremde `/etc/vzlogger.conf` wird dabei nicht veraendert.
 
 ### Dienststeuerung
 
 Die vzLogger-Seite zeigt den Status von `vzlogger` und der MQTT-Bridge mit Dienstzustand und PID. Die `vzlogger`-Schaltflächen **Restart**, **Start** und **Stop** sind im vzLogger-Modus auch dann verfügbar, wenn die Bridge deaktiviert ist. Die Bridge-Schaltflächen sind nur verfügbar, wenn **Bridge-Service aktiv** eingeschaltet ist. Start- und Restart-Aktionen erzeugen und pruefen die gespeicherte Konfiguration vor dem Dienststart neu. **Live-Daten (JSON) öffnen** ruft den integrierten vzLogger-HTTP-Dienst auf; `/` liefert wegen der aktivierten Indexfunktion alle konfigurierten Kanäle, `/<UUID>` einen einzelnen Kanal.
 
-Neben den rohen JSON-Daten gibt es eine generisch gerenderte Webseite, die sich alle zwei Sekunden aktualisiert. Die angezeigten Kanäle werden durch die erzeugte OBIS-Kanalkonfiguration bestimmt; die UUID-Zuordnung steht in `vzlogger_channels.json`.
+Neben den rohen JSON-Daten gibt es eine gerenderte Webseite, die sich alle zwei Sekunden aktualisiert. Sie gruppiert die Werte nach I/R-Lesekopf und Kanal und zeigt Kanalnummer, konfigurierten Namen, OBIS-Identifier, UUID sowie den rohen Timestamp mit lesbarer lokaler Zeit. Die Kanal-Metadaten stammen aus `vzlogger_channels.json` und werden im Browser nur neu geladen, wenn sich das erzeugte Mapping ändert.
 
 Wenn der Zaehler keinen Momentanleistungswert liefert, berechnet die MQTT-Bridge zusaetzlich `Consumption_CalculatedPower_OBIS_1.99.0` aus `1.8.0` und `Delivery_CalculatedPower_OBIS_2.99.0` aus `2.8.0`, sobald zwei unterschiedliche Zaehlerstaende vorliegen. Die Einheit folgt der Einheit des vom Zaehler gelieferten Zaehlerstands pro Stunde.
 

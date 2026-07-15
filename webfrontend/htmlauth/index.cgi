@@ -24,10 +24,12 @@
 use CGI;
 use Config::Simple;
 use File::Path qw(make_path);
+use JSON::PP;
 use LoxBerry::System;
 #use LoxBerry::Web;
 use LoxBerry::JSON; # Available with LoxBerry 2.0
 use LoxBerry::Log;
+use POSIX ":sys_wait_h";
 use warnings;
 use strict;
 
@@ -129,7 +131,13 @@ sub form_vzlogger
 		$control_action = "restart-bridge" if ($action eq "restart-bridge");
 		$control_action = "start-bridge" if ($action eq "start-bridge");
 		$control_action = "stop-bridge" if ($action eq "stop-bridge");
-		my $output = ($control_action eq "apply") ? apply_selected_implementation() : run_control($control_action);
+		$control_action = "read-obis" if ($action eq "read-obis");
+		my $output = "";
+		if ($action eq "read-obis") {
+			$output = read_obis_channels($q->{obis_serial}, @heads);
+		} else {
+			$output = ($control_action eq "apply") ? apply_selected_implementation() : run_control($control_action);
+		}
 		if ($control_action eq "debug-log" && $output =~ m{Created debug log: \Q$lbhomedir\E/log/plugins/\Q$lbpplugindir\E/([^/\s]+)}) {
 			print $cgi->redirect(-url => log_redirect_url("plugins/$lbpplugindir/$1"));
 			exit;
@@ -383,7 +391,7 @@ sub ensure_head_defaults
 		$plugin_cfg->param("$serial.DATABITS", "");
 		$plugin_cfg->param("$serial.STOPBITS", "");
 		$plugin_cfg->param("$serial.PARITY", "");
-		$plugin_cfg->param("$serial.OBISCHANNELS", join(",", map { $_->{identifier} } default_obis_channels()));
+		$plugin_cfg->param("$serial.OBISCHANNELS", "");
 		$plugin_cfg->param("$serial.OBISCUSTOM", "");
 	}
 	$plugin_cfg->save;
@@ -418,11 +426,64 @@ sub save_vzlogger_form
 		$plugin_cfg->param("$serial.DATABITS", clean_config_value($q->{"$serial\_databits"}, qr/\A\d*\z/, ""));
 		$plugin_cfg->param("$serial.STOPBITS", clean_config_value($q->{"$serial\_stopbits"}, qr/\A\d*\z/, ""));
 		$plugin_cfg->param("$serial.PARITY", clean_config_value($q->{"$serial\_parity"}, qr/\A[A-Za-z0-9_.:-]*\z/, ""));
-		my @selected_obis = grep { defined($_) && $_ =~ /\A\d-\d:\d+\.\d+\.\d+\z/ } $cgi->multi_param("$serial\_obis");
+		my @selected_obis = grep { normalize_obis_identifier($_) ne "" } $cgi->multi_param("$serial\_obis");
+		@selected_obis = map { normalize_obis_identifier($_) } @selected_obis;
 		$plugin_cfg->param("$serial.OBISCHANNELS", join(",", @selected_obis));
 		$plugin_cfg->param("$serial.OBISCUSTOM", clean_multiline_obis($q->{"$serial\_obis_custom"}));
 	}
 	$plugin_cfg->save;
+}
+
+sub read_obis_channels
+{
+	my ($target_serial, @heads) = @_;
+	$target_serial = clean_config_value($target_serial, qr/\A[A-Za-z0-9_.:-]+\z/, "");
+	return "No I/R head selected for OBIS channel discovery.\n" if (!$target_serial);
+
+	my %known_heads = map {
+		my $serial = $_;
+		$serial =~ s%/dev/serial/smartmeter/%%g;
+		$serial => 1;
+	} @heads;
+	return "Unknown I/R head '$target_serial'.\n" if (!$known_heads{$target_serial});
+
+	my $was_active = service_state("vzlogger") eq "active";
+	my $output = "Read OBIS channels for $target_serial.\n";
+	if ($was_active) {
+		$output .= "Stopping vzlogger service before OBIS discovery.\n";
+		run_control("stop-vzlogger");
+	}
+
+	if (!command_exists("vzlogger")) {
+		$output .= "vzlogger binary not found. Install vzlogger before reading OBIS channels.\n";
+	} else {
+		my ($test_config, $test_log, $config_error) = write_vzlogger_obis_test_config($target_serial);
+		if ($config_error) {
+			$output .= $config_error;
+		} else {
+			unlink($test_log) if (-e $test_log);
+			my $vzlogger_output = run_vzlogger_obis_test($test_config);
+			write_control_log("read-obis-vzlogger", "config=$test_config\nlog=$test_log\n$vzlogger_output");
+			$output .= "vzLogger OBIS discovery completed. Details were written to the control log.\n";
+			$output .= "Discovery log: $test_log\n";
+
+			my @channels = channels_from_vzlogger_log($test_log);
+			if (@channels) {
+				write_obis_discovery_cache($target_serial, @channels);
+				$output .= "Detected " . scalar(@channels) . " OBIS channel(s) for $target_serial.\n";
+				$output .= join("\n", map { " - " . $_->{identifier} . " (" . $_->{name} . ")" } @channels) . "\n";
+			} else {
+				$output .= "No OBIS channels detected for $target_serial. Check the vzLogger discovery log and meter settings.\n";
+			}
+		}
+	}
+
+	if ($was_active) {
+		$output .= "Restarting vzlogger service after OBIS channel discovery.\n";
+		run_control("start-vzlogger");
+	}
+
+	return $output;
 }
 
 sub apply_selected_implementation
@@ -435,6 +496,185 @@ sub apply_selected_implementation
 
 	remove_legacy_cronjobs();
 	return run_control("apply");
+}
+
+sub write_vzlogger_obis_test_config
+{
+	my ($serial) = @_;
+	my $meter = $plugin_cfg->param("$serial.METER") || "0";
+	return ("", "", "No meter preset is configured for $serial.\n") if ($meter eq "0");
+
+	my $protocol_name = $meter eq "manual" ? ($plugin_cfg->param("$serial.PROTOCOL") || "") : $meter;
+	my $protocol = protocol_for_meter($protocol_name);
+	return ("", "", "Meter preset '$protocol_name' cannot be mapped to a vzLogger protocol.\n") if (!$protocol);
+
+	my $device = $plugin_cfg->param("$serial.DEVICE") || "/dev/serial/smartmeter/$serial";
+	return ("", "", "No serial device is configured for $serial.\n") if (!$device);
+
+	my $meter_config = {
+		enabled => JSON::PP::true,
+		allowskip => JSON::PP::true,
+		aggtime => -1,
+		protocol => $protocol,
+		device => $device,
+		channels => [],
+	};
+
+	if ($protocol eq "sml") {
+		$meter_config->{interval} = -1;
+	} else {
+		$meter_config->{interval} = -1;
+		$meter_config->{read_timeout} = clean_number($plugin_cfg->param("$serial.TIMEOUT"), 10);
+		$meter_config->{baudrate} = clean_number($plugin_cfg->param("$serial.BAUDRATE"), default_baudrate($protocol_name));
+		$meter_config->{baudrate_read} = clean_number($plugin_cfg->param("$serial.STARTBAUDRATE"), 300);
+		$meter_config->{parity} = serial_mode(
+			$plugin_cfg->param("$serial.DATABITS"),
+			$plugin_cfg->param("$serial.PARITY"),
+			$plugin_cfg->param("$serial.STOPBITS")
+		);
+	}
+
+	my $safe_serial = safe_filename($serial);
+	my $log_file = "$lbhomedir/log/plugins/$lbpplugindir/vzLogger_$safe_serial.log";
+	my $config_file = "$lbpconfigdir/vzLogger_IrTest_$safe_serial.conf";
+	my $local_port = clean_number($plugin_cfg->param("VZLOGGER.LOCALPORT"), 18080);
+	my $config = {
+		verbosity => 15,
+		log => $log_file,
+		retry => 0,
+		local => {
+			enabled => JSON::PP::true,
+			port => $local_port,
+			index => JSON::PP::true,
+			timeout => 30,
+			buffer => 0,
+		},
+		mqtt => {
+			enabled => JSON::PP::false,
+		},
+		meters => [ $meter_config ],
+	};
+
+	make_path("$lbhomedir/log/plugins/$lbpplugindir") if (!-d "$lbhomedir/log/plugins/$lbpplugindir");
+	make_path($lbpconfigdir) if (!-d $lbpconfigdir);
+	open(my $fh, ">", $config_file) or return ("", "", "Could not write vzLogger discovery config $config_file: $!\n");
+	print $fh JSON::PP->new->utf8->pretty->canonical->encode($config);
+	close($fh);
+
+	return ($config_file, $log_file, "");
+}
+
+sub run_vzlogger_obis_test
+{
+	my ($config_file) = @_;
+	my $console_log = "$config_file.output.log";
+	unlink($console_log) if (-e $console_log);
+
+	my $pid = fork();
+	return "Could not fork vzlogger discovery run: $!\n" if (!defined($pid));
+	if ($pid == 0) {
+		open STDIN, "</dev/null";
+		open STDOUT, ">", $console_log;
+		open STDERR, ">&STDOUT";
+		exec("vzlogger", "-c", $config_file);
+		exit 1;
+	}
+
+	my $status = "timeout";
+	for (my $i = 0; $i < 15; $i++) {
+		my $done = waitpid($pid, WNOHANG);
+		if ($done == $pid) {
+			$status = "exit=" . ($? >> 8);
+			last;
+		}
+		sleep(1);
+	}
+	if ($status eq "timeout") {
+		kill("TERM", $pid);
+		sleep(1);
+		kill("KILL", $pid) if (kill(0, $pid));
+		waitpid($pid, 0);
+	}
+
+	my $output = "";
+	if (-e $console_log && open(my $fh, "<", $console_log)) {
+		$output = do { local $/; <$fh> };
+		close($fh);
+	}
+	$output .= "\n" if ($output ne "" && $output !~ /\n\z/);
+	$output .= "$status\n";
+	return $output || "vzlogger discovery run produced no console output.\n";
+}
+
+sub channels_from_vzlogger_log
+{
+	my ($log_file) = @_;
+	return () if (!$log_file || !-e $log_file);
+
+	my @channels;
+	my %seen;
+	if (open(my $fh, "<", $log_file)) {
+		while (my $line = <$fh>) {
+			while ($line =~ /ObisIdentifier:([A-Za-z0-9]+-\d+:[A-Za-z0-9]+\.\d+\.\d+)(?:\*\d+)?/g) {
+				my $identifier = normalize_obis_identifier($1);
+				next if (!$identifier || $seen{$identifier} || is_discovery_excluded_identifier($identifier));
+				push @channels, {
+					identifier => $identifier,
+					name => obis_cache_name($identifier),
+				};
+				$seen{$identifier} = 1;
+			}
+		}
+		close($fh);
+	}
+	return sort_obis_channels(@channels);
+}
+
+sub protocol_for_meter
+{
+	my ($meter) = @_;
+	return "sml" if (defined($meter) && $meter =~ /sml\z/i);
+	return "d0" if (defined($meter) && ($meter =~ /d0\z/i || $meter =~ /do\z/i));
+	return "";
+}
+
+sub default_baudrate
+{
+	my ($meter) = @_;
+	return 115200 if (defined($meter) && $meter =~ /sagemcom/i);
+	return 4800 if (defined($meter) && $meter =~ /landisgyr[e]?(320|350)/i);
+	return 2400 if (defined($meter) && $meter =~ /(t550|uh50)/i);
+	return 9600 if (defined($meter) && $meter =~ /(iskra|pafal|siemens)/i);
+	return 300;
+}
+
+sub serial_mode
+{
+	my ($databits, $parity, $stopbits) = @_;
+	$databits ||= 7;
+	$parity ||= "even";
+	$stopbits ||= 1;
+
+	my $parity_char = "N";
+	$parity_char = "E" if (lc($parity) eq "even");
+	$parity_char = "O" if (lc($parity) eq "odd");
+
+	return "$databits$parity_char$stopbits";
+}
+
+sub clean_number
+{
+	my ($value, $default) = @_;
+	return int($value) if (defined($value) && $value =~ /\A\d+\z/);
+	return $default;
+}
+
+sub safe_filename
+{
+	my ($value) = @_;
+	$value ||= "";
+	$value =~ s/[^A-Za-z0-9_.:-]/_/g;
+	return $value || "unknown";
 }
 
 sub implementation_mode
@@ -496,6 +736,7 @@ sub build_head_rows
 		my $serial = $device;
 		$serial =~ s%/dev/serial/smartmeter/%%g;
 		my %enabled_obis = enabled_obis_channels($serial);
+		my @available_obis = available_obis_channels($serial);
 		push @rows, {
 			NAME => $plugin_cfg->param("$serial.NAME") || $serial,
 			SERIAL => $serial,
@@ -517,8 +758,9 @@ sub build_head_rows
 						NAME => $_->{name},
 						CHECKED => $enabled_obis{$_->{identifier}} ? "checked" : "",
 					}
-				} default_obis_channels()
+				} @available_obis
 			],
+			OBIS_CHANNELS_EMPTY => @available_obis ? 0 : 1,
 		};
 	}
 	return @rows;
@@ -527,7 +769,6 @@ sub build_head_rows
 sub enabled_obis_channels
 {
 	my ($serial) = @_;
-	return map { $_->{identifier} => 1 } default_obis_channels() if (!defined($plugin_cfg->param("$serial.OBISCHANNELS")));
 	my %enabled = map { $_ => 1 } config_list_values("$serial.OBISCHANNELS");
 	return %enabled;
 }
@@ -539,6 +780,25 @@ sub config_list_values
 	return () if (!defined($value));
 	return grep { defined($_) && $_ ne "" } @{$value} if (ref($value) eq "ARRAY");
 	return grep { $_ ne "" } split(/\s*,\s*/, $value);
+}
+
+sub available_obis_channels
+{
+	my ($serial) = @_;
+	my @channels = read_obis_discovery_cache($serial);
+	return sort_obis_channels(@channels) if (obis_discovery_cache_exists($serial));
+
+	my %seen;
+	foreach my $identifier (config_list_values("$serial.OBISCHANNELS")) {
+		$identifier = normalize_obis_identifier($identifier);
+		next if (!$identifier || $seen{$identifier});
+		push @channels, {
+			identifier => $identifier,
+			name => obis_cache_name($identifier),
+		};
+		$seen{$identifier} = 1;
+	}
+	return sort_obis_channels(@channels);
 }
 
 sub default_obis_channels
@@ -574,14 +834,125 @@ sub clean_multiline_obis
 	return join("\n", @clean);
 }
 
+sub custom_channels
+{
+	my ($serial) = @_;
+	my $value = $plugin_cfg->param("$serial.OBISCUSTOM") || "";
+	my @channels;
+	foreach my $line (split(/\\n|\r?\n|,|;/, $value)) {
+		my $identifier = normalize_obis_identifier($line);
+		push @channels, $identifier if ($identifier);
+	}
+	return sort_obis_channels(@channels);
+}
+
 sub normalize_obis_identifier
 {
 	my ($value) = @_;
 	return "" if (!defined($value));
 	$value =~ s/^\s+|\s+$//g;
 	$value =~ s/\*\d+\z//;
-	return $value if ($value =~ /\A\d+-\d+:\d+\.\d+\.\d+\z/);
+	return $value if ($value =~ /\A\d+-\d+:[A-Za-z0-9]+\.\d+\.\d+\z/);
 	return "";
+}
+
+sub obis_cache_name
+{
+	my ($identifier) = @_;
+	my %known = map { $_->{identifier} => $_->{name} } default_obis_channels();
+	return $known{$identifier} if ($known{$identifier});
+
+	my $name = $identifier;
+	$name =~ s/\A\d+-\d+://;
+	$name =~ s/[^0-9A-Za-z]+/_/g;
+	$name =~ s/^_+|_+$//g;
+	return "Custom_OBIS_$name";
+}
+
+sub obis_discovery_cache_file
+{
+	my ($serial) = @_;
+	$serial =~ s/[^A-Za-z0-9_.:-]/_/g;
+	return "$lbpconfigdir/obis_channels_$serial.cache";
+}
+
+sub obis_discovery_cache_exists
+{
+	my ($serial) = @_;
+	return -e obis_discovery_cache_file($serial);
+}
+
+sub read_obis_discovery_cache
+{
+	my ($serial) = @_;
+	my $file = obis_discovery_cache_file($serial);
+	return () if (!-e $file);
+
+	my @channels;
+	my %seen;
+	if (open(my $fh, "<", $file)) {
+		while (my $line = <$fh>) {
+			chomp($line);
+			my ($identifier, $name) = split(/\t/, $line, 2);
+			$identifier = normalize_obis_identifier($identifier);
+			next if (!$identifier || $seen{$identifier});
+			push @channels, {
+				identifier => $identifier,
+				name => $name || obis_cache_name($identifier),
+			};
+			$seen{$identifier} = 1;
+		}
+		close($fh);
+	}
+	return @channels;
+}
+
+sub write_obis_discovery_cache
+{
+	my ($serial, @channels) = @_;
+	my $file = obis_discovery_cache_file($serial);
+	my $tmp = "$file.$$";
+	open(my $fh, ">", $tmp) or return;
+	foreach my $channel (@channels) {
+		print $fh $channel->{identifier} . "\t" . $channel->{name} . "\n";
+	}
+	close($fh);
+	rename($tmp, $file);
+}
+
+sub is_discovery_excluded_identifier
+{
+	my ($identifier) = @_;
+	return defined($identifier) && $identifier =~ /\A1-0:(?:1|2)\.99\.0\z/;
+}
+
+sub sort_obis_channels
+{
+	return sort { compare_obis_identifier($a->{identifier}, $b->{identifier}) } @_;
+}
+
+sub compare_obis_identifier
+{
+	my ($left, $right) = @_;
+	my @left_parts = obis_sort_parts($left);
+	my @right_parts = obis_sort_parts($right);
+	for (my $i = 0; $i < @left_parts && $i < @right_parts; $i++) {
+		my $cmp = $left_parts[$i] <=> $right_parts[$i];
+		return $cmp if ($cmp);
+	}
+	return ($left || "") cmp ($right || "");
+}
+
+sub obis_sort_parts
+{
+	my ($identifier) = @_;
+	return (999, 999, 999, 999, 999) if (!defined($identifier));
+	if ($identifier =~ /\A(\d+)-(\d+):([A-Za-z0-9]+)\.(\d+)\.(\d+)\z/) {
+		my ($a, $b, $c_part, $d, $e) = ($1, $2, $3, $4, $5);
+		my $c = ($c_part =~ /\A\d+\z/) ? int($c_part) : 900 + ord(uc(substr($c_part, 0, 1)));
+		return (int($a), int($b), $c, int($d), int($e));
+	}
+	return (999, 999, 999, 999, 999);
 }
 
 sub run_control

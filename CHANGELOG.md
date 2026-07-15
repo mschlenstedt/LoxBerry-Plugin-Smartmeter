@@ -4,6 +4,14 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
+- Start the system `vzlogger` service directly with the generated plugin configuration through a SmartMeter-managed systemd drop-in instead of copying the file to `/etc/vzlogger.conf`; remove the override again when switching to Legacy mode or uninstalling the plugin.
+- Set the generated local vzLogger HTTP ring buffer to `0` so the live JSON endpoint exposes the current readings instead of retaining ten tuples per channel.
+- Structure the rendered vzLogger live-data page by I/R reading head and configured channel, show channel number, OBIS identifier and mapped name, add readable local times next to raw timestamps, and reload channel metadata only when its generated mapping changes.
+- Add dynamic vzLogger OBIS channel discovery: the GUI can read available channels through a temporary vzLogger test configuration with only the selected I/R head, empty `channels`, disabled MQTT, verbose logging, and per-head log parsing, cache the result per I/R head, keep unchecked discovered channels visible on later page loads, omit legacy-calculated power channels and previously configured but undiscovered channels after a successful read, and generate `vzlogger.conf` from selected discovered channels plus the additional OBIS fallback field.
+- Keep the OBIS discovery result message concise in the web UI while writing the temporary vzLogger test output to the control log, and avoid noisy SML parser array-to-string notices during legacy reads.
+- Sort discovered vzLogger OBIS channels numerically in the UI and generated configuration.
+- Avoid Perl warnings while sorting alphanumeric OBIS identifiers such as `1-0:C.5.0` during vzLogger configuration generation.
+- Omit the unused Volkszähler endpoint URL from generated vzLogger channels because Smartmeter uses `api: "null"` and processes readings through the local MQTT bridge.
 - Write vzLogger MQTT bridge HTTP cache files only on the configured update cycle instead of after every received MQTT reading, reducing SD-card writes and system load.
 
 ## 2.0.0.27 - 2026-07-11
@@ -22,7 +30,7 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## 2.0.0.25 - 2026-07-11
 
-- Regenerate and validate the saved vzLogger configuration before manual service Start/Restart actions, so service controls no longer reuse a stale `/etc/vzlogger.conf`.
+- Regenerate and validate the saved vzLogger configuration before manual service Start/Restart actions, so service controls no longer reuse a stale generated configuration.
 - Fail vzLogger validation when meter reading is enabled but no detected I/R head has a meter preset selected, instead of attempting to start `vzlogger` with an empty `meters` list.
 
 ## 2.0.0.24 - 2026-07-11

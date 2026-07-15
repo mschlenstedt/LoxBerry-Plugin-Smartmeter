@@ -118,7 +118,7 @@ Expected:
 Known gaps:
 
 - Serial and D0 settings are only partially mapped from legacy fields.
-- Dynamic OBIS channel discovery is not implemented yet.
+- Dynamic OBIS channel discovery now exists for direct legacy meter reads; target-system validation with real meters is still pending.
 - Guided migration from an existing legacy configuration to vzLogger configuration is not implemented yet.
 - The UI does not yet provide a full table of last cached values.
 - Documentation for guided migration is pending until the migration flow exists.
@@ -145,7 +145,7 @@ Expected:
 
 Known gaps:
 
-- The plugin currently applies generated configuration through `/etc/vzlogger.conf`; support for a custom vzLogger config path is undecided.
+- The plugin starts vzLogger directly with the generated configuration below the plugin config directory through a SmartMeter-managed systemd drop-in.
 - Cleanup policy for generated `vzlogger.conf`, `vzlogger_channels.json`, and runtime cache files is not fully defined.
 
 Impact:

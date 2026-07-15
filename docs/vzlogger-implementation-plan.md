@@ -202,16 +202,16 @@ Implemented files:
 - `[x]` `start`/`restart` service actions: regenerate and validate before starting services so form changes do not reuse stale generated config.
 - `[x]` `status`: report package, apt source, config, validation, vzLogger service, bridge service/process.
 - `[x]` `debug-log`: create a diagnostic log for troubleshooting and MQTT parser verification.
-- `[~]` Copy generated config to `/etc/vzlogger.conf` during apply.
-- `[ ]` Decide whether to support a custom vzLogger config path instead of overwriting `/etc/vzlogger.conf`.
+- `[x]` Start vzLogger directly with the generated plugin config through a SmartMeter-managed systemd drop-in.
+- `[x]` Preserve unrelated `/etc/vzlogger.conf` files and remove the plugin drop-in on Legacy switch or uninstall.
 - `[ ]` Test permission behavior when actions are triggered from the web UI as the LoxBerry user.
 
 Target finding (2.0.0.15): the bridge unit lacked LoxBerry's Perl library environment and exited with status 2 because `LoxBerry::System` was not in `@INC`. The unit template now sets `LBHOMEDIR` and `PERL5LIB` explicitly.
 
 Decision notes:
 
-- Current apply behavior uses `/etc/vzlogger.conf`, because the packaged vzLogger service is expected to use that path.
-- If permission fails, the control script reports that root/manual copy is required.
+- Current apply behavior installs a systemd drop-in that runs vzLogger in the foreground with the generated plugin config path.
+- If installing the drop-in fails, the control script does not restart vzLogger with a different or stale configuration.
 - Meter reading with no selected meter preset is invalid. A detected I/R head alone is not enough to start vzLogger because the generated config would contain an empty `meters` list.
 
 Implemented files:
@@ -233,7 +233,7 @@ Implemented files:
 Decision notes:
 
 - Legacy behavior is preserved as a supported mode; migration to vzLogger should be explicit and reversible.
-- Generated system-wide `/etc/vzlogger.conf` is removed on uninstall only if `/etc/vzlogger.conf.smartmeter-v2` marks it as SmartMeter-generated.
+- The SmartMeter systemd drop-in is removed on Legacy switch and uninstall. Older generated `/etc/vzlogger.conf` copies are removed only when `/etc/vzlogger.conf.smartmeter-v2` marks them as SmartMeter-generated.
 - The external apt source and keyring are removed on uninstall. The `vzlogger` package is removed only if a marker shows that this plugin introduced it.
 
 Implemented files:

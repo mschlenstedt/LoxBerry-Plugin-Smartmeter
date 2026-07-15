@@ -490,7 +490,7 @@ class SML_PARSER {
         $result['abortOnError']  = $this->readUnsigned();
 		$this->debug('abortOnError ('.$result['abortOnError'].')');
         $result['messageBody']   = $this->readMessageBody();
-		$this->debug('messageBody ('.$result['messageBody'].')');
+		$this->debug('messageBody (' . (is_array($result['messageBody']) ? json_encode($result['messageBody']) : $result['messageBody']) . ')');
         if ($crc=="CRC16_X_25") {
             $crc_calc = strtoupper(substr('000'.dechex(($this->crc16_message ^ 0xffff)),-4)); # CRC16_X_25
             $result['crc_calc'] = substr($crc_calc,-2).substr($crc_calc,0,2); # Wert 4-stellig ausgeben  // CRC16_X_25

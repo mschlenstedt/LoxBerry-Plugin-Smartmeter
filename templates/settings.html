@@ -71,6 +71,7 @@
 	</div>
 	<form method="post" data-ajax="false" name="vzlogger_form" id="vzlogger_form" action="./index.cgi">
 	<input type="hidden" name="saveformdata" value="1">
+	<input type="hidden" id="obis_serial" name="obis_serial" value="">
 
 	<TMPL_IF VZLOGGER_MESSAGE>
 		<pre style="background-color: rgba(255,255,200,0.4); border: 1px solid #888; padding: 10px;"><TMPL_VAR VZLOGGER_MESSAGE></pre>
@@ -284,6 +285,10 @@
 	<tr>
 		<td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS></td>
 		<td>
+			<button type="submit" name="submitaction" value="read-obis" onclick="document.getElementById('obis_serial').value='<TMPL_VAR NAME=SERIAL>';" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search"><TMPL_VAR NAME=T::VZLOGGER.READ_OBIS_CHANNELS></button>
+			<TMPL_IF NAME=OBIS_CHANNELS_EMPTY>
+				<p><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_EMPTY></p>
+			</TMPL_IF>
 			<TMPL_LOOP NAME=OBIS_CHANNELS>
 				<label>
 					<input type="checkbox" name="<TMPL_VAR NAME=FIELD_NAME>" value="<TMPL_VAR NAME=IDENTIFIER>" <TMPL_VAR NAME=CHECKED>>

@@ -46,15 +46,15 @@ For each reader, known OBIS channels can be selected and additional meter-specif
 
 ### Apply Flow
 
-Use **Save and apply** to generate and validate the config, copy it to `/etc/vzlogger.conf`, enable the `vzlogger` service for LoxBerry reboot startup, and restart `vzlogger`. If **Bridge service enabled** is on, the plugin also installs and starts the MQTT bridge as a systemd service; otherwise it only stops the bridge.
+Use **Save and apply** to generate and validate the config. The plugin installs a systemd drop-in for the `vzlogger` service that starts vzLogger directly with `/opt/loxberry/config/plugins/smartmeter-v2/vzlogger.conf`. It then enables the service for LoxBerry reboot startup and restarts it. If **Bridge service enabled** is on, the plugin also installs and starts the MQTT bridge as a systemd service; otherwise it only stops the bridge.
 
-If Legacy mode is active, applying the configuration stops vzLogger and the bridge.
+If Legacy mode is active, applying the configuration stops vzLogger and the bridge and removes the plugin drop-in. An unrelated `/etc/vzlogger.conf` is left unchanged.
 
 ### Service Control
 
 The vzLogger page shows the status of `vzlogger` and the MQTT bridge with service state and PID. The `vzlogger` **Restart**, **Start**, and **Stop** buttons are available in vzLogger mode even when the bridge is disabled. The bridge buttons are available only while **Bridge service enabled** is on. Start and Restart actions regenerate and validate the saved configuration before starting services. **Open live data (JSON)** opens vzLogger's integrated HTTP service; `/` returns all configured channels because the index is enabled, while `/<UUID>` returns one channel.
 
-In addition to raw JSON, an automatically refreshed generic web page renders the response every two seconds. The generated OBIS channel configuration determines which channels appear; `vzlogger_channels.json` contains the UUID mapping.
+In addition to raw JSON, a rendered page refreshes the readings every two seconds. It groups values by I/R reading head and channel and shows the channel number, configured name, OBIS identifier, UUID, and raw timestamp with readable local time. Channel metadata comes from `vzlogger_channels.json` and is reloaded by the browser only when the generated mapping changes.
 
 If the meter does not provide an instantaneous power value, the MQTT bridge additionally calculates `Consumption_CalculatedPower_OBIS_1.99.0` from `1.8.0` and `Delivery_CalculatedPower_OBIS_2.99.0` from `2.8.0` once two different counter readings are available. The unit follows the unit of the received counter value per hour.
 
