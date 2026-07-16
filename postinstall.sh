@@ -26,6 +26,7 @@ ARGV5=$5 # Fifth argument is Base folder of LoxBerry
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/install_vzlogger_bridge_service.sh
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/install_vzlogger_service_override.sh
 /bin/chmod +x $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/vzlogger_live.cgi
+/bin/chmod +x $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/vzlogger_config.cgi
 
 echo "<INFO> Rename htaccess to .htaccess"
 mv $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/htaccess $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/.htaccess

@@ -175,7 +175,7 @@ Implemented files:
 - `[x]` Reduce the normal workflow to one save/apply action; retain validation for manually edited configuration.
 - `[x]` Separate bridge and vzLogger debug controls and document their log paths.
 - `[~]` Add better LoxBerry-style layout polish (implementation tabs and service grouping refined after 2.0.0.15 test).
-- `[~]` Add log links for vzLogger, bridge, and generated config (service log links added; generated config remains a path display).
+- `[x]` Add log links for vzLogger and bridge plus a read-only, password-masked generated-config viewer beside the displayed path.
 - `[ ]` Add last cached values table.
 - `[x]` Add explicit OBIS channel selection and custom OBIS entry.
 
@@ -199,7 +199,7 @@ Implemented files:
 - `[x]` `generate`: generate config and validate.
 - `[x]` `validate`: regenerate the saved config, then validate generated config and mapping.
 - `[x]` `apply`: generate, validate, stop if disabled, otherwise restart vzLogger and bridge.
-- `[x]` `start`/`restart` service actions: regenerate and validate before starting services so form changes do not reuse stale generated config.
+- `[x]` `start`/`restart` service actions: use and validate the current generated config without regeneration, apply only the requested service activation plus its log controls, require MQTT in both saved and generated configuration before starting the bridge, and leave every other unsaved form value untouched; vzLogger updates only the root log settings in `vzlogger.conf`.
 - `[x]` `status`: report package, apt source, config, validation, vzLogger service, bridge service/process.
 - `[x]` `debug-log`: create a diagnostic log for troubleshooting and MQTT parser verification.
 - `[x]` Start vzLogger directly with the generated plugin config through a SmartMeter-managed systemd drop-in.

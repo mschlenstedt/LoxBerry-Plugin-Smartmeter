@@ -71,12 +71,27 @@ if( $q->{ajax} ) {
 			ensure_vzlogger_defaults();
 			my @heads = detect_heads();
 			ensure_head_defaults(@heads);
-			save_vzlogger_form(@heads);
+			# Apply the submitted fields only to the in-memory Config::Simple object.
+			# OBIS discovery must use the current draft without persisting normal
+			# settings or committing staged meter removals.
+			save_vzlogger_form("__draft__", @heads);
+			cache_pending_meter_protocol($q->{obis_serial});
 			$response = start_obis_discovery_background($q->{obis_serial}, @heads);
 		} elsif ($action eq "obis-status") {
 			$response = obis_discovery_status();
 		} elsif ($action eq "obis-cancel") {
 			$response = cancel_obis_discovery($q->{job_id});
+		} elsif ($action eq "service-status") {
+			load_service_ajax_config();
+			$response = service_status_response();
+		} elsif ($action eq "service-action") {
+			die "Service actions require POST." if (($ENV{REQUEST_METHOD} || "") ne "POST");
+			load_service_ajax_config();
+			$response = run_service_ajax_action($q->{service_action});
+		} elsif ($action eq "ir-scan") {
+			die "I/R head discovery requires POST." if (($ENV{REQUEST_METHOD} || "") ne "POST");
+			load_service_ajax_config();
+			$response = scan_ir_heads_ajax();
 		} else {
 			$response->{message} = "Unknown AJAX action.";
 		}
@@ -138,8 +153,13 @@ sub form_vzlogger
 	ensure_head_defaults(@heads);
 
 	if ($q->{saveformdata}) {
-		save_vzlogger_form(@heads);
 		my $action = $q->{submitaction} || "apply";
+		my $save_output = "";
+		if ($action =~ /\A(?:start|stop|restart)-(?:vzlogger|bridge)\z/) {
+			save_service_log_settings($action);
+		} else {
+			$save_output = save_vzlogger_form(@heads);
+		}
 		my $control_action = "apply";
 		$control_action = "apply" if ($action eq "apply");
 		$control_action = "validate" if ($action eq "validate");
@@ -151,11 +171,11 @@ sub form_vzlogger
 		$control_action = "start-bridge" if ($action eq "start-bridge");
 		$control_action = "stop-bridge" if ($action eq "stop-bridge");
 		$control_action = "read-obis" if ($action eq "read-obis");
-		my $output = "";
+		my $output = $save_output;
 		if ($action eq "read-obis") {
-			$output = read_obis_channels($q->{obis_serial}, @heads);
+			$output .= read_obis_channels($q->{obis_serial}, @heads);
 		} else {
-			$output = ($control_action eq "apply") ? apply_selected_implementation() : run_control($control_action);
+			$output .= ($control_action eq "apply") ? apply_selected_implementation() : run_control($control_action);
 		}
 		if ($control_action eq "debug-log" && $output =~ m{Created debug log: \Q$lbhomedir\E/log/plugins/\Q$lbpplugindir\E/([^/\s]+)}) {
 			print $cgi->redirect(-url => log_redirect_url("plugins/$lbpplugindir/$1"));
@@ -172,6 +192,7 @@ sub form_vzlogger
 		}
 		$template->param("VZLOGGER_MESSAGE", $output);
 		$plugin_cfg = Config::Simple->new($config_file) or die "Could not reload $config_file";
+		@heads = detect_heads();
 	}
 
 	my @rows = build_head_rows(@heads);
@@ -226,6 +247,8 @@ sub form_vzlogger
 	$template->param("VZLOGGER_MQTTTIMESTAMP" => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP"), 1));
 	add_service_template_params();
 	$template->param("VZLOGGER_CONFIG" => "$lbpconfigdir/vzlogger.conf");
+	$template->param("VZLOGGER_CONFIG_URL" => "./vzlogger_config.cgi");
+	$template->param("VZLOGGER_CONFIG_DISABLED" => (-e "$lbpconfigdir/vzlogger.conf" ? "" : "ui-disabled"));
 	$template->param("VZLOGGER_LIVEURL" => "http://$ENV{HTTP_HOST}:$local_port/");
 	$template->param("VZLOGGER_RENDERED_URL" => "./vzlogger_live.cgi");
 	add_http_cache_template_params(@rows);
@@ -237,21 +260,13 @@ sub add_service_template_params
 {
 	my $vzlogger_expected_active = implementation_mode() eq "vzlogger";
 	my $mqtt_enabled = clean_boolean($plugin_cfg->param("VZLOGGER.MQTTENABLED"), 1);
-	my $bridge_available = $vzlogger_expected_active && $mqtt_enabled;
-	my $bridge_expected_active = $bridge_available && (($plugin_cfg->param("MAIN.READ") || "0") eq "1");
+	my $bridge_expected_active = $vzlogger_expected_active && $mqtt_enabled && (($plugin_cfg->param("MAIN.READ") || "0") eq "1");
 	my $vzlogger_state = service_state("vzlogger");
 	my $bridge_state = service_state("smartmeter-v2-vzlogger-bridge");
-	my $bridge_unavailable = !$vzlogger_expected_active ?
-		($L{'VZLOGGER.BRIDGE_UNAVAILABLE_VZLOGGER'} || "Unavailable: vzLogger is disabled") :
-		!$mqtt_enabled ?
-		($L{'VZLOGGER.BRIDGE_UNAVAILABLE_MQTT'} || "Unavailable: MQTT is disabled") : "";
 
-	$template->param("VZLOGGER_SERVICE_CONTROL_DISABLED" => ($vzlogger_expected_active ? "" : "disabled"));
-	$template->param("BRIDGE_SERVICE_CONTROL_DISABLED" => ($bridge_expected_active ? "" : "disabled"));
-	$template->param("BRIDGE_ACTIVATION_DISABLED" => ($bridge_available ? "" : "disabled"));
 	$template->param("VZLOGGER_SERVICE_STATUS" => service_summary("vzlogger"));
-	$template->param("BRIDGE_SERVICE_STATUS" => ($bridge_unavailable || service_summary("smartmeter-v2-vzlogger-bridge")));
-	$template->param("BRIDGE_AVAILABILITY_HELP" => ($bridge_unavailable || ($L{'VZLOGGER.BRIDGE_SERVICE_CONTROL_HELP'} || "Manual control of the SmartMeter bridge.")));
+	$template->param("BRIDGE_SERVICE_STATUS" => service_summary("smartmeter-v2-vzlogger-bridge"));
+	$template->param("BRIDGE_AVAILABILITY_HELP" => ($L{'VZLOGGER.BRIDGE_SERVICE_CONTROL_HELP'} || "Manual control of the SmartMeter bridge."));
 	$template->param("VZLOGGER_SERVICE_STATUS_CLASS" => service_status_class($vzlogger_state, $vzlogger_expected_active));
 	$template->param("BRIDGE_SERVICE_STATUS_CLASS" => service_status_class($bridge_state, $bridge_expected_active));
 	$template->param("VZLOGGER_SERVICE_RUNNING" => $vzlogger_state eq "active");
@@ -290,6 +305,7 @@ sub add_http_cache_template_params
 
 	$template->param("HTTP_CACHE_STATUS" => (@summaries ? join("<br>", @summaries) : html_escape($L{'VZLOGGER.HTTP_CACHE_NO_METERS'})));
 	$template->param("HTTP_CACHE_URL" => "/plugins/$lbpplugindir/index.php");
+	$template->param("HTTP_CACHE_AVAILABLE" => ($has_cache ? "1" : "0"));
 	$template->param("HTTP_CACHE_DISABLED" => ($has_cache ? "" : "ui-disabled"));
 }
 
@@ -376,6 +392,137 @@ sub service_installed
 	return 0;
 }
 
+sub load_service_ajax_config
+{
+	my $config_file = "$lbpconfigdir/smartmeter.cfg";
+	$plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file";
+}
+
+sub service_status_response
+{
+	my $vzlogger_expected = implementation_mode() eq "vzlogger";
+	my $mqtt_enabled = clean_boolean($plugin_cfg->param("VZLOGGER.MQTTENABLED"), 1);
+	my $bridge_enabled = (($plugin_cfg->param("MAIN.READ") || "0") eq "1");
+	my $bridge_expected = $vzlogger_expected && $mqtt_enabled && $bridge_enabled;
+	my $config = generated_config_status();
+	my $bridge_startable = $config->{valid} && $mqtt_enabled && $config->{mqtt_enabled};
+	return {
+		ok => JSON::PP::true,
+		applied => {
+			vzlogger_enabled => $vzlogger_expected ? JSON::PP::true : JSON::PP::false,
+			mqtt_enabled => $mqtt_enabled ? JSON::PP::true : JSON::PP::false,
+			bridge_enabled => $bridge_enabled ? JSON::PP::true : JSON::PP::false,
+		},
+		config => {
+			present => $config->{present} ? JSON::PP::true : JSON::PP::false,
+			valid => $config->{valid} ? JSON::PP::true : JSON::PP::false,
+			mqtt_enabled => $config->{mqtt_enabled} ? JSON::PP::true : JSON::PP::false,
+		},
+		services => {
+			vzlogger => service_status_data("vzlogger", $vzlogger_expected, $config->{valid}),
+			bridge => service_status_data("smartmeter-v2-vzlogger-bridge", $bridge_expected, $bridge_startable),
+		},
+	};
+}
+
+sub service_status_data
+{
+	my ($service, $expected_active, $startable) = @_;
+	my $state = service_state($service);
+	my $pid = service_pid($service);
+	my $installed = service_installed($service);
+	my $running = $state eq "active";
+	return {
+		state => $state,
+		pid => $pid,
+		installed => $installed ? JSON::PP::true : JSON::PP::false,
+		running => $running ? JSON::PP::true : JSON::PP::false,
+		status_text => "$state | PID: " . ($pid || "-") . " | Service: $service | " . ($installed ? "installed" : "not installed"),
+		status_class => service_status_class($state, $expected_active),
+		config_valid => $startable ? JSON::PP::true : JSON::PP::false,
+		can_start => $startable ? JSON::PP::true : JSON::PP::false,
+		can_restart => $startable ? JSON::PP::true : JSON::PP::false,
+		can_stop => $running ? JSON::PP::true : JSON::PP::false,
+	};
+}
+
+sub run_service_ajax_action
+{
+	my ($action) = @_;
+	my %allowed = map { $_ => 1 } qw(
+		start-vzlogger stop-vzlogger restart-vzlogger
+		start-bridge stop-bridge restart-bridge
+	);
+	die "Unknown service action." if (!$allowed{$action || ""});
+	my $starting = $action =~ /\A(?:start|restart)-/;
+	my $bridge_action = $action =~ /-bridge\z/;
+	my $requested_implementation = clean_config_value($q->{implementation}, qr/\A(?:legacy|vzlogger)\z/, "");
+	my $config = generated_config_status();
+	if ($action =~ /-vzlogger\z/) {
+		die "Enable vzLogger before starting the service." if ($starting && $requested_implementation ne "vzlogger");
+	} else {
+		my $requested_read = clean_config_value($q->{read}, qr/\A[01]\z/, "");
+		die "Enable vzLogger and the SmartMeter bridge before starting the service." if ($starting && ($requested_implementation ne "vzlogger" || $requested_read ne "1"));
+	}
+	die "The generated vzLogger configuration is missing or invalid. Use Save and apply first." if ($starting && !$config->{valid});
+	die "Enable and apply MQTT before starting the SmartMeter bridge." if ($starting && $bridge_action && !clean_boolean($plugin_cfg->param("VZLOGGER.MQTTENABLED"), 1));
+	die "MQTT is disabled in the generated vzLogger configuration. Use Save and apply first." if ($starting && $bridge_action && !$config->{mqtt_enabled});
+
+	save_service_log_settings($action);
+
+	my ($output, $exit) = run_control_result($action);
+	my $response = service_status_response();
+	$response->{ok} = $exit == 0 ? JSON::PP::true : JSON::PP::false;
+	$response->{message} = $output;
+	return $response;
+}
+
+sub save_service_log_settings
+{
+	my ($action) = @_;
+	my $starting = $action =~ /\A(?:start|restart)-/;
+	if ($action =~ /-vzlogger\z/) {
+		die "Invalid vzLogger debug setting." if (!defined($q->{vzlogger_service_debug}) || $q->{vzlogger_service_debug} !~ /\A[01]\z/);
+		die "Invalid vzLogger log level." if (!defined($q->{vzlogger_loglevel}) || $q->{vzlogger_loglevel} !~ /\A(?:0|1|3|5|10|15)\z/);
+		if ($starting) {
+			die "Invalid vzLogger activation setting." if (!defined($q->{implementation}) || $q->{implementation} ne "vzlogger");
+			$plugin_cfg->param("MAIN.IMPLEMENTATION", $q->{implementation});
+		}
+		$plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG", $q->{vzlogger_service_debug});
+		$plugin_cfg->param("VZLOGGER.LOGLEVEL", $q->{vzlogger_loglevel});
+	} else {
+		die "Invalid bridge debug setting." if (!defined($q->{vzlogger_debug}) || $q->{vzlogger_debug} !~ /\A[01]\z/);
+		if ($starting) {
+			die "Invalid vzLogger activation setting." if (!defined($q->{implementation}) || $q->{implementation} ne "vzlogger");
+			die "Invalid bridge activation setting." if (!defined($q->{read}) || $q->{read} ne "1");
+			$plugin_cfg->param("MAIN.IMPLEMENTATION", $q->{implementation});
+			$plugin_cfg->param("MAIN.READ", $q->{read});
+		}
+		$plugin_cfg->param("VZLOGGER.DEBUG", $q->{vzlogger_debug});
+	}
+	$plugin_cfg->save;
+}
+
+sub generated_config_status
+{
+	my $config_file = "$lbpconfigdir/vzlogger.conf";
+	my $mapping_file = "$lbpconfigdir/vzlogger_channels.json";
+	my $validator = "$lbpbindir/vzlogger_validate.pl";
+	my $status = { present => -e $config_file ? 1 : 0, valid => 0, mqtt_enabled => 0 };
+	return $status if (!$status->{present});
+	open(my $fh, "<", $config_file) or return $status;
+	local $/;
+	my $json = <$fh>;
+	close($fh);
+	my $config = eval { JSON::PP->new->utf8->decode($json) };
+	return $status if ($@ || ref($config) ne "HASH");
+	$status->{mqtt_enabled} = (ref($config->{mqtt}) eq "HASH" && $config->{mqtt}->{enabled}) ? 1 : 0;
+	return $status if (!-e $mapping_file || !-e $validator || ref($config->{meters}) ne "ARRAY" || !@{$config->{meters}});
+	my $output = `$^X "$validator" 2>&1`;
+	$status->{valid} = (($? >> 8) == 0) ? 1 : 0;
+	return $status;
+}
+
 sub command_exists
 {
 	my ($command) = @_;
@@ -436,18 +583,103 @@ sub ensure_vzlogger_defaults
 	$plugin_cfg->param("VZLOGGER.MQTTRAWANDAGG", "0") if (!defined $plugin_cfg->param("VZLOGGER.MQTTRAWANDAGG"));
 	$plugin_cfg->param("VZLOGGER.MQTTQOS", "0") if (!defined $plugin_cfg->param("VZLOGGER.MQTTQOS"));
 	$plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP", "1") if (!defined $plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP"));
+	$plugin_cfg->param("VZLOGGER.REMOVEDHEADS", "") if (!defined $plugin_cfg->param("VZLOGGER.REMOVEDHEADS"));
 	$plugin_cfg->save;
 }
 
 sub detect_heads
 {
-	my %heads = map { $_ => 1 } glob("/dev/serial/smartmeter/*");
+	my %connected = map { $_ => 1 } glob("/dev/serial/smartmeter/*");
+	my %removed = map { $_ => 1 } config_list_values("VZLOGGER.REMOVEDHEADS");
+	if (($q->{rescan} || "") eq "1") {
+		my $changed = 0;
+		foreach my $device (keys %connected) {
+			my $serial = $device;
+			$serial =~ s%/dev/serial/smartmeter/%%g;
+			$changed = 1 if (delete $removed{$serial});
+		}
+		if ($changed) {
+			$plugin_cfg->param("VZLOGGER.REMOVEDHEADS", join(",", sort keys %removed));
+			$plugin_cfg->save;
+		}
+	}
+	my %heads;
+	foreach my $device (keys %connected) {
+		my $serial = $device;
+		$serial =~ s%/dev/serial/smartmeter/%%g;
+		$heads{$device} = 1 if (!$removed{$serial});
+	}
 	my %config;
 	Config::Simple->import_from("$lbpconfigdir/smartmeter.cfg", \%config);
 	while (my ($name, $value) = each %config) {
 		$heads{$value} = 1 if ($name =~ /\.DEVICE\z/ && $value);
 	}
 	return sort keys %heads;
+}
+
+sub scan_ir_heads_ajax
+{
+	my @connected = sort glob("/dev/serial/smartmeter/*");
+	my %removed = map { $_ => 1 } config_list_values("VZLOGGER.REMOVEDHEADS");
+	my %staged = map { $_ => 1 } grep { defined($_) && $_ =~ /\A[A-Za-z0-9_.:-]+\z/ } $cgi->multi_param("staged_removed");
+	my @new_devices;
+	my @staged_devices;
+	my $removed_changed = 0;
+	foreach my $device (@connected) {
+		my $serial = $device;
+		$serial =~ s%/dev/serial/smartmeter/%%g;
+		my $was_removed = delete($removed{$serial}) ? 1 : 0;
+		$removed_changed ||= $was_removed;
+		push @new_devices, $device if ($was_removed || !$plugin_cfg->param("$serial.DEVICE"));
+		push @staged_devices, $device if ($staged{$serial} && $plugin_cfg->param("$serial.DEVICE"));
+	}
+	if ($removed_changed) {
+		$plugin_cfg->param("VZLOGGER.REMOVEDHEADS", join(",", sort keys %removed));
+		$plugin_cfg->save;
+	}
+
+	# Reuse the regular defaults so a newly discovered or explicitly restored
+	# reader behaves exactly like one found by the former full-page rescan.
+	my @visible_heads = detect_heads();
+	ensure_head_defaults(@visible_heads);
+	foreach my $device (@new_devices) {
+		my $serial = $device;
+		$serial =~ s%/dev/serial/smartmeter/%%g;
+		mark_pending_meter_new($serial);
+	}
+	my @found = map {
+		my $device = $_;
+		my $serial = $device;
+		$serial =~ s%/dev/serial/smartmeter/%%g;
+		{
+			serial => $serial,
+			name => $plugin_cfg->param("$serial.NAME") || $serial,
+			path => $device,
+		}
+	} @new_devices;
+	my @staged_found = map {
+		my $device = $_;
+		my $serial = $device;
+		$serial =~ s%/dev/serial/smartmeter/%%g;
+		{
+			serial => $serial,
+			name => $plugin_cfg->param("$serial.NAME") || $serial,
+			path => $device,
+		}
+	} @staged_devices;
+
+	my $result = !@connected ? "none" : @found ? "found" : @staged_found ? "staged" : "no_new";
+	return {
+		ok => JSON::PP::true,
+		state => "completed",
+		result => $result,
+		connected_count => scalar(@connected),
+		new_count => scalar(@found),
+		heads => \@found,
+		staged_count => scalar(@staged_found),
+		staged_heads => \@staged_found,
+		reload => JSON::PP::false,
+	};
 }
 
 sub ensure_head_defaults
@@ -495,8 +727,22 @@ sub ensure_head_defaults
 
 sub save_vzlogger_form
 {
+	my $draft_only = (@_ && $_[0] eq "__draft__") ? shift : "";
 	my (@heads) = @_;
-	$plugin_cfg->param("MAIN.IMPLEMENTATION", clean_config_value($q->{implementation}, qr/\A(?:legacy|vzlogger)\z/, implementation_mode()));
+	my %known_serials = map {
+		my $serial = $_;
+		$serial =~ s%/dev/serial/smartmeter/%%g;
+		$serial => 1;
+	} @heads;
+	my %remove_serials;
+	if (!$draft_only && ($q->{submitaction} || "") eq "apply") {
+		foreach my $serial ($cgi->multi_param("remove_meter")) {
+			next if (!defined($serial) || $serial !~ /\A[A-Za-z0-9_.:-]+\z/);
+			$remove_serials{$serial} = 1 if ($known_serials{$serial});
+		}
+	}
+	my $implementation = clean_config_value($q->{implementation}, qr/\A(?:legacy|vzlogger)\z/, implementation_mode());
+	$plugin_cfg->param("MAIN.IMPLEMENTATION", $implementation);
 	$plugin_cfg->param("MAIN.READ", clean_config_value($q->{read}, qr/\A[01]\z/, defined($plugin_cfg->param("MAIN.READ")) ? $plugin_cfg->param("MAIN.READ") : "0"));
 	# Disabled form controls are not submitted. Preserve their saved values while
 	# meter reading is off instead of silently restoring defaults.
@@ -540,15 +786,20 @@ sub save_vzlogger_form
 	$plugin_cfg->param("VZLOGGER.MQTTQOS", clean_config_value($q->{vzlogger_mqttqos}, qr/\A[01]\z/, $plugin_cfg->param("VZLOGGER.MQTTQOS") || "0"));
 	$plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP", clean_config_value($q->{vzlogger_mqtttimestamp}, qr/\A[01]\z/, defined($plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP")) ? $plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP") : "1"));
 
-	foreach my $device (@heads) {
+	foreach my $device ($implementation eq "vzlogger" ? @heads : ()) {
 		my $serial = $device;
 		$serial =~ s%/dev/serial/smartmeter/%%g;
+		next if ($remove_serials{$serial});
 		my $previous_meter = $plugin_cfg->param("$serial.METER") || "0";
-		$plugin_cfg->param("$serial.NAME", clean_config_value($q->{"$serial\_name"}, qr/\A[A-Za-z0-9_-]+\z/, $serial));
+		$plugin_cfg->param("$serial.NAME", clean_config_value($q->{"$serial\_name"}, qr/\A[A-Za-z0-9_-]+\z/, $plugin_cfg->param("$serial.NAME") || $serial));
 		my $mode = clean_config_value($q->{"$serial\_meter"}, qr/\A(?:0|sml|d0|oms|user)\z/, normalized_meter_mode($previous_meter, $plugin_cfg->param("$serial.PROTOCOL")));
 		$plugin_cfg->param("$serial.METER", $mode);
+		my $meter_enabled = 1;
 		if ($mode =~ /\A(?:sml|d0|oms)\z/) {
-			$plugin_cfg->param("$serial.ENABLED", clean_config_value($q->{"$serial\_enabled"}, qr/\A[01]\z/, clean_boolean(config_scalar_value("$serial.ENABLED"), 1)));
+			$meter_enabled = clean_config_value($q->{"$serial\_enabled"}, qr/\A[01]\z/, clean_boolean(config_scalar_value("$serial.ENABLED"), 1));
+			$plugin_cfg->param("$serial.ENABLED", $meter_enabled);
+		}
+		if ($mode =~ /\A(?:sml|d0|oms)\z/ && $meter_enabled) {
 			$plugin_cfg->param("$serial.ALLOWSKIP", clean_config_value($q->{"$serial\_allowskip"}, qr/\A[01]\z/, clean_boolean(config_scalar_value("$serial.ALLOWSKIP"), 1)));
 			$plugin_cfg->param("$serial.AGGTIME", clean_config_value($q->{"$serial\_aggtime"}, qr/\A(?:-?\d+)?\z/, config_scalar_value("$serial.AGGTIME")));
 			$plugin_cfg->param("$serial.INTERVAL", clean_config_value($q->{"$serial\_interval"}, qr/\A(?:-?\d+)?\z/, config_scalar_value("$serial.INTERVAL")));
@@ -559,7 +810,7 @@ sub save_vzlogger_form
 			$plugin_cfg->param("$serial.PARITYSET", (defined($q->{"$serial\_paritymode"}) && $q->{"$serial\_paritymode"} ne "") ? "1" : "0");
 			$plugin_cfg->param("$serial.USELOCALTIME", clean_config_value($q->{"$serial\_uselocaltime"}, qr/\A[01]\z/, clean_boolean(config_scalar_value("$serial.USELOCALTIME"), 0)));
 		}
-		if ($mode eq "d0") {
+		if ($mode eq "d0" && $meter_enabled) {
 			$plugin_cfg->param("$serial.DUMPFILE", clean_config_value($q->{"$serial\_dumpfile"}, qr/\A[^\r\n]*\z/, config_scalar_value("$serial.DUMPFILE")));
 			$plugin_cfg->param("$serial.ACKSEQ", clean_config_value($q->{"$serial\_ackseq"}, qr/\A(?:auto|[A-Fa-f0-9]*)\z/, config_scalar_value("$serial.ACKSEQ")));
 			$plugin_cfg->param("$serial.BAUDRATEREAD", clean_config_value($q->{"$serial\_baudrateread"}, qr/\A\d*\z/, first_config_value($serial, "BAUDRATEREAD", "STARTBAUDRATE") || ""));
@@ -567,21 +818,95 @@ sub save_vzlogger_form
 			$plugin_cfg->param("$serial.READTIMEOUT", clean_config_value($q->{"$serial\_readtimeout"}, qr/\A\d*\z/, first_config_value($serial, "READTIMEOUT", "TIMEOUT") || ""));
 			$plugin_cfg->param("$serial.BAUDRATECHANGEDELAY", clean_config_value($q->{"$serial\_baudratechangedelay"}, qr/\A\d*\z/, config_scalar_value("$serial.BAUDRATECHANGEDELAY")));
 		}
-		if ($mode eq "oms") {
+		if ($mode eq "oms" && $meter_enabled) {
 			$plugin_cfg->param("$serial.OMSKEY", clean_config_value($q->{"$serial\_omskey"}, qr/\A(?:[A-Fa-f0-9]{32})?\z/, config_scalar_value("$serial.OMSKEY")));
 			$plugin_cfg->param("$serial.MBUSDEBUG", clean_config_value($q->{"$serial\_mbusdebug"}, qr/\A[01]\z/, clean_boolean(config_scalar_value("$serial.MBUSDEBUG"), 0)));
 		}
-		if ($mode eq "user" && defined($q->{"$serial\_userjson"})) {
+		if (!$draft_only && $mode eq "user" && defined($q->{"$serial\_userjson"})) {
 			save_user_meter_source($serial, $q->{"$serial\_userjson"});
 		}
-		if ($mode =~ /\A(?:sml|d0|oms)\z/) {
+		if ($mode =~ /\A(?:sml|d0|oms)\z/ && $meter_enabled) {
 			my @selected_obis = grep { normalize_obis_identifier($_) ne "" } $cgi->multi_param("$serial\_obis");
 			@selected_obis = map { normalize_obis_identifier($_) } @selected_obis;
 			$plugin_cfg->param("$serial.OBISCHANNELS", join(",", @selected_obis));
 			$plugin_cfg->param("$serial.OBISCUSTOM", clean_multiline_obis($q->{"$serial\_obis_custom"}));
 		}
+		unlink(pending_obis_channels_file($serial)) if (!$draft_only && ($q->{submitaction} || "") eq "apply" && -e pending_obis_channels_file($serial));
+		unlink(pending_meter_draft_file($serial)) if (!$draft_only && ($q->{submitaction} || "") eq "apply" && -e pending_meter_draft_file($serial));
 	}
-	$plugin_cfg->save;
+	my @removed_serials = sort keys %remove_serials;
+	if (@removed_serials) {
+		my %removed_heads = map { $_ => 1 } config_list_values("VZLOGGER.REMOVEDHEADS");
+		foreach my $serial (@removed_serials) {
+			foreach my $key ($plugin_cfg->param()) {
+				$plugin_cfg->delete($key) if ($key =~ /\A\Q$serial\E\./);
+			}
+			$removed_heads{$serial} = 1;
+		}
+		$plugin_cfg->param("VZLOGGER.REMOVEDHEADS", join(",", sort keys %removed_heads));
+	}
+	$plugin_cfg->save if (!$draft_only);
+	my $cleanup_output = "";
+	foreach my $serial ($draft_only ? () : @removed_serials) {
+		$cleanup_output .= remove_meter_artifacts($serial);
+	}
+	return $cleanup_output;
+}
+
+sub remove_meter_artifacts
+{
+	my ($serial) = @_;
+	return "" if (!defined($serial) || $serial !~ /\A[A-Za-z0-9_.:-]+\z/);
+	my $safe_serial = safe_filename($serial);
+	my @files = (
+		user_meter_source_file($serial),
+		obis_discovery_cache_file($serial),
+		pending_obis_channels_file($serial),
+		pending_meter_draft_file($serial),
+		"$lbpconfigdir/vzLogger_IrTest_$safe_serial.conf",
+		"$lbpconfigdir/vzLogger_IrTest_$safe_serial.conf.output.log",
+		"$lbhomedir/log/plugins/$lbpplugindir/vzLogger_$safe_serial.log",
+		"/var/run/shm/$lbpplugindir/$safe_serial.data",
+		"/var/run/shm/$lbpplugindir/$safe_serial.lastcons",
+		"/var/run/shm/$lbpplugindir/$safe_serial.lastdel",
+	);
+	my @errors;
+	foreach my $file (@files) {
+		next if (!-e $file);
+		push @errors, "$file: $!" if (!unlink($file));
+	}
+	my $mapping_error = remove_meter_channel_mapping($serial);
+	push @errors, $mapping_error if ($mapping_error);
+	my $output = "Removed meter configuration for $serial.\n";
+	$output .= "Could not remove meter artifact $_\n" foreach @errors;
+	return $output;
+}
+
+sub remove_meter_channel_mapping
+{
+	my ($serial) = @_;
+	my $mapping_file = "$lbpconfigdir/vzlogger_channels.json";
+	return "" if (!-e $mapping_file);
+	open(my $fh, "<", $mapping_file) or return "$mapping_file: $!";
+	local $/;
+	my $json = <$fh>;
+	close($fh);
+	my $mapping = eval { JSON::PP->new->utf8->decode($json || "") };
+	return "$mapping_file: invalid JSON" if ($@ || ref($mapping) ne "HASH");
+	my $changed = 0;
+	foreach my $uuid (keys %{$mapping}) {
+		my $entry = $mapping->{$uuid};
+		next if (ref($entry) ne "HASH" || !defined($entry->{serial}) || $entry->{serial} ne $serial);
+		delete $mapping->{$uuid};
+		$changed = 1;
+	}
+	return "" if (!$changed);
+	my $tmp = "$mapping_file.$$";
+	open(my $out, ">", $tmp) or return "$tmp: $!";
+	print $out JSON::PP->new->utf8->pretty->canonical->encode($mapping);
+	close($out) or do { unlink($tmp); return "$tmp: $!"; };
+	rename($tmp, $mapping_file) or do { unlink($tmp); return "$mapping_file: $!"; };
+	return "";
 }
 
 sub read_obis_channels
@@ -973,25 +1298,38 @@ sub run_vzlogger_obis_test
 		}
 		if ($job_id) {
 			my @channels = $cancelled ? () : channels_from_vzlogger_log($test_log);
-			write_obis_discovery_cache($serial, @channels) if (@channels && !$restore_failed);
-			my $state = $restore_failed ? "failed" : $cancelled ? "cancelled" : @channels ? "completed" : "failed";
-			my $message = $restore_failed ? "OBIS discovery ended, but the vzLogger service could not be restored." :
-				$cancelled ? "OBIS discovery was cancelled." :
+			write_obis_discovery_cache($serial, @channels) if (@channels);
+			my %pending_channels = map { $_ => 1 } read_pending_obis_channels($serial);
+			my %enabled_channels = enabled_obis_channels($serial);
+			my @status_channels = map {
+				{
+					identifier => $_->{identifier},
+					name => $_->{name},
+					is_new => $pending_channels{$_->{identifier}} ? JSON::PP::true : JSON::PP::false,
+					selected => $enabled_channels{$_->{identifier}} ? JSON::PP::true : JSON::PP::false,
+				}
+			} @channels;
+			my $state = $cancelled ? "cancelled" : @channels ? "completed" : "failed";
+			my $message = $cancelled ? "OBIS discovery was cancelled." :
 				@channels ? "Detected " . scalar(@channels) . " OBIS channel(s)." :
 				"No OBIS channels were detected. Check the vzLogger discovery log and meter settings.";
+			my $warning = $restore_failed ? "OBIS channels were detected, but the regular vzLogger service could not be restored." : "";
 			my $details = "";
 			if (-e $console_log && open(my $detail_fh, "<", $console_log)) {
 				$details = do { local $/; <$detail_fh> };
 				close($detail_fh);
 			}
-			write_control_log("read-obis-vzlogger", "config=$config_file\nlog=$test_log\nstate=$state\n$message\n$details");
+			write_control_log("read-obis-vzlogger", "config=$config_file\nlog=$test_log\nstate=$state\n$message\n" . ($warning ? "warning=$warning\n" : "") . $details);
 			write_obis_discovery_status_file({
 				ok => $state eq "failed" ? JSON::PP::false : JSON::PP::true,
 				state => $state,
 				job_id => $job_id,
 				serial => $serial,
 				channel_count => scalar(@channels),
+				channels => \@status_channels,
 				message => $message,
+				warning => $warning,
+				restore_failed => $restore_failed ? JSON::PP::true : JSON::PP::false,
 				started_at => read_obis_discovery_status_file()->{started_at} || time(),
 				finished_at => time(),
 			});
@@ -1384,7 +1722,12 @@ sub build_head_rows
 		$serial =~ s%/dev/serial/smartmeter/%%g;
 		my $stored_meter = $plugin_cfg->param("$serial.METER") || "0";
 		my $mode = normalized_meter_mode($stored_meter, $plugin_cfg->param("$serial.PROTOCOL"));
+		my $meter_draft = read_pending_meter_draft($serial);
+		if ($mode eq "0" && ($meter_draft->{protocol} || "") =~ /\A(?:sml|d0|oms)\z/) {
+			$mode = $meter_draft->{protocol};
+		}
 		my %enabled_obis = enabled_obis_channels($serial);
+		my %pending_obis = map { $_ => 1 } read_pending_obis_channels($serial);
 		my @available_obis = available_obis_channels($serial);
 		my ($json_error, $device_warning) = ("", "");
 		if ($mode eq "user") {
@@ -1413,6 +1756,7 @@ sub build_head_rows
 			SERIAL => $serial,
 			DEVICE => $plugin_cfg->param("$serial.DEVICE") || $device,
 			METER => $mode,
+			PENDING_METER => $meter_draft->{new_reader} ? 1 : 0,
 			PROTOCOL_LABEL => $protocol_labels{$mode},
 			METER_ENABLED => clean_boolean(config_scalar_value("$serial.ENABLED"), 1),
 			ALLOWSKIP => clean_boolean(config_scalar_value("$serial.ALLOWSKIP"), 1),
@@ -1447,6 +1791,7 @@ sub build_head_rows
 						IDENTIFIER => $_->{identifier},
 						NAME => $_->{name},
 						CHECKED => $enabled_obis{$_->{identifier}} ? "checked" : "",
+						IS_NEW => $pending_obis{$_->{identifier}} ? 1 : 0,
 					}
 				} @available_obis
 			],
@@ -1460,6 +1805,7 @@ sub enabled_obis_channels
 {
 	my ($serial) = @_;
 	my %enabled = map { $_ => 1 } config_list_values("$serial.OBISCHANNELS");
+	$enabled{$_} = 1 foreach read_pending_obis_channels($serial);
 	return %enabled;
 }
 
@@ -1572,6 +1918,100 @@ sub obis_discovery_cache_exists
 	return -e obis_discovery_cache_file($serial);
 }
 
+sub pending_obis_channels_file
+{
+	my ($serial) = @_;
+	$serial =~ s/[^A-Za-z0-9_.:-]/_/g;
+	return "$lbpconfigdir/obis_channels_$serial.pending";
+}
+
+sub pending_meter_draft_file
+{
+	my ($serial) = @_;
+	$serial = safe_filename($serial || "");
+	return "$lbpconfigdir/meter_draft_$serial.json";
+}
+
+sub read_pending_meter_draft
+{
+	my ($serial) = @_;
+	my $file = pending_meter_draft_file($serial);
+	return {} if (!-e $file || !open(my $fh, "<", $file));
+	local $/;
+	my $json = <$fh>;
+	close($fh);
+	my $draft = eval { JSON::PP->new->utf8->decode($json || "") };
+	return {} if ($@ || ref($draft) ne "HASH");
+	return $draft;
+}
+
+sub write_pending_meter_draft
+{
+	my ($serial, $draft) = @_;
+	return 0 if (!defined($serial) || $serial !~ /\A[A-Za-z0-9_.:-]+\z/ || ref($draft) ne "HASH");
+	my $file = pending_meter_draft_file($serial);
+	my $tmp = "$file.$$";
+	open(my $fh, ">", $tmp) or return 0;
+	print $fh JSON::PP->new->utf8->canonical->encode($draft);
+	close($fh) or do { unlink($tmp); return 0; };
+	return rename($tmp, $file) ? 1 : do { unlink($tmp); 0 };
+}
+
+sub mark_pending_meter_new
+{
+	my ($serial) = @_;
+	my $draft = read_pending_meter_draft($serial);
+	$draft->{new_reader} = 1;
+	write_pending_meter_draft($serial, $draft);
+}
+
+sub cache_pending_meter_protocol
+{
+	my ($serial) = @_;
+	return if (!defined($serial) || $serial !~ /\A[A-Za-z0-9_.:-]+\z/ || !-e pending_meter_draft_file($serial));
+	my $mode = normalized_meter_mode($plugin_cfg->param("$serial.METER"), $plugin_cfg->param("$serial.PROTOCOL"));
+	return if ($mode !~ /\A(?:sml|d0|oms)\z/);
+	my $draft = read_pending_meter_draft($serial);
+	$draft->{new_reader} = 1;
+	$draft->{protocol} = $mode;
+	write_pending_meter_draft($serial, $draft);
+}
+
+sub read_pending_obis_channels
+{
+	my ($serial) = @_;
+	my $file = pending_obis_channels_file($serial);
+	return () if (!-e $file || !open(my $fh, "<", $file));
+	my %seen;
+	my @identifiers;
+	while (my $line = <$fh>) {
+		chomp($line);
+		my $identifier = normalize_obis_identifier($line);
+		next if (!$identifier || $seen{$identifier});
+		push @identifiers, $identifier;
+		$seen{$identifier} = 1;
+	}
+	close($fh);
+	return @identifiers;
+}
+
+sub write_pending_obis_channels
+{
+	my ($serial, @identifiers) = @_;
+	my $file = pending_obis_channels_file($serial);
+	my %seen;
+	@identifiers = grep { $_ && !$seen{$_}++ } map { normalize_obis_identifier($_) } @identifiers;
+	if (!@identifiers) {
+		unlink($file) if (-e $file);
+		return 1;
+	}
+	my $tmp = "$file.$$";
+	open(my $fh, ">", $tmp) or return 0;
+	print $fh "$_\n" foreach sort_obis_identifiers(@identifiers);
+	close($fh) or do { unlink($tmp); return 0; };
+	return rename($tmp, $file) ? 1 : do { unlink($tmp); 0 };
+}
+
 sub read_obis_discovery_cache
 {
 	my ($serial) = @_;
@@ -1600,6 +2040,12 @@ sub read_obis_discovery_cache
 sub write_obis_discovery_cache
 {
 	my ($serial, @channels) = @_;
+	my %known = map { $_->{identifier} => 1 } read_obis_discovery_cache($serial);
+	$known{$_} = 1 foreach config_list_values("$serial.OBISCHANNELS");
+	my %previous_pending = map { $_ => 1 } read_pending_obis_channels($serial);
+	my %found = map { $_->{identifier} => 1 } @channels;
+	my @pending = grep { $found{$_} } keys %previous_pending;
+	push @pending, map { $_->{identifier} } grep { !$known{$_->{identifier}} } @channels;
 	my $file = obis_discovery_cache_file($serial);
 	my $tmp = "$file.$$";
 	open(my $fh, ">", $tmp) or return;
@@ -1607,7 +2053,8 @@ sub write_obis_discovery_cache
 		print $fh $channel->{identifier} . "\t" . $channel->{name} . "\n";
 	}
 	close($fh);
-	rename($tmp, $file);
+	return if (!rename($tmp, $file));
+	write_pending_obis_channels($serial, @pending);
 }
 
 sub is_discovery_excluded_identifier
@@ -1619,6 +2066,11 @@ sub is_discovery_excluded_identifier
 sub sort_obis_channels
 {
 	return sort { compare_obis_identifier($a->{identifier}, $b->{identifier}) } @_;
+}
+
+sub sort_obis_identifiers
+{
+	return map { $_->{identifier} } sort_obis_channels(map { { identifier => $_ } } @_);
 }
 
 sub compare_obis_identifier
@@ -1653,12 +2105,20 @@ sub obis_sort_parts
 sub run_control
 {
 	my ($action) = @_;
+	my ($output) = run_control_result($action);
+	return $output;
+}
+
+sub run_control_result
+{
+	my ($action) = @_;
 	my $script = "$lbpbindir/vzlogger_control.pl";
-	return "Control script not found: $script" if (!-e $script);
+	return ("Control script not found: $script", 1) if (!-e $script);
 	my $output = `$^X "$script" "$action" 2>&1`;
+	my $exit = $? >> 8;
 	$output ||= "No output.";
 	write_control_log($action, $output);
-	return $output;
+	return ($output, $exit);
 }
 
 sub write_control_log

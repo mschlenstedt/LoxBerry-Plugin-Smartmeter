@@ -50,6 +50,12 @@
 	.service-status-ok { background: #d7f0d2; color: #245b1d; }
 	.service-status-warning { background: #ffe0b2; color: #7a4100; }
 	.service-status-error { background: #f5c6cb; color: #721c24; }
+	.service-action-message { background-color: rgba(255,255,200,0.4); border: 1px solid #888; padding: 10px; white-space: pre-wrap; }
+	.service-action-message:empty { display: none; }
+	.service-action-reason { color: #8a5a00; font-size: 85%; margin-top: .25em; }
+	.service-action-reason:empty { display: none; }
+	.obis-channel-option { display: block; }
+	.obis-channel-new { display: block; color: #8a5a00; font-size: 85%; margin: .15em 0 .35em 2em; }
 	.implementation-tabs { width: 100%; }
 	.implementation-tabs ul { display: flex !important; width: 100% !important; }
 	.implementation-tabs li { float: none !important; flex: 1 1 50%; width: 50% !important; }
@@ -71,6 +77,21 @@
 	.service-panel .service-controls { width: 52%; }
 	.service-panel .service-spacer { width: 3%; }
 	.service-panel .service-help { width: 27%; font-size: 90%; line-height: 1.35; }
+	.configuration-section {
+		border: 1px solid #aaa;
+		border-radius: 6px;
+		background: rgba(255,255,255,0.4);
+		padding: 12px 14px;
+		margin: 18px 0;
+	}
+	.configuration-section > h2 { margin-top: 0; }
+	.configuration-section.configuration-disabled { color: #888; }
+	.configuration-section.configuration-disabled .ui-collapsible-heading .ui-btn { color: #888 !important; opacity: .65; }
+	.settings-table tr.setting-disabled > td { color: #888; }
+	.settings-table tr.setting-disabled label,
+	.settings-table tr.setting-disabled h4,
+	.settings-table tr.setting-disabled font { color: inherit; }
+	.service-inline-setting.setting-disabled-inline { color: #888; opacity: .65; }
 	.service-action-line {
 		display: flex;
 		flex-wrap: wrap;
@@ -105,6 +126,7 @@
 	.meter-panel { margin: 8px 0; }
 	.meter-panel .ui-collapsible-content { padding: 8px 10px; }
 	.meter-panel .meter-summary-device { font-weight: normal; opacity: .8; }
+	.meter-pending-badge { display: inline-block; margin-left: .5em; color: #8a5a00; font-size: 85%; font-weight: normal; }
 	.meter-warning-icon {
 		display: inline-block;
 		margin-left: .45em;
@@ -122,6 +144,9 @@
 	}
 	.meter-json-editor { min-height: 18em; font-family: monospace; white-space: pre; }
 	.meter-doc-links { margin-top: .45em; }
+	.meter-remove-row td { padding-top: 12px !important; border-top: 1px solid #ddd; }
+	.meter-remove-button.ui-btn { color: #9c1c1c; }
+	.meter-remove-help { margin-left: .75em; font-size: 90%; }
 	.obis-search-overlay {
 		display: none;
 		position: fixed;
@@ -156,6 +181,9 @@
 	}
 	.obis-search-title { font-size: 1.15em; font-weight: bold; }
 	.obis-search-message { margin-top: 8px; line-height: 1.4; }
+	.ir-scan-results { margin: 12px 0 0; padding-left: 1.4em; text-align: left; }
+	.ir-scan-countdown { margin-top: 10px; color: #666; font-size: 90%; }
+	.service-action-details { max-height: 12em; overflow: auto; margin: 12px 0 0; padding: 8px; border: 1px solid #ddd; background: #f7f7f7; text-align: left; white-space: pre-wrap; }
 	.obis-search-actions { margin-top: 18px; }
 	.obis-search-actions .ui-btn { margin: 0 auto; }
 	.obis-search-dialog [hidden] { display: none !important; }
@@ -187,9 +215,7 @@
 	<input type="hidden" name="saveformdata" value="1">
 	<input type="hidden" id="obis_serial" name="obis_serial" value="">
 
-	<TMPL_IF VZLOGGER_MESSAGE>
-		<pre style="background-color: rgba(255,255,200,0.4); border: 1px solid #888; padding: 10px;"><TMPL_VAR VZLOGGER_MESSAGE></pre>
-	</TMPL_IF>
+	<pre id="service_action_message" class="service-action-message" role="status" aria-live="polite"><TMPL_VAR VZLOGGER_MESSAGE ESCAPE=HTML></pre>
 
 	<h2><TMPL_VAR NAME=T::VZLOGGER.OPERATION></h2>
 	<div class="service-panel">
@@ -205,15 +231,17 @@
 		<tr>
 			<td class="service-label"><TMPL_VAR NAME=T::VZLOGGER.STATUS></td>
 			<td class="service-controls">
-				<span class="service-status <TMPL_VAR VZLOGGER_SERVICE_STATUS_CLASS>"><TMPL_VAR VZLOGGER_SERVICE_STATUS></span>
+				<span id="vzlogger_service_status" class="service-status <TMPL_VAR VZLOGGER_SERVICE_STATUS_CLASS>"><TMPL_VAR VZLOGGER_SERVICE_STATUS></span>
 				<div class="service-action-line">
-					<button type="submit" name="submitaction" value="restart-vzlogger" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" <TMPL_VAR VZLOGGER_SERVICE_CONTROL_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE></button>
-					<TMPL_IF VZLOGGER_SERVICE_RUNNING><button type="submit" name="submitaction" value="stop-vzlogger" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="delete" <TMPL_VAR VZLOGGER_SERVICE_CONTROL_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE></button><TMPL_ELSE><button type="submit" name="submitaction" value="start-vzlogger" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="power" <TMPL_VAR VZLOGGER_SERVICE_CONTROL_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE></button></TMPL_IF>
+					<button id="vzlogger_restart_button" class="service-control-button" type="button" onclick="run_service_action('restart-vzlogger');" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" disabled><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE></button>
+					<button id="vzlogger_start_button" class="service-control-button" type="button" onclick="run_service_action('start-vzlogger');" data-role="button" data-inline="true" data-mini="true" data-icon="power" disabled <TMPL_IF VZLOGGER_SERVICE_RUNNING>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE></button>
+					<button id="vzlogger_stop_button" class="service-control-button" type="button" onclick="run_service_action('stop-vzlogger');" data-role="button" data-inline="true" data-mini="true" data-icon="delete" disabled <TMPL_IF VZLOGGER_SERVICE_RUNNING><TMPL_ELSE>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE></button>
 					<a href="<TMPL_VAR VZLOGGER_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR VZLOGGER_LOG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_LOG></a>
 					<span class="service-inline-setting"><label for="vzlogger_service_debug"><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG></label><select id="vzlogger_service_debug" name="vzlogger_service_debug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></span>
 					<span class="service-inline-setting"><label for="vzlogger_loglevel"><TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL></label><select id="vzlogger_loglevel" name="vzlogger_loglevel" data-inline="true" data-mini="true"><option value="0">0 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_0></option><option value="1">1 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_1></option><option value="3">3 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_3></option><option value="5">5 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_5></option><option value="10">10 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_10></option><option value="15">15 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_15></option></select></span>
 				</div>
-				<div class="vzlogger-live-links"><a class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_LIVEURL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_LIVE_READINGS></a><a class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_RENDERED_URL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_RENDERED_READINGS></a></div>
+				<div id="vzlogger_service_action_reason" class="service-action-reason" aria-live="polite"></div>
+				<div class="vzlogger-live-links"><a id="vzlogger_live_link" class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_LIVEURL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_LIVE_READINGS></a><a id="vzlogger_rendered_link" class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_RENDERED_URL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_RENDERED_READINGS></a></div>
 			</td>
 			<td class="service-spacer">&nbsp;</td>
 			<td class="service-help"><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_SERVICE_CONTROL_HELP><br><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_DEBUG_HELP><br><TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_HELP></td>
@@ -227,20 +255,22 @@
 		<table border="0">
 		<tr>
 			<td class="service-label"><label for="read"><TMPL_VAR NAME=T::VZLOGGER.READ_METERS></label></td>
-			<td class="service-controls"><select onChange="update_bridge_controls();" id="read" name="read" data-role="flipswitch" <TMPL_VAR BRIDGE_ACTIVATION_DISABLED>><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+			<td class="service-controls"><select onChange="update_bridge_controls();" id="read" name="read" data-role="flipswitch" disabled><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
 			<td class="service-spacer">&nbsp;</td>
 			<td class="service-help"><TMPL_VAR NAME=T::VZLOGGER.READ_METERS_HELP></td>
 		</tr>
 		<tr>
 			<td class="service-label"><TMPL_VAR NAME=T::VZLOGGER.STATUS></td>
 			<td class="service-controls">
-				<span class="service-status <TMPL_VAR BRIDGE_SERVICE_STATUS_CLASS>"><TMPL_VAR BRIDGE_SERVICE_STATUS></span>
+				<span id="bridge_service_status" class="service-status <TMPL_VAR BRIDGE_SERVICE_STATUS_CLASS>"><TMPL_VAR BRIDGE_SERVICE_STATUS></span>
 				<div class="service-action-line">
-					<button class="bridge-service-control" type="submit" name="submitaction" value="restart-bridge" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" <TMPL_VAR BRIDGE_SERVICE_CONTROL_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE></button>
-					<TMPL_IF BRIDGE_SERVICE_RUNNING><button type="submit" name="submitaction" value="stop-bridge" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="delete"><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE></button><TMPL_ELSE><button class="bridge-service-control" type="submit" name="submitaction" value="start-bridge" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="power" <TMPL_VAR BRIDGE_SERVICE_CONTROL_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE></button></TMPL_IF>
+					<button id="bridge_restart_button" class="service-control-button" type="button" onclick="run_service_action('restart-bridge');" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" disabled><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE></button>
+					<button id="bridge_start_button" class="service-control-button" type="button" onclick="run_service_action('start-bridge');" data-role="button" data-inline="true" data-mini="true" data-icon="power" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE></button>
+					<button id="bridge_stop_button" class="service-control-button" type="button" onclick="run_service_action('stop-bridge');" data-role="button" data-inline="true" data-mini="true" data-icon="delete" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING><TMPL_ELSE>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE></button>
 					<a href="<TMPL_VAR BRIDGE_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR BRIDGE_LOG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_LOG></a>
 					<span class="service-inline-setting"><label for="vzlogger_debug"><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG></label><select id="vzlogger_debug" name="vzlogger_debug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></span>
 				</div>
+				<div id="bridge_service_action_reason" class="service-action-reason" aria-live="polite"></div>
 			</td>
 			<td class="service-spacer">&nbsp;</td>
 			<td class="service-help"><TMPL_VAR BRIDGE_AVAILABILITY_HELP><br><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG_HELP><br>/opt/loxberry/log/plugins/smartmeter-v2/vzlogger_mqtt_bridge.log</td>
@@ -248,8 +278,10 @@
 		</table>
 	</div>
 
+	<div id="vzlogger_configuration_section" class="configuration-section">
+	<h2><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_CONFIGURATION></h2>
+	<p><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_CONFIGURATION_HELP></p>
 	<table border="0" class="settings-table">
-	<tr><td colspan="4"><h2><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_CONFIGURATION></h2><p><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_CONFIGURATION_HELP></p></td></tr>
 	<tr>
 		<td colspan="4">
 			<div data-role="collapsible" data-collapsed="true" data-mini="true">
@@ -273,7 +305,7 @@
 				<table border="0" class="settings-table compact-settings">
 				<tr>
 					<td width="20%"><label for="vzlogger_localenabled"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_ENABLED></label></td>
-					<td width="55%"><select id="vzlogger_localenabled" name="vzlogger_localenabled" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+					<td width="55%"><select id="vzlogger_localenabled" name="vzlogger_localenabled" data-role="flipswitch" onchange="update_local_controls();"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
 					<td width="5%">&nbsp;</td>
 					<td width="20%"><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_ENABLED_HELP></font></td>
 				</tr>
@@ -307,7 +339,7 @@
 	</tr>
 	<tr>
 		<td colspan="4">
-			<div data-role="collapsible" data-collapsed="true" data-mini="true">
+			<div id="mqtt_settings_panel" data-role="collapsible" data-collapsed="true" data-mini="true">
 				<h3><TMPL_VAR NAME=T::VZLOGGER.MQTT_SETTINGS></h3>
 				<p><TMPL_VAR NAME=T::VZLOGGER.MQTT_SETTINGS_HELP></p>
 				<table border="0" class="settings-table compact-settings">
@@ -411,26 +443,27 @@
 		</td>
 	</tr>
 	<tr>
-		<td colspan=4><h2><TMPL_VAR NAME=T::VZLOGGER.IR_HEADS></h2><p><TMPL_VAR NAME=T::VZLOGGER.IR_HEADS_HELP></p></td>
+		<td colspan=4><h3><TMPL_VAR NAME=T::VZLOGGER.IR_HEADS></h3><p><TMPL_VAR NAME=T::VZLOGGER.IR_HEADS_HELP></p></td>
 	</tr>
 	<tr>
-		<td colspan=4><a data-icon="refresh" data-role="button" data-inline="true" data-mini="true" href="./index.cgi?rescan=1"><TMPL_VAR NAME=T::VZLOGGER.RESCAN_IR_HEADS></a></td>
+		<td colspan=4><a id="rescan_ir_heads" data-icon="refresh" data-role="button" data-inline="true" data-mini="true" href="./index.cgi?rescan=1" onclick="return start_ir_head_scan(event);"><TMPL_VAR NAME=T::VZLOGGER.RESCAN_IR_HEADS></a></td>
 	</tr>
 	<TMPL_LOOP NAME=ROWS>
-	<tr><td colspan="4">
+	<tr id="meter_row_<TMPL_VAR NAME=SERIAL>" class="meter-row" data-meter-serial="<TMPL_VAR NAME=SERIAL ESCAPE=HTML>"><td colspan="4">
 		<div id="meter_<TMPL_VAR NAME=SERIAL>" class="meter-panel" data-role="collapsible" data-mini="true" data-collapsed="<TMPL_VAR NAME=COLLAPSED>" data-warning-kind="<TMPL_VAR NAME=WARNING_KIND>" data-oms-supported="<TMPL_VAR NAME=OMS_SUPPORTED>" data-current-mode="<TMPL_VAR NAME=METER>" data-meter-enabled="<TMPL_VAR NAME=METER_ENABLED>" data-allowskip="<TMPL_VAR NAME=ALLOWSKIP>" data-parity="<TMPL_VAR NAME=PARITYMODE>" data-local-time="<TMPL_VAR NAME=USELOCALTIME>" data-wait-sync="<TMPL_VAR NAME=WAITSYNC>" data-mbus-debug="<TMPL_VAR NAME=MBUSDEBUG>">
-			<h3>
+			<h4>
 				<TMPL_VAR NAME=NAME ESCAPE=HTML>
+				<TMPL_IF NAME=PENDING_METER><span class="meter-pending-badge"><TMPL_VAR NAME=T::VZLOGGER.METER_PENDING_NEW></span></TMPL_IF>
 				<span class="meter-summary-device">– <TMPL_VAR NAME=DEVICE ESCAPE=HTML> – <span class="meter-protocol-summary"><TMPL_VAR NAME=PROTOCOL_LABEL ESCAPE=HTML></span></span>
 				<TMPL_IF NAME=HAS_WARNING><span class="meter-warning-icon" title="<TMPL_VAR NAME=WARNING_TEXT ESCAPE=HTML>" aria-label="<TMPL_VAR NAME=WARNING_TEXT ESCAPE=HTML>">!</span></TMPL_IF>
-			</h3>
+			</h4>
 			<TMPL_IF NAME=SHOW_WARNING_DETAIL><div class="meter-primary-warning meter-warning-message" role="alert"><TMPL_VAR NAME=WARNING_TEXT ESCAPE=HTML></div></TMPL_IF>
 			<TMPL_IF NAME=OMS_UNSUPPORTED><div class="meter-oms-runtime-warning meter-warning-message" role="alert"><TMPL_VAR NAME=T::VZLOGGER.METER_WARNING_OMS_UNAVAILABLE></div></TMPL_IF>
 			<table border="0" class="settings-table compact-settings">
-			<tr><td><label for="<TMPL_VAR NAME=SERIAL>_name"><TMPL_VAR NAME=T::FORMTABLEROWS.NAME></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_name" name="<TMPL_VAR NAME=SERIAL>_name" type="text" value="<TMPL_VAR NAME=NAME ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_NAME_HELP></td></tr>
+			<tr class="meter-name-row"><td><label for="<TMPL_VAR NAME=SERIAL>_name"><TMPL_VAR NAME=T::FORMTABLEROWS.NAME></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_name" name="<TMPL_VAR NAME=SERIAL>_name" type="text" value="<TMPL_VAR NAME=NAME ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_NAME_HELP></td></tr>
+			<tr class="meter-common-field meter-enabled-row"><td><label for="<TMPL_VAR NAME=SERIAL>_enabled"><TMPL_VAR NAME=T::VZLOGGER.METER_ENABLED></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_enabled" name="<TMPL_VAR NAME=SERIAL>_enabled" data-role="flipswitch" onchange="update_meter_enabled('<TMPL_VAR NAME=SERIAL>');"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_ENABLED_HELP></td></tr>
 			<tr><td><TMPL_VAR NAME=T::VZLOGGER.METER_DEVICE></td><td><code><TMPL_VAR NAME=DEVICE ESCAPE=HTML></code></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_DEVICE_HELP></td></tr>
 			<tr><td><label for="<TMPL_VAR NAME=SERIAL>_meter"><TMPL_VAR NAME=T::VZLOGGER.METER_PROTOCOL></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_meter" name="<TMPL_VAR NAME=SERIAL>_meter" data-mini="true" data-native-menu="true" onchange="update_meter_protocol(this.id.substring(0, this.id.length - 6));"><option value="0"><TMPL_VAR NAME=T::FORMTABLEROWS.PLEASESELECT></option><option value="sml">SML</option><option value="d0">D0</option><option value="oms">OMS</option><option value="user"><TMPL_VAR NAME=T::VZLOGGER.PROTOCOL_USER></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_PROTOCOL_HELP></td></tr>
-			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_enabled"><TMPL_VAR NAME=T::VZLOGGER.METER_ENABLED></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_enabled" name="<TMPL_VAR NAME=SERIAL>_enabled" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_ENABLED_HELP></td></tr>
 			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_allowskip"><TMPL_VAR NAME=T::VZLOGGER.METER_ALLOWSKIP></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_allowskip" name="<TMPL_VAR NAME=SERIAL>_allowskip" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_ALLOWSKIP_HELP></td></tr>
 			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_aggtime"><TMPL_VAR NAME=T::VZLOGGER.METER_AGGTIME></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_aggtime" name="<TMPL_VAR NAME=SERIAL>_aggtime" type="number" value="<TMPL_VAR NAME=AGGTIME>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_AGGTIME_HELP></td></tr>
 
@@ -452,15 +485,24 @@
 
 			<tr class="meter-user-settings"><td><label for="<TMPL_VAR NAME=SERIAL>_userjson"><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON></label></td><td><textarea class="meter-json-editor" id="<TMPL_VAR NAME=SERIAL>_userjson" name="<TMPL_VAR NAME=SERIAL>_userjson" maxlength="65536"><TMPL_VAR NAME=USER_JSON ESCAPE=HTML></textarea><div class="meter-doc-links"><a href="https://wiki.volkszaehler.org/software/controller/vzlogger/vzlogger_conf_parameter" target="_blank" rel="noopener"><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON_DOCS></a> · <a href="https://github.com/volkszaehler/vzlogger/tree/master/etc" target="_blank" rel="noopener"><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON_EXAMPLES></a></div></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON_HELP></td></tr>
 
-			<tr class="meter-obis-settings"><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS></td><td><button class="obis-discovery" type="button" onclick="start_obis_discovery('<TMPL_VAR NAME=SERIAL>');" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search" <TMPL_VAR NAME=OBIS_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.READ_OBIS_CHANNELS></button><TMPL_IF NAME=OBIS_CHANNELS_EMPTY><p><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_EMPTY></p></TMPL_IF><TMPL_LOOP NAME=OBIS_CHANNELS><label><input type="checkbox" name="<TMPL_VAR NAME=FIELD_NAME>" value="<TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML>" <TMPL_VAR NAME=CHECKED>><TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML> - <TMPL_VAR NAME=NAME ESCAPE=HTML></label></TMPL_LOOP></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_HELP></td></tr>
+			<tr class="meter-obis-settings"><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS></td><td><button class="obis-discovery" type="button" onclick="start_obis_discovery('<TMPL_VAR NAME=SERIAL>');" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search" <TMPL_VAR NAME=OBIS_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.READ_OBIS_CHANNELS></button><p id="<TMPL_VAR NAME=SERIAL>_obis_empty" <TMPL_IF NAME=OBIS_CHANNELS_EMPTY><TMPL_ELSE>hidden</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_EMPTY></p><div id="<TMPL_VAR NAME=SERIAL>_obis_channels" class="obis-channel-list"><TMPL_LOOP NAME=OBIS_CHANNELS><label class="obis-channel-option" data-obis-identifier="<TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML>"><input type="checkbox" name="<TMPL_VAR NAME=FIELD_NAME>" value="<TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML>" <TMPL_VAR NAME=CHECKED>><span class="obis-channel-label"><TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML> - <TMPL_VAR NAME=NAME ESCAPE=HTML></span><TMPL_IF NAME=IS_NEW><span class="obis-channel-new"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNEL_NEW></span></TMPL_IF></label></TMPL_LOOP></div></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_HELP></td></tr>
 			<tr class="meter-obis-settings"><td><label for="<TMPL_VAR NAME=SERIAL>_obis_custom"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CUSTOM></label></td><td><textarea id="<TMPL_VAR NAME=SERIAL>_obis_custom" name="<TMPL_VAR NAME=SERIAL>_obis_custom" rows="4"><TMPL_VAR NAME=OBIS_CUSTOM ESCAPE=HTML></textarea></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CUSTOM_HELP></td></tr>
+			<tr class="meter-remove-row"><td colspan="4"><input class="meter-remove-marker" type="hidden" name="remove_meter" value="<TMPL_VAR NAME=SERIAL>" disabled><button class="meter-remove-button" type="button" onclick="stage_meter_removal('<TMPL_VAR NAME=SERIAL>');" data-role="button" data-inline="true" data-mini="true" data-icon="delete"><TMPL_VAR NAME=T::VZLOGGER.REMOVE_METER></button><span class="meter-remove-help"><TMPL_VAR NAME=T::VZLOGGER.REMOVE_METER_HELP></span></td></tr>
 			</table>
 		</div>
 	</td></tr>
 	</TMPL_LOOP>
+	<tr id="meter_rows_end" hidden><td colspan="4"></td></tr>
+	</table>
+	</div>
+
+	<div id="bridge_configuration_section" class="configuration-section">
+	<h2><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_CONFIGURATION></h2>
+	<p><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_CONFIGURATION_HELP></p>
+	<table border="0" class="settings-table">
 	<tr>
 		<td colspan="4">
-			<div data-role="collapsible" data-collapsed="true" data-mini="true">
+			<div id="bridge_settings_panel" data-role="collapsible" data-collapsed="true" data-mini="true">
 				<h3><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_SETTINGS></h3>
 				<p><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_SETTINGS_HELP></p>
 				<table border="0" class="settings-table compact-settings">
@@ -471,16 +513,16 @@
 					<td width="20%"><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.UPDATE_CYCLE_HELP></font></td>
 				</tr>
 				<tr><td colspan="4"><h4><TMPL_VAR NAME=T::VZLOGGER.HTTP_CACHE></h4></td></tr>
-				<tr>
+				<tr id="http_cache_status_row">
 					<td><TMPL_VAR NAME=T::VZLOGGER.HTTP_CACHE_STATUS></td>
-					<td><span><TMPL_VAR NAME=HTTP_CACHE_STATUS></span><br><a class="inline-link <TMPL_VAR HTTP_CACHE_DISABLED>" href="<TMPL_VAR HTTP_CACHE_URL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_HTTP_CACHE></a></td>
+					<td><span><TMPL_VAR NAME=HTTP_CACHE_STATUS></span><br><a id="http_cache_link" data-cache-available="<TMPL_VAR HTTP_CACHE_AVAILABLE>" class="inline-link <TMPL_VAR HTTP_CACHE_DISABLED>" href="<TMPL_VAR HTTP_CACHE_URL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_HTTP_CACHE></a></td>
 					<td>&nbsp;</td>
 					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.HTTP_CACHE_HELP></font></td>
 				</tr>
 				<tr><td colspan="4"><h4><TMPL_VAR NAME=T::VZLOGGER.UDP_OPTIONS></h4></td></tr>
 				<tr>
 					<td><label for="sendudp"><TMPL_VAR NAME=T::VZLOGGER.SEND_UDP></label></td>
-					<td><select onChange="disable_udp();" id="sendudp" name="sendudp" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+					<td><select id="sendudp" name="sendudp" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
 					<td>&nbsp;</td>
 					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.SEND_UDP_HELP></font></td>
 				</tr>
@@ -494,9 +536,13 @@
 			</div>
 		</td>
 	</tr>
+	</table>
+	</div>
+
+	<table border="0" class="settings-table">
 	<tr>
 		<td><TMPL_VAR NAME=T::VZLOGGER.GENERATED_CONFIG></td>
-		<td colspan=3><code><TMPL_VAR VZLOGGER_CONFIG></code></td>
+		<td colspan=3><a href="<TMPL_VAR VZLOGGER_CONFIG_URL>" target="_blank" rel="noopener" title="<TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="search" class="<TMPL_VAR VZLOGGER_CONFIG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG></a> <code><TMPL_VAR VZLOGGER_CONFIG></code></td>
 	</tr>
 	<tr>
 		<td><TMPL_VAR NAME=T::VZLOGGER.ACTIONS></td>
@@ -510,6 +556,29 @@
 	</tr>
 	</table>
 	</form>
+	<div id="ir_scan_overlay" class="obis-search-overlay" role="dialog" aria-modal="true" aria-labelledby="ir_scan_title" aria-describedby="ir_scan_message" aria-hidden="true" tabindex="-1">
+		<div class="obis-search-dialog">
+			<div id="ir_scan_spinner" class="obis-search-spinner" aria-hidden="true"></div>
+			<div id="ir_scan_title" class="obis-search-title"><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_RUNNING></div>
+			<div id="ir_scan_message" class="obis-search-message" role="status" aria-live="polite"><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_WAIT></div>
+			<ul id="ir_scan_results" class="ir-scan-results" hidden></ul>
+			<div id="ir_scan_staged_heading" class="obis-search-message" hidden></div>
+			<ul id="ir_scan_staged_results" class="ir-scan-results" hidden></ul>
+			<div id="ir_scan_countdown" class="ir-scan-countdown" aria-live="polite" hidden></div>
+			<div class="obis-search-actions"><button id="ir_scan_close" type="button" data-role="button" data-inline="true" data-mini="true" onclick="close_ir_head_scan();" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_CLOSE></button></div>
+			<span id="ir_scan_running_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_RUNNING></span>
+			<span id="ir_scan_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_WAIT></span>
+			<span id="ir_scan_result_title_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_RESULT_TITLE></span>
+			<span id="ir_scan_none_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_NONE></span>
+			<span id="ir_scan_no_new_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_NO_NEW></span>
+			<span id="ir_scan_found_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_FOUND></span>
+			<span id="ir_scan_staged_found_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_STAGED_FOUND></span>
+			<span id="ir_scan_failed_title_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_FAILED_TITLE></span>
+			<span id="ir_scan_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_FAILED></span>
+			<span id="ir_scan_timeout_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_TIMEOUT></span>
+			<span id="ir_scan_autoclose_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_AUTOCLOSE></span>
+		</div>
+	</div>
 	<div id="obis_search_overlay" class="obis-search-overlay" role="dialog" aria-modal="true" aria-labelledby="obis_search_title" aria-describedby="obis_search_message" aria-hidden="true" tabindex="-1">
 		<div class="obis-search-dialog">
 			<div class="obis-search-spinner" aria-hidden="true"></div>
@@ -520,18 +589,376 @@
 			<span id="obis_search_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_WAIT></span>
 			<span id="obis_search_cancelling_text" hidden><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_CANCELLING></span>
 			<span id="obis_search_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_FAILED></span>
+			<span id="obis_search_restore_warning_text" hidden><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_RESTORE_WARNING></span>
+			<span id="obis_channel_new_text" hidden><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNEL_NEW></span>
+			<span id="service_reason_waiting" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_REASON_WAITING></span>
+			<span id="service_reason_activation" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_REASON_ACTIVATION></span>
+			<span id="service_reason_config" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_REASON_CONFIG></span>
+			<span id="service_reason_mqtt" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_REASON_MQTT></span>
+			<span id="service_reason_busy" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_REASON_BUSY></span>
 		</div>
 	</div>
+	<div id="service_action_overlay" class="obis-search-overlay" role="dialog" aria-modal="true" aria-labelledby="service_action_title" aria-describedby="service_action_overlay_message" aria-hidden="true" tabindex="-1">
+		<div class="obis-search-dialog">
+			<div id="service_action_spinner" class="obis-search-spinner" aria-hidden="true"></div>
+			<div id="service_action_title" class="obis-search-title"></div>
+			<div id="service_action_overlay_message" class="obis-search-message" role="status" aria-live="polite"><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_WAIT></div>
+			<pre id="service_action_details" class="service-action-details" hidden></pre>
+			<div class="obis-search-actions">
+				<button id="service_action_hide" type="button" data-role="button" data-inline="true" data-mini="true" onclick="hide_service_action_overlay();"><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_HIDE></button>
+				<button id="service_action_close" type="button" data-role="button" data-inline="true" data-mini="true" onclick="close_service_action_overlay();" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_CLOSE></button>
+			</div>
+			<span id="service_action_start_vzlogger_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_START_VZLOGGER></span>
+			<span id="service_action_stop_vzlogger_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_STOP_VZLOGGER></span>
+			<span id="service_action_restart_vzlogger_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_RESTART_VZLOGGER></span>
+			<span id="service_action_start_bridge_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_START_BRIDGE></span>
+			<span id="service_action_stop_bridge_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_STOP_BRIDGE></span>
+			<span id="service_action_restart_bridge_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_RESTART_BRIDGE></span>
+			<span id="service_action_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_WAIT></span>
+			<span id="service_action_slow_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_SLOW></span>
+			<span id="service_action_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_FAILED></span>
+		</div>
+	</div>
+	<span id="remove_meter_confirm_text" hidden><TMPL_VAR NAME=T::VZLOGGER.REMOVE_METER_CONFIRM></span>
 
 	<script>
 		var obis_job_id = "";
 		var obis_job_serial = "";
 		var obis_poll_timer = null;
 		var obis_poll_failures = 0;
+		var service_poll_timer = null;
+		var service_poll_in_flight = false;
+		var service_action_running = false;
+		var service_action_timeout_timer = null;
+		var last_service_snapshot = null;
+		var ir_scan_running = false;
+		var ir_scan_close_timer = null;
+
+		function service_ajax_url(action) {
+			return "./index.cgi?ajax=1&ajaxaction=" + encodeURIComponent(action) + "&_=" + Date.now();
+		}
+
+		function show_service_message(message) {
+			var element = document.getElementById("service_action_message");
+			if (element) element.textContent = message || "";
+		}
+
+		function set_service_button_state(id, visible, enabled, reason) {
+			var button = $("#" + id);
+			button.toggle(!!visible);
+			button.prop("disabled", !enabled).toggleClass("ui-disabled", !enabled);
+			if (!enabled && reason) button.attr("title", reason);
+			else button.removeAttr("title");
+		}
+
+		function render_service_status(name, status) {
+			if (!status) return;
+			var element = $("#" + name + "_service_status");
+			element.text(status.status_text || status.state || "unknown");
+			element.removeClass("service-status-idle service-status-ok service-status-warning service-status-error");
+			element.addClass(status.status_class || "service-status-error");
+		}
+
+		function render_service_snapshot(response) {
+			if (!response || !response.services) return;
+			last_service_snapshot = response;
+			render_service_status("vzlogger", response.services.vzlogger);
+			render_service_status("bridge", response.services.bridge);
+			update_all_control_states();
+		}
+
+		function schedule_service_poll() {
+			if (service_poll_timer) window.clearTimeout(service_poll_timer);
+			service_poll_timer = null;
+			if (!document.hidden && !service_action_running) service_poll_timer = window.setTimeout(poll_service_status, 3000);
+		}
+
+		function poll_service_status() {
+			if (document.hidden || service_action_running || service_poll_in_flight) {
+				schedule_service_poll();
+				return;
+			}
+			service_poll_in_flight = true;
+			fetch(service_ajax_url("service-status"), { credentials: "same-origin", cache: "no-store" })
+				.then(function (response) {
+					if (!response.ok) throw new Error("HTTP " + response.status);
+					return response.json();
+				})
+				.then(render_service_snapshot)
+				.catch(function () {})
+				.then(function () {
+					service_poll_in_flight = false;
+					schedule_service_poll();
+				});
+		}
+
+		function show_service_action_overlay(action) {
+			var overlay = document.getElementById("service_action_overlay");
+			if (!overlay) return;
+			document.getElementById("service_action_spinner").style.display = "block";
+			var title_id = "service_action_" + action.replace(/-/g, "_") + "_text";
+			document.getElementById("service_action_title").textContent = obis_text(title_id);
+			document.getElementById("service_action_overlay_message").textContent = obis_text("service_action_wait_text");
+			document.getElementById("service_action_details").hidden = true;
+			document.getElementById("service_action_details").textContent = "";
+			document.getElementById("service_action_hide").hidden = false;
+			document.getElementById("service_action_close").hidden = true;
+			overlay.classList.add("is-visible");
+			overlay.setAttribute("aria-hidden", "false");
+			document.getElementById("vzlogger_form").setAttribute("aria-busy", "true");
+			overlay.focus();
+			service_action_timeout_timer = window.setTimeout(function () {
+				if (service_action_running) document.getElementById("service_action_overlay_message").textContent = obis_text("service_action_slow_text");
+			}, 15000);
+		}
+
+		function hide_service_action_overlay() {
+			var overlay = document.getElementById("service_action_overlay");
+			overlay.classList.remove("is-visible");
+			overlay.setAttribute("aria-hidden", "true");
+		}
+
+		function close_service_action_overlay() {
+			if (service_action_running) return;
+			hide_service_action_overlay();
+		}
+
+		function finish_service_action_overlay(ok, message) {
+			if (service_action_timeout_timer) window.clearTimeout(service_action_timeout_timer);
+			service_action_timeout_timer = null;
+			document.getElementById("service_action_spinner").style.display = "none";
+			document.getElementById("service_action_overlay_message").textContent = obis_text("service_action_failed_text");
+			var details = document.getElementById("service_action_details");
+			details.textContent = message || "";
+			details.hidden = !message;
+			document.getElementById("service_action_hide").hidden = true;
+			document.getElementById("service_action_close").hidden = false;
+			document.getElementById("vzlogger_form").removeAttribute("aria-busy");
+			if (ok) {
+				hide_service_action_overlay();
+			} else {
+				var overlay = document.getElementById("service_action_overlay");
+				overlay.classList.add("is-visible");
+				overlay.setAttribute("aria-hidden", "false");
+				overlay.focus();
+			}
+		}
+
+		function run_service_action(action) {
+			if (service_action_running) return;
+			service_action_running = true;
+			if (service_poll_timer) window.clearTimeout(service_poll_timer);
+			service_poll_timer = null;
+			update_all_control_states();
+			show_service_message("");
+			show_service_action_overlay(action);
+			var action_ok = false;
+			var action_message = "";
+			var needs_status_refresh = false;
+			var data = new FormData();
+			data.append("ajax", "1");
+			data.append("ajaxaction", "service-action");
+			data.append("service_action", action);
+			if (/-vzlogger$/.test(action)) {
+				data.append("implementation", $("#implementation").val());
+				data.append("vzlogger_service_debug", $("#vzlogger_service_debug").val());
+				data.append("vzlogger_loglevel", $("#vzlogger_loglevel").val());
+			} else {
+				data.append("implementation", $("#implementation").val());
+				data.append("read", $("#read").val());
+				data.append("vzlogger_debug", $("#vzlogger_debug").val());
+			}
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
+				.then(function (response) {
+					if (!response.ok) throw new Error("HTTP " + response.status);
+					return response.json();
+				})
+				.then(function (response) {
+					action_ok = !!response.ok;
+					action_message = response.message || (response.ok ? "OK" : obis_text("service_action_failed_text"));
+					show_service_message(action_message);
+					render_service_snapshot(response);
+					needs_status_refresh = !response.services;
+				})
+				.catch(function (error) {
+					action_message = obis_text("service_action_failed_text") + ": " + error.message;
+					show_service_message(action_message);
+					needs_status_refresh = true;
+				})
+				.then(function () {
+					service_action_running = false;
+					update_all_control_states();
+					finish_service_action_overlay(action_ok, action_message);
+					if (needs_status_refresh) poll_service_status();
+					else schedule_service_poll();
+				});
+		}
+
+		document.addEventListener("visibilitychange", function () {
+			if (document.hidden) {
+				if (service_poll_timer) window.clearTimeout(service_poll_timer);
+				service_poll_timer = null;
+			} else {
+				poll_service_status();
+			}
+		});
 
 		function obis_text(id) {
 			var element = document.getElementById(id);
 			return element ? element.textContent : "";
+		}
+
+		function show_ir_head_scan() {
+			var overlay = document.getElementById("ir_scan_overlay");
+			ir_scan_running = true;
+			if (ir_scan_close_timer) window.clearInterval(ir_scan_close_timer);
+			ir_scan_close_timer = null;
+			document.getElementById("ir_scan_spinner").style.display = "block";
+			document.getElementById("ir_scan_title").textContent = obis_text("ir_scan_running_text");
+			document.getElementById("ir_scan_message").textContent = obis_text("ir_scan_wait_text");
+			document.getElementById("ir_scan_results").replaceChildren();
+			document.getElementById("ir_scan_results").hidden = true;
+			document.getElementById("ir_scan_staged_heading").hidden = true;
+			document.getElementById("ir_scan_staged_results").replaceChildren();
+			document.getElementById("ir_scan_staged_results").hidden = true;
+			document.getElementById("ir_scan_countdown").hidden = true;
+			document.getElementById("ir_scan_close").hidden = true;
+			overlay.classList.add("is-visible");
+			overlay.setAttribute("aria-hidden", "false");
+			document.getElementById("vzlogger_form").setAttribute("aria-busy", "true");
+			overlay.focus();
+		}
+
+		function finish_ir_head_scan(status) {
+			ir_scan_running = false;
+			document.getElementById("ir_scan_spinner").style.display = "none";
+			document.getElementById("ir_scan_title").textContent = obis_text("ir_scan_result_title_text");
+			var message = status.result == "none" ? obis_text("ir_scan_none_text") :
+				status.result == "no_new" ? obis_text("ir_scan_no_new_text") :
+				status.result == "staged" ? obis_text("ir_scan_staged_found_text") : obis_text("ir_scan_found_text");
+			document.getElementById("ir_scan_message").textContent = message;
+			render_ir_head_list("ir_scan_results", status.heads || []);
+			var staged = status.staged_heads || [];
+			var staged_heading = document.getElementById("ir_scan_staged_heading");
+			staged_heading.textContent = obis_text("ir_scan_staged_found_text");
+			staged_heading.hidden = !(staged.length && (status.heads || []).length);
+			render_ir_head_list("ir_scan_staged_results", staged);
+			restore_staged_meter_panels(staged);
+			document.getElementById("ir_scan_close").hidden = false;
+			document.getElementById("vzlogger_form").removeAttribute("aria-busy");
+			if (status.result == "no_new") start_ir_scan_countdown(3);
+		}
+
+		function render_ir_head_list(id, heads) {
+			var list = document.getElementById(id);
+			list.replaceChildren();
+			heads.forEach(function (head) {
+				var item = document.createElement("li");
+				item.textContent = (head.name || head.serial) + ": " + head.path;
+				list.appendChild(item);
+			});
+			list.hidden = !list.children.length;
+		}
+
+		function restore_staged_meter_panels(heads) {
+			heads.forEach(function (head) {
+				var panel = $(document.getElementById("meter_" + head.serial));
+				if (!panel.length) return;
+				panel.find(".meter-remove-marker").prop("disabled", true);
+				panel.closest("tr").show();
+			});
+		}
+
+		function synchronize_ir_head_panels() {
+			return fetch("./index.cgi?form=vzlogger&_=" + Date.now(), { credentials: "same-origin", cache: "no-store" })
+				.then(function (response) {
+					if (!response.ok) throw new Error("HTTP " + response.status);
+					return response.text();
+				})
+				.then(function (html) {
+					var parsed = new DOMParser().parseFromString(html, "text/html");
+					var end = document.getElementById("meter_rows_end");
+					if (!end) throw new Error("Meter insertion point not found.");
+					parsed.querySelectorAll("tr.meter-row").forEach(function (source_row) {
+						var source_panel = source_row.querySelector(".meter-panel");
+						if (!source_panel || document.getElementById(source_panel.id)) return;
+						var row = document.importNode(source_row, true);
+						end.parentNode.insertBefore(row, end);
+						initialize_meter_panel(row.querySelector(".meter-panel"), true);
+					});
+					update_all_control_states();
+				});
+		}
+
+		function fail_ir_head_scan(message) {
+			ir_scan_running = false;
+			document.getElementById("ir_scan_spinner").style.display = "none";
+			document.getElementById("ir_scan_title").textContent = obis_text("ir_scan_failed_title_text");
+			document.getElementById("ir_scan_message").textContent = obis_text("ir_scan_failed_text") + " " + message;
+			document.getElementById("ir_scan_results").hidden = true;
+			document.getElementById("ir_scan_staged_heading").hidden = true;
+			document.getElementById("ir_scan_staged_results").hidden = true;
+			document.getElementById("ir_scan_countdown").hidden = true;
+			document.getElementById("ir_scan_close").hidden = false;
+			document.getElementById("vzlogger_form").removeAttribute("aria-busy");
+		}
+
+		function start_ir_scan_countdown(seconds) {
+			var countdown = document.getElementById("ir_scan_countdown");
+			function render() {
+				countdown.textContent = obis_text("ir_scan_autoclose_text").replace("{seconds}", seconds);
+				countdown.hidden = false;
+			}
+			render();
+			ir_scan_close_timer = window.setInterval(function () {
+				seconds--;
+				if (seconds <= 0) {
+					window.clearInterval(ir_scan_close_timer);
+					ir_scan_close_timer = null;
+					close_ir_head_scan();
+					return;
+				}
+				render();
+			}, 1000);
+		}
+
+		function close_ir_head_scan() {
+			if (ir_scan_running) return;
+			if (ir_scan_close_timer) window.clearInterval(ir_scan_close_timer);
+			ir_scan_close_timer = null;
+			var overlay = document.getElementById("ir_scan_overlay");
+			overlay.classList.remove("is-visible");
+			overlay.setAttribute("aria-hidden", "true");
+		}
+
+		function start_ir_head_scan(event) {
+			if (event) event.preventDefault();
+			if (ir_scan_running || $("#rescan_ir_heads").attr("aria-disabled") == "true") return false;
+			show_ir_head_scan();
+			var controller = window.AbortController ? new AbortController() : null;
+			var timed_out = false;
+			var timeout = window.setTimeout(function () {
+				timed_out = true;
+				if (controller) controller.abort();
+				else fail_ir_head_scan(obis_text("ir_scan_timeout_text"));
+			}, 15000);
+			var data = new FormData();
+			data.append("ajax", "1");
+			data.append("ajaxaction", "ir-scan");
+			document.querySelectorAll(".meter-remove-marker:not(:disabled)").forEach(function (marker) {
+				data.append("staged_removed", marker.value);
+			});
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store", signal: controller ? controller.signal : undefined })
+				.then(function (response) { return response.json(); })
+				.then(function (status) {
+					if (!status.ok) throw new Error(status.message || obis_text("ir_scan_failed_text"));
+					return synchronize_ir_head_panels().then(function () { finish_ir_head_scan(status); });
+				})
+				.catch(function (error) {
+					fail_ir_head_scan(timed_out ? obis_text("ir_scan_timeout_text") : (error.message || obis_text("ir_scan_failed_text")));
+				})
+				.then(function () { window.clearTimeout(timeout); });
+			return false;
 		}
 
 		function show_obis_search_overlay() {
@@ -593,7 +1020,11 @@
 					obis_poll_failures = 0;
 					if (status.state == "completed") {
 						var serial = status.serial || obis_job_serial;
-						window.location.href = "./index.cgi?form=vzlogger&obis_serial=" + encodeURIComponent(serial);
+						if (status.restore_failed || status.warning) {
+							window.alert($("#obis_search_restore_warning_text").text() || status.warning);
+						}
+						render_discovered_obis_channels(serial, status.channels || []);
+						reset_obis_search_overlay();
 						return;
 					}
 					if (status.state == "cancelled") {
@@ -619,6 +1050,55 @@
 					}
 					obis_discovery_failed(error);
 				});
+		}
+
+		function render_discovered_obis_channels(serial, channels) {
+			var container = document.getElementById(serial + "_obis_channels");
+			if (!container) return;
+			var existing = {};
+			container.querySelectorAll(".obis-channel-option").forEach(function (label) {
+				existing[label.getAttribute("data-obis-identifier")] = label;
+				var old_new = label.querySelector(".obis-channel-new");
+				if (old_new) old_new.remove();
+			});
+			channels.forEach(function (channel) {
+				var identifier = channel.identifier || "";
+				if (!identifier) return;
+				var label = existing[identifier];
+				if (!label) {
+					label = document.createElement("label");
+					label.className = "obis-channel-option";
+					label.setAttribute("data-obis-identifier", identifier);
+					var checkbox = document.createElement("input");
+					checkbox.type = "checkbox";
+					checkbox.name = serial + "_obis";
+					checkbox.value = identifier;
+					checkbox.checked = !!channel.selected;
+					label.appendChild(checkbox);
+					var text = document.createElement("span");
+					text.className = "obis-channel-label";
+					label.appendChild(text);
+					container.appendChild(label);
+					existing[identifier] = label;
+				} else {
+					var text = label.querySelector(".obis-channel-label");
+					if (!text) {
+						text = document.createElement("span");
+						text.className = "obis-channel-label";
+						label.appendChild(text);
+					}
+				}
+				text.textContent = identifier + " - " + (channel.name || identifier);
+				if (channel.is_new) {
+					var new_marker = document.createElement("span");
+					new_marker.className = "obis-channel-new";
+					new_marker.textContent = obis_text("obis_channel_new_text");
+					label.appendChild(new_marker);
+				}
+			});
+			var empty = document.getElementById(serial + "_obis_empty");
+			if (empty) empty.hidden = !!container.querySelector(".obis-channel-option");
+			try { $(container).enhanceWithin(); } catch (error) {}
 		}
 
 		function cancel_obis_discovery() {
@@ -663,11 +1143,18 @@
 		window.addEventListener("pageshow", function () {
 			reset_obis_search_overlay();
 			resume_obis_discovery();
+			poll_service_status();
 		});
 
 		$("#read").val("<TMPL_VAR READ>");
 		$("#implementation").val("<TMPL_VAR IMPLEMENTATION>");
-		$("#sendudp").val("<TMPL_VAR SENDUDP>");
+		var sendudp_control = $("#sendudp");
+		sendudp_control.val("<TMPL_VAR SENDUDP>");
+		sendudp_control.off("change.smartmeterUdp").on("change.smartmeterUdp", disable_udp);
+		try { sendudp_control.flipswitch("refresh"); } catch (error) {}
+		$("#rescan_ir_heads, #http_cache_link, #vzlogger_live_link, #vzlogger_rendered_link").off("click.smartmeterDisabled").on("click.smartmeterDisabled", function (event) {
+			if ($(this).attr("aria-disabled") == "true") event.preventDefault();
+		});
 		$("#vzlogger_debug").val("<TMPL_VAR VZLOGGER_DEBUG>");
 		$("#vzlogger_service_debug").val("<TMPL_VAR VZLOGGER_SERVICE_DEBUG>");
 		$("#vzlogger_loglevel").val("<TMPL_VAR VZLOGGER_LOGLEVEL>");
@@ -683,41 +1170,105 @@
 		disable_udp();
 
 		function disable_cron() {
-			update_vzlogger_controls();
+			update_all_control_states();
 		}
 
 		function set_control_disabled(selector, disabled) {
 			var controls = $(selector);
 			controls.prop("disabled", disabled).toggleClass("ui-disabled", disabled);
 			controls.each(function() {
-				$(this).closest(".ui-input-text, .ui-select, .ui-flipswitch, .ui-checkbox").toggleClass("ui-disabled", disabled);
+				var control = $(this);
+				control.closest(".ui-input-text, .ui-select, .ui-flipswitch, .ui-checkbox").toggleClass("ui-disabled", disabled);
+				try {
+					if (control.is("select[data-role='flipswitch']")) control.flipswitch(disabled ? "disable" : "enable");
+					else if (control.is("select")) control.selectmenu(disabled ? "disable" : "enable");
+					else if (control.is("input[type='text'], input[type='number'], input[type='password']")) control.textinput(disabled ? "disable" : "enable");
+				} catch (error) {}
+				var inline_setting = control.closest(".service-inline-setting");
+				if (inline_setting.length) inline_setting.toggleClass("setting-disabled-inline", disabled);
+				else control.closest("tr").toggleClass("setting-disabled", disabled);
 			});
 		}
 
-		function update_vzlogger_controls() {
-			var vzlogger_disabled = $("#implementation").val() != "vzlogger";
-			set_control_disabled("#vzlogger_localenabled, #vzlogger_localport, #vzlogger_localindex, #vzlogger_localtimeout, #vzlogger_localbuffer, #vzlogger_service_debug, #vzlogger_loglevel, #vzlogger_retry, #vzlogger_mqttenabled", vzlogger_disabled);
-			update_mqtt_controls();
+		function set_anchor_disabled(selector, disabled) {
+			var anchors = $(selector);
+			anchors.toggleClass("ui-disabled", disabled).attr("aria-disabled", disabled ? "true" : "false");
+			if (disabled) anchors.attr("tabindex", "-1"); else anchors.removeAttr("tabindex");
 		}
 
-		function update_mqtt_controls() {
-			var mqtt_disabled = $("#implementation").val() != "vzlogger" || $("#vzlogger_mqttenabled").val() == "0";
-			set_control_disabled("#vzlogger_mqtthost, #vzlogger_mqttport, #vzlogger_mqttcafile, #vzlogger_mqttcapath, #vzlogger_mqttcertfile, #vzlogger_mqttkeyfile, #vzlogger_mqttkeypass, #vzlogger_mqttkeypass_reset, #vzlogger_mqttkeepalive, #mqtttopic, #vzlogger_mqttid, #vzlogger_mqttuser, #vzlogger_mqttpass, #vzlogger_mqttpass_reset, #vzlogger_mqttretain, #vzlogger_mqttrawandagg, #vzlogger_mqttqos, #vzlogger_mqtttimestamp", mqtt_disabled);
-			update_bridge_controls();
+		function service_reason(id) {
+			return obis_text("service_reason_" + id);
 		}
 
-		function update_bridge_controls() {
-			var bridge_available = $("#implementation").val() == "vzlogger" && $("#vzlogger_mqttenabled").val() == "1";
-			var bridge_disabled = !bridge_available || $("#read").val() == "0";
-			set_control_disabled("#read", !bridge_available);
-			set_control_disabled(".bridge-service-control, #vzlogger_udpinterval, #sendudp, #vzlogger_debug", bridge_disabled);
-			disable_udp();
+		function update_service_action_states(ui) {
+			if (!last_service_snapshot || !last_service_snapshot.services) {
+				var waiting_reason = service_reason("waiting");
+				$(".service-control-button").prop("disabled", true).addClass("ui-disabled").attr("title", waiting_reason);
+				$("#vzlogger_service_action_reason, #bridge_service_action_reason").text(waiting_reason);
+				return;
+			}
+			var services = last_service_snapshot.services;
+			var config = last_service_snapshot.config || {};
+			var applied = last_service_snapshot.applied || {};
+			var busy_reason = service_reason("busy");
+			var vz_reason = !ui.vzlogger ? service_reason("activation") : !config.valid ? service_reason("config") : "";
+			var bridge_reason = !ui.bridge ? service_reason("activation") : !config.valid ? service_reason("config") :
+				(!applied.mqtt_enabled || !config.mqtt_enabled ? service_reason("mqtt") : "");
+			var vz_enabled = ui.vzlogger && !!config.valid && !service_action_running;
+			var bridge_enabled = ui.bridge && !!config.valid && !!applied.mqtt_enabled && !!config.mqtt_enabled && !service_action_running;
+			$("#vzlogger_service_action_reason").text(vz_enabled ? "" : (service_action_running ? busy_reason : vz_reason));
+			$("#bridge_service_action_reason").text(bridge_enabled ? "" : (service_action_running ? busy_reason : bridge_reason));
+			set_service_button_state("vzlogger_start_button", !services.vzlogger.running, vz_enabled, service_action_running ? busy_reason : vz_reason);
+			set_service_button_state("vzlogger_restart_button", true, vz_enabled, service_action_running ? busy_reason : vz_reason);
+			set_service_button_state("vzlogger_stop_button", !!services.vzlogger.running, !!services.vzlogger.running && !service_action_running, service_action_running ? busy_reason : "");
+			set_service_button_state("bridge_start_button", !services.bridge.running, bridge_enabled, service_action_running ? busy_reason : bridge_reason);
+			set_service_button_state("bridge_restart_button", true, bridge_enabled, service_action_running ? busy_reason : bridge_reason);
+			set_service_button_state("bridge_stop_button", !!services.bridge.running, !!services.bridge.running && !service_action_running, service_action_running ? busy_reason : "");
+			set_anchor_disabled("#vzlogger_live_link, #vzlogger_rendered_link", !services.vzlogger.running);
 		}
 
+		function update_all_control_states() {
+			var ui = {
+				vzlogger: $("#implementation").val() == "vzlogger",
+				local: $("#vzlogger_localenabled").val() == "1",
+				mqtt: $("#vzlogger_mqttenabled").val() == "1",
+				bridge_switch: $("#read").val() == "1",
+				udp: $("#sendudp").val() == "1"
+			};
+			ui.bridge_available = ui.vzlogger && ui.mqtt;
+			ui.bridge = ui.bridge_available && ui.bridge_switch;
+
+			$("#vzlogger_configuration_section").toggleClass("configuration-disabled", !ui.vzlogger);
+			set_control_disabled("#vzlogger_service_debug, #vzlogger_loglevel, #vzlogger_retry, #vzlogger_localenabled, #vzlogger_mqttenabled", !ui.vzlogger);
+			set_control_disabled("#vzlogger_localport, #vzlogger_localindex, #vzlogger_localtimeout, #vzlogger_localbuffer", !(ui.vzlogger && ui.local));
+			set_control_disabled("#vzlogger_mqtthost, #vzlogger_mqttport, #vzlogger_mqttcafile, #vzlogger_mqttcapath, #vzlogger_mqttcertfile, #vzlogger_mqttkeyfile, #vzlogger_mqttkeypass, #vzlogger_mqttkeypass_reset, #vzlogger_mqttkeepalive, #mqtttopic, #vzlogger_mqttid, #vzlogger_mqttuser, #vzlogger_mqttpass, #vzlogger_mqttpass_reset, #vzlogger_mqttretain, #vzlogger_mqttrawandagg, #vzlogger_mqttqos, #vzlogger_mqtttimestamp", !(ui.vzlogger && ui.mqtt));
+			$("#mqtt_settings_panel h4").closest("tr").toggleClass("setting-disabled", !(ui.vzlogger && ui.mqtt));
+			$("#mqtt_settings_panel > p").toggleClass("setting-disabled-inline", !(ui.vzlogger && ui.mqtt));
+
+			set_anchor_disabled("#rescan_ir_heads", !ui.vzlogger);
+			$("#rescan_ir_heads").closest("tr").toggleClass("setting-disabled", !ui.vzlogger);
+			$(".meter-panel").each(function () { update_meter_enabled(this.id.substring("meter_".length)); });
+
+			set_control_disabled("#read", !ui.bridge_available);
+			$("#bridge_configuration_section").toggleClass("configuration-disabled", !ui.bridge);
+			set_control_disabled("#vzlogger_debug, #vzlogger_udpinterval, #sendudp", !ui.bridge);
+			$("#bridge_settings_panel > p").toggleClass("setting-disabled-inline", !ui.bridge);
+			$("#bridge_settings_panel h4").closest("tr").toggleClass("setting-disabled", !ui.bridge);
+			$("#http_cache_status_row").toggleClass("setting-disabled", !ui.bridge);
+			var cache_available = $("#http_cache_link").attr("data-cache-available") == "1";
+			set_anchor_disabled("#http_cache_link", !ui.bridge || !cache_available);
+			set_control_disabled("#udpport", !ui.bridge || !ui.udp);
+			$("#labeludpport").toggleClass("ui-disabled", !ui.bridge || !ui.udp);
+
+			update_service_action_states(ui);
+		}
+
+		function update_vzlogger_controls() { update_all_control_states(); }
+		function update_local_controls() { update_all_control_states(); }
+		function update_mqtt_controls() { update_all_control_states(); }
+		function update_bridge_controls() { update_all_control_states(); }
 		function disable_udp() {
-			var udp_disabled = $("#implementation").val() != "vzlogger" || $("#vzlogger_mqttenabled").val() == "0" || $("#read").val() == "0" || $("#sendudp").val() == "0";
-			set_control_disabled("#udpport", udp_disabled);
-			$("#labeludpport").toggleClass("ui-disabled", udp_disabled);
+			update_all_control_states();
 		}
 
 		function update_meter_protocol(serial) {
@@ -743,26 +1294,69 @@
 			panel.find(".meter-common-field").toggle(["sml", "d0", "oms"].indexOf(mode) >= 0);
 			panel.find(".meter-obis-settings").toggle(["sml", "d0", "oms"].indexOf(mode) >= 0);
 			var omsUnsupported = mode == "oms" && panel.attr("data-oms-supported") != "1";
-			set_control_disabled(panel.find(".obis-discovery"), omsUnsupported);
 			panel.find(".meter-oms-runtime-warning").toggle(omsUnsupported);
 			var selectedOption = selectElement.options[selectElement.selectedIndex];
 			panel.find(".meter-protocol-summary").text(selectedOption ? selectedOption.text : "");
 			var warningKind = panel.attr("data-warning-kind") || "";
 			var showWarning = !warningKind || warningKind == mode;
 			panel.find(".meter-warning-icon, .meter-primary-warning").toggle(showWarning);
+			update_meter_enabled(serial);
 		}
 
-		$(".meter-panel").each(function () {
-			var serial = this.id.substring("meter_".length);
-			document.getElementById(serial + "_meter").value = this.getAttribute("data-current-mode") || "0";
-			document.getElementById(serial + "_enabled").value = this.getAttribute("data-meter-enabled") || "1";
-			document.getElementById(serial + "_allowskip").value = this.getAttribute("data-allowskip") || "1";
-			document.getElementById(serial + "_paritymode").value = this.getAttribute("data-parity") || "8n1";
-			document.getElementById(serial + "_uselocaltime").value = this.getAttribute("data-local-time") || "0";
-			document.getElementById(serial + "_waitsync").value = this.getAttribute("data-wait-sync") || "off";
-			document.getElementById(serial + "_mbusdebug").value = this.getAttribute("data-mbus-debug") || "0";
+		function update_meter_enabled(serial) {
+			var panel = $("#meter_" + serial);
+			if (!panel.length) return;
+			var mode = $("#" + serial + "_meter").val();
+			var standard_meter = ["sml", "d0", "oms"].indexOf(mode) >= 0;
+			var global_disabled = $("#implementation").val() != "vzlogger";
+			var meter_disabled = standard_meter && $("#" + serial + "_enabled").val() == "0";
+			var name_control = $("#" + serial + "_name");
+			var enabled_control = $("#" + serial + "_enabled");
+			var remove_control = panel.find(".meter-remove-button");
+			var dependent_controls = panel.find("input, select, textarea, button").not(name_control).not(enabled_control).not(remove_control).not(".meter-remove-marker");
+			set_control_disabled(name_control, global_disabled);
+			set_control_disabled(enabled_control, global_disabled);
+			set_control_disabled(dependent_controls, global_disabled || meter_disabled);
+			set_control_disabled(remove_control, global_disabled);
+			var rows = panel.find("table.settings-table").first().children("tbody").children("tr");
+			rows.each(function () {
+				var keep_active = $(this).hasClass("meter-name-row") || $(this).hasClass("meter-enabled-row");
+				$(this).toggleClass("setting-disabled", global_disabled || (meter_disabled && !keep_active));
+			});
+			var oms_unsupported = mode == "oms" && panel.attr("data-oms-supported") != "1";
+			set_control_disabled(panel.find(".obis-discovery"), global_disabled || meter_disabled || oms_unsupported);
+		}
+
+		function stage_meter_removal(serial) {
+			var panel = $("#meter_" + serial);
+			if (!panel.length || !window.confirm(obis_text("remove_meter_confirm_text"))) return;
+			panel.find(".meter-remove-marker").prop("disabled", false);
+			panel.closest("tr").hide();
+		}
+
+		function initialize_meter_panel(panel, enhance) {
+			if (!panel) return;
+			var serial = panel.id.substring("meter_".length);
+			var values = {
+				meter: panel.getAttribute("data-current-mode") || "0",
+				enabled: panel.getAttribute("data-meter-enabled") || "1",
+				allowskip: panel.getAttribute("data-allowskip") || "1",
+				paritymode: panel.getAttribute("data-parity") || "8n1",
+				uselocaltime: panel.getAttribute("data-local-time") || "0",
+				waitsync: panel.getAttribute("data-wait-sync") || "off",
+				mbusdebug: panel.getAttribute("data-mbus-debug") || "0"
+			};
+			Object.keys(values).forEach(function (suffix) {
+				var control = document.getElementById(serial + "_" + suffix);
+				if (control) control.value = values[suffix];
+			});
+			if (enhance) {
+				try { $(panel.closest("tr")).enhanceWithin(); } catch (error) {}
+			}
 			update_meter_protocol(serial);
-		});
+		}
+
+		$(".meter-panel").each(function () { initialize_meter_panel(this, false); });
 	</script>
 </TMPL_IF>
 

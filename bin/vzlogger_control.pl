@@ -33,7 +33,16 @@ if ($action eq "generate") {
 }
 
 if ($action eq "apply") {
-	my $rc = generate_and_validate();
+	my $rc = run_perl("$bindir/vzlogger_config.pl");
+	exit $rc if ($rc != 0);
+	if (vzlogger_mode_enabled() && generated_meter_count() == 0) {
+		stop_bridge();
+		stop_vzlogger(1);
+		install_vzlogger_service_override("remove");
+		print "No meter is configured. Stopped vzLogger and bridge.\n";
+		exit 0;
+	}
+	$rc = run_perl("$bindir/vzlogger_validate.pl");
 	exit $rc if ($rc != 0);
 	if (!vzlogger_mode_enabled()) {
 		stop_bridge();
@@ -53,7 +62,7 @@ if ($action eq "apply") {
 }
 
 if ($action eq "restart-vzlogger") {
-	my $rc = generate_and_validate();
+	my $rc = update_vzlogger_log_config();
 	exit $rc if ($rc != 0);
 	if (!vzlogger_mode_enabled()) {
 		print "vzLogger mode is disabled. Did not restart vzLogger.\n";
@@ -64,7 +73,7 @@ if ($action eq "restart-vzlogger") {
 }
 
 if ($action eq "start-vzlogger") {
-	my $rc = generate_and_validate();
+	my $rc = update_vzlogger_log_config();
 	exit $rc if ($rc != 0);
 	if (!vzlogger_mode_enabled()) {
 		print "vzLogger mode is disabled. Did not start vzLogger.\n";
@@ -75,16 +84,22 @@ if ($action eq "start-vzlogger") {
 }
 
 if ($action eq "stop-vzlogger") {
+	my $rc = update_vzlogger_log_config();
+	print "Warning: vzLogger log settings could not be written to the current configuration.\n" if ($rc != 0);
 	stop_vzlogger();
 	exit 0;
 }
 
 if ($action eq "restart-bridge") {
-	my $rc = generate_and_validate();
-	exit $rc if ($rc != 0);
 	if (!bridge_enabled()) {
 		print "MQTT bridge is disabled. Did not restart the MQTT bridge.\n";
 		exit 0;
+	}
+	my $rc = run_perl("$bindir/vzlogger_validate.pl");
+	exit $rc if ($rc != 0);
+	if (!generated_mqtt_enabled()) {
+		print "MQTT is disabled in the generated vzLogger configuration. Use Save and apply first.\n";
+		exit 1;
 	}
 	restart_bridge();
 	exit 0;
@@ -95,11 +110,15 @@ if ($action eq "validate") {
 }
 
 if ($action eq "start-bridge") {
-	my $rc = generate_and_validate();
-	exit $rc if ($rc != 0);
 	if (!bridge_enabled()) {
 		print "MQTT bridge is disabled. Did not start the MQTT bridge.\n";
 		exit 0;
+	}
+	my $rc = run_perl("$bindir/vzlogger_validate.pl");
+	exit $rc if ($rc != 0);
+	if (!generated_mqtt_enabled()) {
+		print "MQTT is disabled in the generated vzLogger configuration. Use Save and apply first.\n";
+		exit 1;
 	}
 	start_bridge();
 	exit 0;
@@ -154,6 +173,102 @@ sub generate_and_validate
 	my $rc = run_perl("$bindir/vzlogger_config.pl");
 	return $rc if ($rc != 0);
 	return run_perl("$bindir/vzlogger_validate.pl");
+}
+
+sub generated_meter_count
+{
+	return -1 if (!-e $config_file);
+	open(my $fh, "<", $config_file) or return -1;
+	my $json = do { local $/; <$fh> };
+	close($fh);
+	my $config = eval { JSON::PP->new->utf8->decode($json || "") };
+	return -1 if ($@ || ref($config) ne "HASH" || ref($config->{meters}) ne "ARRAY");
+	return scalar(@{$config->{meters}});
+}
+
+sub update_vzlogger_log_config
+{
+	if (!-e $config_file) {
+		print "Generated vzLogger configuration is missing. Use Save and apply first.\n";
+		return 1;
+	}
+
+	open(my $fh, "<", $config_file) or do {
+		print "Could not read $config_file: $!\n";
+		return 1;
+	};
+	my $original;
+	{
+		local $/;
+		$original = <$fh>;
+	}
+	close($fh);
+
+	my $decoded = eval { JSON::PP->new->utf8->decode($original) };
+	if ($@ || ref($decoded) ne "HASH") {
+		print "Current vzLogger configuration is invalid. Use Save and apply first.\n";
+		return 1;
+	}
+
+	my $cfg = Config::Simple->new($plugin_config_file);
+	if (!$cfg) {
+		my $error = Config::Simple->error() || "unknown Config::Simple error";
+		print "Could not read $plugin_config_file: $error\n";
+		return 1;
+	}
+	my $debug_enabled = ($cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0") eq "1";
+	my $configured_level = $cfg->param("VZLOGGER.LOGLEVEL");
+	my $log_level = (defined($configured_level) && $configured_level =~ /\A(?:0|1|3|5|10|15)\z/) ? $configured_level : 0;
+	my $verbosity = $debug_enabled ? $log_level : 0;
+	my $log_file = $debug_enabled ? $vzlogger_log_file : "/dev/null";
+	my $log_json = JSON::PP->new->utf8->allow_nonref->encode($log_file);
+
+	my $updated = $original;
+	my $verbosity_updates = ($updated =~ s/^(  "verbosity"\s*:\s*)-?\d+(\s*,\s*)$/$1$verbosity$2/mg);
+	my $log_updates = ($updated =~ s/^(  "log"\s*:\s*)"(?:\\.|[^"\\])*"(\s*,\s*)$/$1$log_json$2/mg);
+	if ($verbosity_updates != 1 || $log_updates != 1) {
+		print "Could not locate the generated root log settings in $config_file. Use Save and apply first.\n";
+		return 1;
+	}
+
+	if ($updated ne $original && !write_vzlogger_config_atomic($updated)) {
+		print "Could not update $config_file.\n";
+		return 1;
+	}
+
+	my $validate_rc = run_perl("$bindir/vzlogger_validate.pl");
+	if ($validate_rc != 0) {
+		write_vzlogger_config_atomic($original) if ($updated ne $original);
+		print "Restored the previous vzLogger configuration. Use Save and apply before starting the service.\n";
+		return $validate_rc;
+	}
+
+	print "Validated the current vzLogger configuration and updated only its log settings.\n";
+	return 0;
+}
+
+sub write_vzlogger_config_atomic
+{
+	my ($content) = @_;
+	my $tmp = "$config_file.tmp.$$";
+	my $mode = (stat($config_file))[2];
+	$mode = defined($mode) ? ($mode & 07777) : 0644;
+	open(my $fh, ">", $tmp) or return 0;
+	if (!print $fh $content) {
+		close($fh);
+		unlink($tmp);
+		return 0;
+	}
+	if (!close($fh)) {
+		unlink($tmp);
+		return 0;
+	}
+	chmod($mode, $tmp);
+	if (!rename($tmp, $config_file)) {
+		unlink($tmp);
+		return 0;
+	}
+	return 1;
 }
 
 sub start_bridge
@@ -451,6 +566,18 @@ sub bridge_enabled
 	return 0 if (!$cfg);
 	my $mqtt_enabled = $cfg->param("VZLOGGER.MQTTENABLED");
 	return !defined($mqtt_enabled) || $mqtt_enabled eq "1";
+}
+
+sub generated_mqtt_enabled
+{
+	return 0 if (!-e $config_file);
+	open(my $fh, "<", $config_file) or return 0;
+	local $/;
+	my $json = <$fh>;
+	close($fh);
+	my $config = eval { JSON::PP->new->utf8->decode($json) };
+	return 0 if ($@ || ref($config) ne "HASH" || ref($config->{mqtt}) ne "HASH");
+	return $config->{mqtt}->{enabled} ? 1 : 0;
 }
 
 sub install_bridge_service
