@@ -68,3 +68,12 @@ jobs:
           if [ "$found" -eq 0 ]; then
             echo "No PHP files found."
           fi
+
+      - name: Run vzLogger configuration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_channels.pl
+          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_generator.pl
+          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_validator.pl

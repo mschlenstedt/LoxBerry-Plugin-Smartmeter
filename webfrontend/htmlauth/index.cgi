@@ -987,6 +987,7 @@ sub save_vzlogger_form
 {
 	my $draft_only = (@_ && $_[0] eq "__draft__") ? shift : "";
 	my (@heads) = @_;
+	validate_submitted_vzlogger_form(@heads);
 	my $submitted_channels = submitted_channel_document(@heads);
 	my %known_serials = map {
 		my $serial = $_;
@@ -1114,6 +1115,98 @@ sub save_vzlogger_form
 		$cleanup_output .= remove_meter_artifacts($serial);
 	}
 	return $cleanup_output;
+}
+
+sub validate_submitted_vzlogger_form
+{
+	my (@heads) = @_;
+	my @errors;
+	my %integer_fields = (
+		vzlogger_retry => [0, undef], vzlogger_localport => [1, 65535],
+		vzlogger_localtimeout => [0, undef], vzlogger_localbuffer => [undef, undef],
+		vzlogger_mqttport => [1, 65535], vzlogger_mqttkeepalive => [0, undef],
+		udpport => [1, 65535],
+	);
+	foreach my $field (sort keys %integer_fields) {
+		next if (!defined($q->{$field}) || ($field eq "vzlogger_mqttport" && $q->{$field} eq ""));
+		my ($minimum, $maximum) = @{$integer_fields{$field}};
+		push @errors, "$field must be an integer" if ($q->{$field} !~ /\A-?\d+\z/);
+		next if ($q->{$field} !~ /\A-?\d+\z/);
+		push @errors, "$field must be at least $minimum" if (defined($minimum) && $q->{$field} < $minimum);
+		push @errors, "$field must not exceed $maximum" if (defined($maximum) && $q->{$field} > $maximum);
+	}
+	foreach my $field (qw(read sendudp vzlogger_localenabled vzlogger_localindex vzlogger_debug vzlogger_service_debug vzlogger_mqttenabled vzlogger_mqttretain vzlogger_mqttrawandagg vzlogger_mqtttimestamp)) {
+		push @errors, "$field must be 0 or 1" if (defined($q->{$field}) && $q->{$field} !~ /\A[01]\z/);
+	}
+	push @errors, "vzlogger_mqttqos must be 0 or 1" if (defined($q->{vzlogger_mqttqos}) && $q->{vzlogger_mqttqos} !~ /\A[01]\z/);
+	push @errors, "vzlogger_loglevel must be 0, 1, 3, 5, 10 or 15"
+		if (defined($q->{vzlogger_loglevel}) && $q->{vzlogger_loglevel} !~ /\A(?:0|1|3|5|10|15)\z/);
+	if (defined($q->{mqtttopic})) {
+		push @errors, "mqtttopic must not be empty" if ($q->{mqtttopic} eq "");
+		push @errors, "mqtttopic must not start with \$" if ($q->{mqtttopic} =~ /\A\$/);
+		push @errors, "mqtttopic must not end with /" if ($q->{mqtttopic} =~ m{/\z});
+		push @errors, "mqtttopic must not contain + or #" if ($q->{mqtttopic} =~ /[+#]/);
+	}
+
+	foreach my $device (@heads) {
+		my $serial = $device;
+		$serial =~ s%/dev/serial/smartmeter/%%g;
+		my $mode = defined($q->{"$serial\_meter"}) ? $q->{"$serial\_meter"} :
+			normalized_meter_mode($plugin_cfg->param("$serial.METER"), $plugin_cfg->param("$serial.PROTOCOL"));
+		push @errors, "$serial: invalid meter protocol selection" if ($mode !~ /\A(?:0|sml|d0|oms|user)\z/);
+		next if ($mode !~ /\A(?:sml|d0|oms)\z/);
+		my $enabled = defined($q->{"$serial\_enabled"}) ? $q->{"$serial\_enabled"} : clean_boolean(config_scalar_value("$serial.ENABLED"), 1);
+		push @errors, "$serial: enabled must be 0 or 1" if ($enabled !~ /\A[01]\z/);
+		next if ($enabled ne "1");
+		foreach my $field (qw(allowskip uselocaltime)) {
+			my $name = "$serial\_$field";
+			push @errors, "$serial: $field must be 0 or 1" if (defined($q->{$name}) && $q->{$name} !~ /\A[01]\z/);
+		}
+		foreach my $field (qw(aggtime interval)) {
+			my $name = "$serial\_$field";
+			next if (!defined($q->{$name}) || $q->{$name} eq "");
+			push @errors, "$serial: $field must be -1 or a non-negative integer"
+				if ($q->{$name} !~ /\A(?:-1|\d+)\z/);
+		}
+		my $aggtime = $q->{"$serial\_aggtime"};
+		my $interval = $q->{"$serial\_interval"};
+		if (defined($aggtime) && defined($interval) && $aggtime =~ /\A\d+\z/ && $interval =~ /\A\d+\z/ && $aggtime > 0 && $interval > 0 && $aggtime < $interval) {
+			push @errors, "$serial: aggtime ($aggtime) must not be shorter than interval ($interval)";
+		}
+		my $pullseq = $q->{"$serial\_pullseq"};
+		push @errors, "$serial: pullseq must be empty or an even-length hexadecimal sequence"
+			if (defined($pullseq) && $pullseq ne "" && ($pullseq !~ /\A[0-9a-f]+\z/i || length($pullseq) % 2));
+		my $baudrate = $q->{"$serial\_baudrate"};
+		push @errors, "$serial: baudrate must be between 1 and 4000000"
+			if (defined($baudrate) && $baudrate ne "" && ($baudrate !~ /\A\d+\z/ || $baudrate < 1 || $baudrate > 4000000));
+		my $parity = $q->{"$serial\_paritymode"};
+		push @errors, "$serial: parity must be 8n1, 7e1, 7o1 or 7n1"
+			if (defined($parity) && $parity ne "" && $parity !~ /\A(?:8n1|7e1|7o1|7n1)\z/i);
+		if ($mode eq "d0") {
+			my $ackseq = $q->{"$serial\_ackseq"};
+			push @errors, "$serial: ackseq must be empty, auto or an even-length hexadecimal sequence"
+				if (defined($ackseq) && $ackseq ne "" && lc($ackseq) ne "auto" && ($ackseq !~ /\A[0-9a-f]+\z/i || length($ackseq) % 2));
+			my $baudrate_read = $q->{"$serial\_baudrateread"};
+			push @errors, "$serial: baudrate_read must be between 1 and 4000000"
+				if (defined($baudrate_read) && $baudrate_read ne "" && ($baudrate_read !~ /\A\d+\z/ || $baudrate_read < 1 || $baudrate_read > 4000000));
+			my $wait_sync = $q->{"$serial\_waitsync"};
+			push @errors, "$serial: wait_sync must be off or end" if (defined($wait_sync) && $wait_sync ne "" && $wait_sync !~ /\A(?:off|end)\z/);
+			my $read_timeout = $q->{"$serial\_readtimeout"};
+			push @errors, "$serial: read_timeout must be a positive integer"
+				if (defined($read_timeout) && $read_timeout ne "" && ($read_timeout !~ /\A\d+\z/ || $read_timeout < 1));
+			my $delay = $q->{"$serial\_baudratechangedelay"};
+			push @errors, "$serial: baudrate_change_delay must be a non-negative integer"
+				if (defined($delay) && $delay ne "" && $delay !~ /\A\d+\z/);
+		}
+		if ($mode eq "oms") {
+			my $key = $q->{"$serial\_omskey"};
+			push @errors, "$serial: OMS key must contain exactly 32 hexadecimal characters"
+				if (defined($key) && $key ne "" && $key !~ /\A[0-9a-f]{32}\z/i);
+			my $debug = $q->{"$serial\_mbusdebug"};
+			push @errors, "$serial: mbus_debug must be 0 or 1" if (defined($debug) && $debug !~ /\A[01]\z/);
+		}
+	}
+	die "Invalid submitted vzLogger configuration:\n - " . join("\n - ", @errors) . "\n" if (@errors);
 }
 
 sub submitted_channel_document

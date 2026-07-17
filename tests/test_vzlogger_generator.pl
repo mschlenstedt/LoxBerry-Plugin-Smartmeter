@@ -40,7 +40,7 @@ my $document = {
 	version => 1,
 	meters => { reader => [
 		{ uuid=>$first_uuid, enabled=>JSON::PP::true, origin=>"manual", obis=>"1-0:1.8.0", storage=>5, display_name=>"Historic label only", api=>"influxdb", aggmode=>"avg", duplicates=>1,
-		  api_options=>{influxdb=>{host=>"http://influx",database=>"meter",organization=>"org",send_uuid=>JSON::PP::true},volkszaehler=>{middleware=>"must-not-leak"},mysmartgrid=>{}}, plugin_output=>{enabled=>JSON::PP::true,key=>"Import_Storage_5",legacy_keys=>["Consumption_Total_OBIS_1.8.0"]} },
+		  api_options=>{influxdb=>{version=>1,host=>"http://influx",database=>"meter",organization=>"org",tags=>'{"meter":"main"}',send_uuid=>JSON::PP::true},volkszaehler=>{middleware=>"must-not-leak"},mysmartgrid=>{}}, plugin_output=>{enabled=>JSON::PP::true,key=>"Import_Storage_5",legacy_keys=>["Consumption_Total_OBIS_1.8.0"]} },
 		{ uuid=>$second_uuid, enabled=>JSON::PP::true, origin=>"manual", obis=>"1-0:1.8.0", storage=>5, display_name=>"", api=>"null", aggmode=>"none", duplicates=>9,
 		  api_options=>{influxdb=>{host=>"must-not-leak"},volkszaehler=>{},mysmartgrid=>{}}, plugin_output=>{enabled=>JSON::PP::false,key=>"Not_Output"} },
 		{ uuid=>$disabled_uuid, enabled=>JSON::PP::false, origin=>"manual", obis=>"1-0:2.8.0", storage=>undef, display_name=>"", api=>"volkszaehler", aggmode=>"none", duplicates=>0,
@@ -71,6 +71,8 @@ my $generated = read_json_file("$dir/vzlogger.conf");
 is(scalar(@{$generated->{meters}->[0]->{channels}}), 2, "only active definitions are generated");
 is($generated->{meters}->[0]->{channels}->[0]->{identifier}, "1-0:1.8.0*5", "storage index reaches vzLogger identifier");
 is($generated->{meters}->[0]->{channels}->[0]->{host}, "http://influx", "active API field generated");
+is($generated->{meters}->[0]->{channels}->[0]->{version}, 1, "InfluxDB version is generated");
+is_deeply($generated->{meters}->[0]->{channels}->[0]->{tags}, {meter=>"main"}, "InfluxDB tags JSON is generated as an object");
 ok(!exists($generated->{meters}->[0]->{channels}->[0]->{middleware}), "inactive API field omitted");
 ok(!exists($generated->{meters}->[0]->{channels}->[0]->{display_name}), "display name is not a vzLogger field");
 ok(!exists($generated->{meters}->[0]->{channels}->[0]->{name}), "no general channel name is invented");

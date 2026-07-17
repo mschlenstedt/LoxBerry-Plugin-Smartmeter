@@ -87,6 +87,9 @@ Implemented files:
 - `[x]` Validate MQTT/local ports.
 - `[x]` Validate meter protocol, device, channels, UUID format, and duplicate UUIDs.
 - `[x]` Validate channel mapping file.
+- `[x]` Validate numeric ranges, enums, protocol-specific SML/D0/OMS field sets, aggregation dependencies, MQTT/TLS combinations, active API requirements, and readable device/certificate paths.
+- `[x]` Cross-check active structured definitions, generated UUIDs and identifiers, plugin-output mappings, global channel indices, and MQTT `chnN` names.
+- `[x]` Validate submitted form values before legacy fallback/default normalization can hide malformed input.
 - `[x]` Make `generate` validate after writing config.
 - `[x]` Make `apply` abort if validation fails.
 - `[x]` Show validation status in `status`.

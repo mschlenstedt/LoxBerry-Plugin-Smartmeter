@@ -271,6 +271,7 @@ sub validate_document
 	push @errors, "Unsupported channel-definition version." if (($document->{version} || 0) != 1);
 	push @errors, "The meters member must be an object." if (ref($document->{meters}) ne "HASH");
 	return @errors if (@errors);
+	my %global_uuids;
 	foreach my $serial (sort keys %{$document->{meters}}) {
 		my $channels = $document->{meters}->{$serial};
 		if (ref($channels) ne "ARRAY") { push @errors, "$serial: channels must be an array."; next; }
@@ -280,34 +281,119 @@ sub validate_document
 			my $uuid = $channel->{uuid} || "";
 			push @errors, "$serial: invalid channel UUID." if ($uuid !~ /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i);
 			push @errors, "$serial: duplicate channel UUID $uuid." if ($uuid && $uuids{lc($uuid)}++);
+			push @errors, "$serial: channel UUID $uuid is duplicated across meters." if ($uuid && $global_uuids{lc($uuid)}++);
+			push @errors, "$serial/$uuid: enabled must be a JSON boolean." if (!is_json_boolean($channel->{enabled}));
 			push @errors, "$serial/$uuid: invalid channel origin." if (($channel->{origin} || "") !~ /\A(?:discovered|manual|migrated)\z/);
 			my $identifier = compose_obis($channel->{obis}, $channel->{storage});
 			push @errors, "$serial/$uuid: invalid OBIS identifier." if (!$identifier);
 			my $base = parse_obis($channel->{obis});
 			push @errors, "$serial/$uuid: obis must contain the base code without *F." if ($base && $channel->{obis} ne $base->{base});
-			push @errors, "$serial/$uuid: invalid API option blocks." if (ref($channel->{api_options}) ne "HASH" || grep { ref($channel->{api_options}->{$_}) ne "HASH" } qw(volkszaehler influxdb mysmartgrid));
-			push @errors, "$serial/$uuid: invalid plugin output block." if (ref($channel->{plugin_output}) ne "HASH");
+			my $options_valid = ref($channel->{api_options}) eq "HASH" &&
+				!grep { ref($channel->{api_options}->{$_}) ne "HASH" } qw(volkszaehler influxdb mysmartgrid);
+			push @errors, "$serial/$uuid: invalid API option blocks." if (!$options_valid);
+			my $output_valid = ref($channel->{plugin_output}) eq "HASH";
+			push @errors, "$serial/$uuid: invalid plugin output block." if (!$output_valid);
+			push @errors, "$serial/$uuid: plugin output enabled must be a JSON boolean."
+				if ($output_valid && !is_json_boolean($channel->{plugin_output}->{enabled}));
+			push @errors, "$serial/$uuid: display name must be a string no longer than 128 characters."
+				if (defined($channel->{display_name}) && (ref($channel->{display_name}) || length($channel->{display_name}) > 128));
 			my $api = $channel->{api} || "null";
 			push @errors, "$serial/$uuid: unsupported API $api." if ($api !~ /\A(?:null|volkszaehler|influxdb|mysmartgrid)\z/);
 			my $agg = $channel->{aggmode} || "none";
 			push @errors, "$serial/$uuid: invalid aggregation mode." if ($agg !~ /\A(?:none|avg|max|sum)\z/);
-			if ($channel->{enabled} && $channel->{plugin_output}->{enabled}) {
+			push @errors, "$serial/$uuid: duplicates must be a non-negative integer."
+				if (!is_nonnegative_integer($channel->{duplicates}));
+			if ($channel->{enabled} && $output_valid && $channel->{plugin_output}->{enabled}) {
 				my $key = $channel->{plugin_output}->{key} || "";
 				push @errors, "$serial/$uuid: invalid output key." if ($key !~ /\A[A-Za-z0-9_]{1,64}\z/);
 				push @errors, "$serial: duplicate output key $key." if ($key && $keys{lc($key)}++);
 			}
-			next if (!$channel->{enabled});
+			next if (!$channel->{enabled} || !$options_valid || $api !~ /\A(?:null|volkszaehler|influxdb|mysmartgrid)\z/);
 			my $options = $channel->{api_options}->{$api} || {};
-			push @errors, "$serial/$uuid: Volkszaehler middleware is required." if ($api eq "volkszaehler" && !($options->{middleware} || ""));
-			push @errors, "$serial/$uuid: InfluxDB host is required." if ($api eq "influxdb" && !($options->{host} || ""));
+			my %allowed_options = (
+				volkszaehler => { map { $_ => 1 } qw(middleware timeout) },
+				influxdb => { map { $_ => 1 } qw(version host token organization username password database measurement_name tags timeout max_batch_inserts max_buffer_size send_uuid ssl_verifypeer) },
+				mysmartgrid => { map { $_ => 1 } qw(middleware secretKey device type interval scaler timeout name) },
+				null => {},
+			);
+			foreach my $field (keys %$options) {
+				push @errors, "$serial/$uuid: unsupported $api option $field." if (!$allowed_options{$api}->{$field});
+			}
+			if ($api eq "volkszaehler") {
+				push @errors, "$serial/$uuid: Volkszaehler middleware must be a valid HTTP(S) URL."
+					if (!is_http_url($options->{middleware}));
+			}
+			if ($api eq "influxdb") {
+				push @errors, "$serial/$uuid: InfluxDB host is required." if (!is_nonempty_scalar($options->{host}));
+				my $version = defined($options->{version}) && $options->{version} ne "" ? "$options->{version}" : "";
+				push @errors, "$serial/$uuid: InfluxDB version must be 1 or 2." if ($version ne "" && $version !~ /\A[12]\z/);
+				push @errors, "$serial/$uuid: InfluxDB database/bucket is required for version $version."
+					if ($version ne "" && !is_nonempty_scalar($options->{database}));
+				push @errors, "$serial/$uuid: InfluxDB organization is required for version 2."
+					if ($version eq "2" && !is_nonempty_scalar($options->{organization}));
+				push @errors, "$serial/$uuid: InfluxDB token is required for version 2."
+					if ($version eq "2" && !is_nonempty_scalar($options->{token}));
+				push @errors, "$serial/$uuid: InfluxDB tags must be a JSON object."
+					if (exists($options->{tags}) && $options->{tags} ne "" && !is_json_object_value($options->{tags}));
+				foreach my $field (qw(send_uuid ssl_verifypeer)) {
+					push @errors, "$serial/$uuid: InfluxDB $field must be a JSON boolean."
+						if (exists($options->{$field}) && !is_json_boolean($options->{$field}));
+				}
+			}
 			if ($api eq "mysmartgrid") {
 				foreach my $field (grep { !($options->{$_} || "") } qw(middleware secretKey device type)) {
 					push @errors, "$serial/$uuid: MySmartGrid $field is required.";
 				}
+				push @errors, "$serial/$uuid: MySmartGrid middleware must be a valid HTTP(S) URL."
+					if (is_nonempty_scalar($options->{middleware}) && !is_http_url($options->{middleware}));
+				push @errors, "$serial/$uuid: MySmartGrid type must be device or sensor."
+					if (is_nonempty_scalar($options->{type}) && $options->{type} !~ /\A(?:device|sensor)\z/);
+			}
+			foreach my $field (qw(timeout max_batch_inserts max_buffer_size interval)) {
+				next if (!exists($options->{$field}) || $options->{$field} eq "");
+				push @errors, "$serial/$uuid: $api $field must be a non-negative integer."
+					if (!is_nonnegative_integer($options->{$field}));
+			}
+			if (exists($options->{scaler}) && $options->{scaler} ne "") {
+				push @errors, "$serial/$uuid: MySmartGrid scaler must be a number."
+					if (ref($options->{scaler}) || $options->{scaler} !~ /\A-?\d+(?:\.\d+)?\z/);
 			}
 		}
 	}
 	return @errors;
+}
+
+sub is_json_boolean
+{
+	my ($value) = @_;
+	return defined($value) && JSON::PP::is_bool($value) ? 1 : 0;
+}
+
+sub is_nonnegative_integer
+{
+	my ($value) = @_;
+	return defined($value) && !ref($value) && "$value" =~ /\A\d+\z/;
+}
+
+sub is_nonempty_scalar
+{
+	my ($value) = @_;
+	return defined($value) && !ref($value) && $value ne "";
+}
+
+sub is_http_url
+{
+	my ($value) = @_;
+	return is_nonempty_scalar($value) && $value =~ m{\Ahttps?://[^\s/]+(?:/[^\s]*)?\z}i;
+}
+
+sub is_json_object_value
+{
+	my ($value) = @_;
+	return 1 if (ref($value) eq "HASH");
+	return 0 if (ref($value));
+	my $decoded = eval { JSON::PP->new->decode($value) };
+	return !$@ && ref($decoded) eq "HASH";
 }
 
 sub native_channel
@@ -324,7 +410,7 @@ sub native_channel
 	my $options = $definition->{api_options}->{$api} || {};
 	my %allowed = (
 		volkszaehler => [qw(middleware timeout)],
-		influxdb => [qw(host token organization username password database measurement_name tags timeout max_batch_inserts max_buffer_size send_uuid ssl_verifypeer)],
+		influxdb => [qw(version host token organization username password database measurement_name tags timeout max_batch_inserts max_buffer_size send_uuid ssl_verifypeer)],
 		mysmartgrid => [qw(middleware secretKey device type interval scaler timeout name)],
 	);
 	foreach my $key (@{$allowed{$api} || []}) {
@@ -334,6 +420,9 @@ sub native_channel
 			$value = int($value);
 		} elsif ($key eq "scaler" && !ref($value) && $value =~ /\A-?\d+(?:\.\d+)?\z/) {
 			$value = 0 + $value;
+		} elsif ($key eq "tags" && !ref($value)) {
+			my $decoded = eval { JSON::PP->new->decode($value) };
+			$value = $decoded if (!$@ && ref($decoded) eq "HASH");
 		} elsif ($key =~ /\A(?:send_uuid|ssl_verifypeer)\z/) {
 			$value = $value ? JSON::PP::true : JSON::PP::false;
 		}
