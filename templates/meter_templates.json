@@ -1,5 +1,5 @@
 [
-  {"id":"genericsml","label":"Generic SML","protocol":"sml","initial_baudrate":300,"read_baudrate":300,"serial_mode":"7e1","read_timeout":120,"legacy":{"handshake":"none","delay":2,"crc":"CRC16_X_25"}},
+  {"id":"genericsml","label":"Generic SML","protocol":"sml","initial_baudrate":9600,"read_baudrate":9600,"serial_mode":"8n1","read_timeout":120,"legacy":{"handshake":"none","delay":2,"crc":"CRC16_X_25"}},
   {"id":"emhed300sml","label":"EMH ED300(S)","protocol":"sml","initial_baudrate":9600,"read_baudrate":9600,"serial_mode":"8n1","read_timeout":20,"legacy":{"handshake":"none","delay":1,"crc":"CRC16_X_25"}},
   {"id":"emhehzksml","label":"EMH eHZ-K","protocol":"sml","initial_baudrate":9600,"read_baudrate":9600,"serial_mode":"8n1","read_timeout":30,"legacy":{"handshake":"none","delay":30,"crc":"CRC16_X_25"}},
   {"id":"emhehziw8e2asml","label":"EMH eHZ-IW8E2A","protocol":"sml","initial_baudrate":9600,"read_baudrate":9600,"serial_mode":"8n1","read_timeout":30,"legacy":{"handshake":"none","delay":30,"crc":"CRC16_X_25"}},

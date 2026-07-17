@@ -11,10 +11,10 @@ use LoxBerry::System;
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
-my $config_file = "$home/config/plugins/$psubfolder/smartmeter.cfg";
-my $target_file = "$home/config/plugins/$psubfolder/vzlogger.conf";
-my $mapping_file = "$home/config/plugins/$psubfolder/vzlogger_channels.json";
-my $plugin_config_dir = "$home/config/plugins/$psubfolder";
+my $plugin_config_dir = $ENV{SMARTMETER_CONFIG_DIR} || "$home/config/plugins/$psubfolder";
+my $config_file = $ENV{SMARTMETER_CONFIG_FILE} || "$plugin_config_dir/smartmeter.cfg";
+my $target_file = $ENV{SMARTMETER_VZLOGGER_CONFIG_FILE} || "$plugin_config_dir/vzlogger.conf";
+my $mapping_file = $ENV{SMARTMETER_VZLOGGER_MAPPING_FILE} || "$plugin_config_dir/vzlogger_channels.json";
 my $plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file\n";
 my $debug_enabled = ($plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0") eq "1";
 my $log_level = int(clean_log_level($plugin_cfg->param("VZLOGGER.LOGLEVEL"), 0));
@@ -125,7 +125,11 @@ my $config = {
 write_ordered_vzlogger_json($target_file, $config);
 write_json($mapping_file, \%channel_mapping);
 
-print "Generated $target_file with " . scalar(@meters) . " configured meter(s).\n";
+if (($ENV{SMARTMETER_VALIDATION_DRAFT} || "") eq "1") {
+	print "Generated temporary vzLogger configuration with " . scalar(@meters) . " configured meter(s). No saved configuration files were changed.\n";
+} else {
+	print "Generated $target_file with " . scalar(@meters) . " configured meter(s).\n";
+}
 exit 0;
 
 sub read_mqtt_settings

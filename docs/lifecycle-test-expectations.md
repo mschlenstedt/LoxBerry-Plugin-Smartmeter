@@ -57,3 +57,6 @@ Expected:
 - Reactivating vzLogger validates and applies the existing generated configuration without migrating the current Legacy meter settings.
 - Legacy meter settings are migrated only when no valid generated vzLogger configuration exists.
 - Saving while vzLogger is already active remains an explicit request to regenerate and apply its configuration.
+- Existing Legacy meter selection and manual serial settings are copied once into isolated `LEGACY_*` keys.
+- Saving and activating vzLogger does not change the isolated Legacy meter settings.
+- Reactivating Legacy restores the same selected preset or manual protocol and serial settings in both the UI and polling runtime.

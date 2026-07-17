@@ -224,6 +224,8 @@
 	.ir-scan-results { margin: 12px 0 0; padding-left: 1.4em; text-align: left; }
 	.ir-scan-countdown { margin-top: 10px; color: #666; font-size: 90%; }
 	.service-action-details { max-height: 12em; overflow: auto; margin: 12px 0 0; padding: 8px; border: 1px solid #ddd; background: #f7f7f7; text-align: left; white-space: pre-wrap; }
+	.configuration-action-dialog { max-width: 640px; }
+	.configuration-action-dialog .service-action-details { max-height: 22em; }
 	.obis-search-actions { margin-top: 18px; }
 	.obis-search-actions .ui-btn { margin: 0 auto; }
 	.obis-search-dialog [hidden] { display: none !important; }
@@ -324,7 +326,7 @@
 	<table border="0" class="settings-table">
 	<tr>
 		<td colspan="4">
-			<div data-role="collapsible" data-collapsed="true" data-mini="true">
+			<div id="advanced_service_settings_panel" data-role="collapsible" data-collapsed="true" data-mini="true">
 				<h3><TMPL_VAR NAME=T::VZLOGGER.ADVANCED_SERVICE_SETTINGS></h3>
 				<table border="0" class="settings-table compact-settings">
 				<tr>
@@ -339,7 +341,7 @@
 	</tr>
 	<tr>
 		<td colspan="4">
-			<div data-role="collapsible" data-collapsed="true" data-mini="true">
+			<div id="local_settings_panel" data-role="collapsible" data-collapsed="true" data-mini="true">
 				<h3><TMPL_VAR NAME=T::VZLOGGER.LOCAL_SETTINGS></h3>
 				<p><TMPL_VAR NAME=T::VZLOGGER.LOCAL_SETTINGS_HELP></p>
 				<table border="0" class="settings-table compact-settings">
@@ -583,14 +585,14 @@
 	<table border="0" class="settings-table">
 	<tr>
 		<td><TMPL_VAR NAME=T::VZLOGGER.GENERATED_CONFIG></td>
-		<td><a href="<TMPL_VAR VZLOGGER_CONFIG_URL>" target="_blank" rel="noopener" title="<TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="search" class="<TMPL_VAR VZLOGGER_CONFIG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG></a> <code><TMPL_VAR VZLOGGER_CONFIG></code></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP></td>
+		<td><a id="show_generated_config" href="<TMPL_VAR VZLOGGER_CONFIG_URL>" target="_blank" rel="noopener" title="<TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="search" class="<TMPL_VAR VZLOGGER_CONFIG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG></a> <code><TMPL_VAR VZLOGGER_CONFIG></code></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP></td>
 	</tr>
 	<tr>
 		<td><TMPL_VAR NAME=T::VZLOGGER.ACTIONS></td>
 		<td>
-			<button type="submit" name="submitaction" value="validate" title="<TMPL_VAR NAME=T::VZLOGGER.VALIDATE_CONFIG_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="alert"><TMPL_VAR NAME=T::VZLOGGER.VALIDATE_CONFIG></button>
-			<button type="submit" name="submitaction" value="debug-log" title="<TMPL_VAR NAME=T::VZLOGGER.CREATE_DEBUG_LOG_HELP>" form="vzlogger_form" formtarget="_blank" data-role="button" data-inline="true" data-mini="true" data-icon="search"><TMPL_VAR NAME=T::VZLOGGER.CREATE_DEBUG_LOG></button>
-			<button type="submit" name="submitaction" value="apply" title="<TMPL_VAR NAME=T::VZLOGGER.SAVE_APPLY_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="gear"><TMPL_VAR NAME=T::VZLOGGER.SAVE_APPLY></button>
+			<button id="validate_config_button" type="button" onclick="run_configuration_action('validate');" title="<TMPL_VAR NAME=T::VZLOGGER.VALIDATE_CONFIG_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="alert"><TMPL_VAR NAME=T::VZLOGGER.VALIDATE_CONFIG></button>
+			<button id="debug_log_button" type="button" onclick="run_configuration_action('debug-log');" title="<TMPL_VAR NAME=T::VZLOGGER.CREATE_DEBUG_LOG_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search"><TMPL_VAR NAME=T::VZLOGGER.CREATE_DEBUG_LOG></button>
+			<button id="save_apply_button" type="button" onclick="run_configuration_action('apply');" title="<TMPL_VAR NAME=T::VZLOGGER.SAVE_APPLY_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="gear"><TMPL_VAR NAME=T::VZLOGGER.SAVE_APPLY></button>
 		</td>
 		<td>&nbsp;</td>
 		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.VALIDATE_CONFIG_HELP><br><br><TMPL_VAR NAME=T::VZLOGGER.CREATE_DEBUG_LOG_HELP><br><br><TMPL_VAR NAME=T::VZLOGGER.SAVE_APPLY_HELP></font></td>
@@ -660,6 +662,30 @@
 			<span id="service_action_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_FAILED></span>
 		</div>
 	</div>
+	<div id="configuration_action_overlay" class="obis-search-overlay" role="dialog" aria-modal="true" aria-labelledby="configuration_action_title" aria-describedby="configuration_action_message" aria-hidden="true" tabindex="-1">
+		<div class="obis-search-dialog configuration-action-dialog">
+			<div id="configuration_action_spinner" class="obis-search-spinner" aria-hidden="true"></div>
+			<div id="configuration_action_title" class="obis-search-title"></div>
+			<div id="configuration_action_message" class="obis-search-message" role="status" aria-live="polite"></div>
+			<pre id="configuration_action_details" class="service-action-details" hidden></pre>
+			<div id="configuration_action_countdown" class="ir-scan-countdown" aria-live="polite" hidden></div>
+			<div class="obis-search-actions"><button id="configuration_action_close" type="button" data-role="button" data-inline="true" data-mini="true" onclick="close_configuration_action_overlay();" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_CLOSE></button></div>
+			<span id="configuration_action_validate_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_VALIDATE></span>
+			<span id="configuration_action_debug_log_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_LOG></span>
+			<span id="configuration_action_apply_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_APPLY></span>
+			<span id="configuration_action_validate_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_VALIDATE_WAIT></span>
+			<span id="configuration_action_debug_log_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_LOG_WAIT></span>
+			<span id="configuration_action_apply_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_APPLY_WAIT></span>
+			<span id="configuration_action_success_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_SUCCESS></span>
+			<span id="configuration_action_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_FAILED></span>
+			<span id="configuration_action_autoclose_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_AUTOCLOSE></span>
+			<span id="configuration_action_debug_tab_title_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_TAB_TITLE></span>
+			<span id="configuration_action_debug_tab_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_TAB_WAIT></span>
+			<span id="configuration_action_debug_elapsed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_ELAPSED></span>
+			<span id="configuration_action_debug_timeout_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_TIMEOUT></span>
+			<span id="configuration_action_debug_popup_blocked_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_POPUP_BLOCKED></span>
+		</div>
+	</div>
 	<span id="remove_meter_confirm_text" hidden><TMPL_VAR NAME=T::VZLOGGER.REMOVE_METER_CONFIRM></span>
 
 	<script>
@@ -674,6 +700,9 @@
 		var last_service_snapshot = null;
 		var ir_scan_running = false;
 		var ir_scan_close_timer = null;
+		var configuration_action_running = false;
+		var configuration_action_close_timer = null;
+		var debug_log_tab = null;
 
 		function service_ajax_url(action) {
 			return "./index.cgi?ajax=1&ajaxaction=" + encodeURIComponent(action) + "&_=" + Date.now();
@@ -717,11 +746,11 @@
 		function schedule_service_poll() {
 			if (service_poll_timer) window.clearTimeout(service_poll_timer);
 			service_poll_timer = null;
-			if (!document.hidden && !service_action_running) service_poll_timer = window.setTimeout(poll_service_status, 3000);
+			if (!document.hidden && !service_action_running && !configuration_action_running) service_poll_timer = window.setTimeout(poll_service_status, 3000);
 		}
 
 		function poll_service_status() {
-			if (document.hidden || service_action_running || service_poll_in_flight) {
+			if (document.hidden || service_action_running || configuration_action_running || service_poll_in_flight) {
 				schedule_service_poll();
 				return;
 			}
@@ -859,6 +888,157 @@
 		function obis_text(id) {
 			var element = document.getElementById(id);
 			return element ? element.textContent : "";
+		}
+
+		function configuration_action_text(action, suffix) {
+			return obis_text("configuration_action_" + action.replace(/-/g, "_") + (suffix || "") + "_text");
+		}
+
+		function set_configuration_action_buttons(disabled) {
+			["validate_config_button", "debug_log_button", "save_apply_button"].forEach(function (id) {
+				var button = $("#" + id);
+				button.prop("disabled", disabled).toggleClass("ui-disabled", disabled);
+			});
+		}
+
+		function show_configuration_action_overlay(action) {
+			var overlay = document.getElementById("configuration_action_overlay");
+			document.getElementById("configuration_action_spinner").style.display = "block";
+			document.getElementById("configuration_action_title").textContent = configuration_action_text(action, "");
+			document.getElementById("configuration_action_message").textContent = configuration_action_text(action, "_wait");
+			document.getElementById("configuration_action_details").hidden = true;
+			document.getElementById("configuration_action_details").textContent = "";
+			document.getElementById("configuration_action_countdown").hidden = true;
+			document.getElementById("configuration_action_close").hidden = true;
+			overlay.classList.add("is-visible");
+			overlay.setAttribute("aria-hidden", "false");
+			document.getElementById("vzlogger_form").setAttribute("aria-busy", "true");
+			overlay.focus();
+		}
+
+		function close_configuration_action_overlay() {
+			if (configuration_action_running) return;
+			if (configuration_action_close_timer) window.clearInterval(configuration_action_close_timer);
+			configuration_action_close_timer = null;
+			var overlay = document.getElementById("configuration_action_overlay");
+			overlay.classList.remove("is-visible");
+			overlay.setAttribute("aria-hidden", "true");
+		}
+
+		function start_configuration_action_countdown(seconds) {
+			var countdown = document.getElementById("configuration_action_countdown");
+			function render() {
+				countdown.textContent = obis_text("configuration_action_autoclose_text").replace("{seconds}", seconds);
+				countdown.hidden = false;
+			}
+			render();
+			configuration_action_close_timer = window.setInterval(function () {
+				seconds--;
+				if (seconds <= 0) {
+					close_configuration_action_overlay();
+					return;
+				}
+				render();
+			}, 1000);
+		}
+
+		function finish_configuration_action_overlay(action, ok, message) {
+			document.getElementById("configuration_action_spinner").style.display = "none";
+			document.getElementById("configuration_action_message").textContent = obis_text(ok ? "configuration_action_success_text" : "configuration_action_failed_text");
+			var details = document.getElementById("configuration_action_details");
+			details.textContent = message || "";
+			details.hidden = !message;
+			document.getElementById("configuration_action_close").hidden = false;
+			document.getElementById("vzlogger_form").removeAttribute("aria-busy");
+			if (action == "apply" && ok) start_configuration_action_countdown(3);
+		}
+
+		function escape_debug_tab_text(value) {
+			return String(value || "").replace(/[&<>]/g, function (character) {
+				return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[character];
+			});
+		}
+
+		function open_debug_progress_tab() {
+			if (debug_log_tab && !debug_log_tab.closed) {
+				debug_log_tab.focus();
+				return debug_log_tab;
+			}
+			var tab = window.open("", "_blank");
+			if (!tab) return null;
+			debug_log_tab = tab;
+			var title = escape_debug_tab_text(obis_text("configuration_action_debug_tab_title_text"));
+			var wait = escape_debug_tab_text(obis_text("configuration_action_debug_tab_wait_text"));
+			var elapsedText = obis_text("configuration_action_debug_elapsed_text");
+			var failedText = obis_text("configuration_action_failed_text");
+			var timeoutText = obis_text("configuration_action_debug_timeout_text");
+			var endpoint = new URL("./index.cgi?ajax=1&ajaxaction=debug-log&_=" + Date.now(), window.location.href).href;
+			var script = '(function(){var elapsed=0;var elapsedNode=document.getElementById("elapsed");var spinner=document.getElementById("spinner");var message=document.getElementById("message");var details=document.getElementById("details");var timer=setInterval(function(){elapsed++;elapsedNode.textContent=' + JSON.stringify(elapsedText) + '.replace("{seconds}",elapsed);},1000);var controller=window.AbortController?new AbortController():null;var browserTimeout=setTimeout(function(){if(controller)controller.abort();},52000);var data=new FormData();data.append("ajax","1");data.append("ajaxaction","debug-log");fetch(' + JSON.stringify(endpoint) + ',{method:"POST",body:data,credentials:"same-origin",cache:"no-store",signal:controller?controller.signal:undefined}).then(function(result){if(!result.ok)throw new Error("HTTP "+result.status);return result.json();}).then(function(response){if(!response.ok||!response.log_url)throw new Error(response.message||' + JSON.stringify(failedText) + ');try{if(window.opener)window.opener.debug_log_tab=null;}catch(ignore){}window.location.replace(response.log_url);}).catch(function(error){spinner.style.display="none";message.textContent=(error.name==="AbortError"?' + JSON.stringify(timeoutText) + ':' + JSON.stringify(failedText) + ');details.textContent=error.name==="AbortError"?"":(error.message||"");details.hidden=!details.textContent;}).then(function(){clearInterval(timer);clearTimeout(browserTimeout);});})();';
+			tab.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + title + '</title><style>body{margin:0;background:#f3f5f7;color:#222;font:16px/1.5 system-ui,sans-serif;display:grid;min-height:100vh;place-items:center}.box{width:min(42rem,calc(100% - 3rem));text-align:center;padding:2rem}.spinner{width:42px;height:42px;margin:0 auto 1rem;border:4px solid #ccd3da;border-top-color:#2b6dad;border-radius:50%;animation:s .8s linear infinite}pre{padding:1rem;background:#fff;border:1px solid #ccd3da;text-align:left;white-space:pre-wrap}@keyframes s{to{transform:rotate(360deg)}}</style></head><body><main class="box"><div id="spinner" class="spinner"></div><h1>' + title + '</h1><p id="message">' + wait + '</p><p id="elapsed"></p><pre id="details" hidden></pre></main><script>' + script + '<\/script></body></html>');
+			tab.document.close();
+			return tab;
+		}
+
+		function mark_configuration_form_saved(response) {
+			initial_implementation_value = $("#implementation").val();
+			saved_implementation = initial_implementation_value;
+			initial_read_value = $("#read").val();
+			document.getElementById("implementation_changed").value = "0";
+			update_activation_dirty_hints();
+			$("#vzlogger_mqttpass, #vzlogger_mqttkeypass").val("");
+			$("#vzlogger_mqttpass_reset, #vzlogger_mqttkeypass_reset").prop("checked", false).checkboxradio("refresh");
+			if (response && response.action == "apply") {
+				document.querySelectorAll(".meter-remove-marker:not(:disabled)").forEach(function (marker) {
+					var row = marker.closest("tr.meter-row");
+					if (row) row.remove();
+				});
+				document.querySelectorAll(".meter-pending-badge, .obis-channel-new").forEach(function (marker) { marker.remove(); });
+				document.querySelectorAll(".meter-template-note[id$='_template_unsaved']").forEach(function (note) { note.hidden = true; });
+			}
+			if (response && response.config && response.config.present) {
+				$("#show_generated_config").removeClass("ui-disabled").attr("aria-disabled", "false");
+			}
+		}
+
+		function run_configuration_action(action) {
+			if (configuration_action_running || service_action_running) return;
+			if (action == "debug-log") {
+				if (!open_debug_progress_tab()) window.alert(obis_text("configuration_action_debug_popup_blocked_text"));
+				return;
+			}
+			var form = document.getElementById("vzlogger_form");
+			if (!form || (form.reportValidity && !form.reportValidity())) return;
+			configuration_action_running = true;
+			set_configuration_action_buttons(true);
+			if (service_poll_timer) window.clearTimeout(service_poll_timer);
+			service_poll_timer = null;
+			show_configuration_action_overlay(action);
+			var ok = false;
+			var message = "";
+			var data = new FormData(form);
+			data.set("ajax", "1");
+			data.set("ajaxaction", "form-action");
+			data.set("submitaction", action);
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
+				.then(function (result) {
+					if (!result.ok) throw new Error("HTTP " + result.status);
+					return result.json();
+				})
+				.then(function (response) {
+					ok = !!response.ok;
+					message = response.message || (ok ? obis_text("configuration_action_success_text") : obis_text("configuration_action_failed_text"));
+					if (action == "apply") mark_configuration_form_saved(response);
+					render_service_snapshot(response);
+				})
+				.catch(function (error) {
+					message = obis_text("configuration_action_failed_text") + ": " + error.message;
+				})
+				.then(function () {
+					configuration_action_running = false;
+					set_configuration_action_buttons(false);
+					finish_configuration_action_overlay(action, ok, message);
+					schedule_service_poll();
+				});
 		}
 
 		function show_ir_head_scan() {
@@ -1085,7 +1265,8 @@
 						return;
 					}
 					if (status.state == "failed") {
-						throw new Error(status.message || obis_text("obis_search_failed_text"));
+						obis_discovery_failed(new Error(status.message || obis_text("obis_search_failed_text")));
+						return;
 					}
 					if (status.state == "cancelling") {
 						document.getElementById("obis_search_message").textContent = obis_text("obis_search_cancelling_text");
@@ -1174,7 +1355,9 @@
 		function obis_discovery_failed(error) {
 			var message = error && error.message ? error.message : obis_text("obis_search_failed_text");
 			reset_obis_search_overlay();
-			window.alert(obis_text("obis_search_failed_text") + "\n\n" + message);
+			var alert_message = obis_text("obis_search_failed_text") + "\n\n" + message;
+			// Yield so the hidden overlay is painted before the blocking alert.
+			window.setTimeout(function () { window.alert(alert_message); }, 0);
 		}
 
 		function resume_obis_discovery() {
@@ -1412,7 +1595,8 @@
 			if (!select || !select.value) return;
 			var template = meter_templates.find(function (candidate) { return candidate.id == select.value && candidate.protocol == protocol; });
 			if (!template) return;
-			$("#" + serial + "_baudrate").val(String(template.initial_baudrate));
+			var operating_baudrate = protocol == "sml" ? template.read_baudrate : template.initial_baudrate;
+			$("#" + serial + "_baudrate").val(String(operating_baudrate));
 			$("#" + serial + "_paritymode").val(template.serial_mode);
 			if (protocol == "d0") {
 				$("#" + serial + "_baudrateread").val(String(template.read_baudrate));
@@ -1454,6 +1638,27 @@
 			panel.closest("tr").hide();
 		}
 
+		function collapsible_storage_key(element) {
+			return "smartmeter-vzlogger-collapsible:" + window.location.pathname + ":" + element.id;
+		}
+
+		function restore_collapsible_state(element) {
+			if (!element || !element.id) return;
+			try {
+				var state = window.localStorage.getItem(collapsible_storage_key(element));
+				if (state == "open") $(element).collapsible("expand");
+				else if (state == "closed") $(element).collapsible("collapse");
+			} catch (error) {}
+		}
+
+		function initialize_collapsible_persistence() {
+			$(document).off("collapsibleexpand.smartmeterPersistence collapsiblecollapse.smartmeterPersistence", "#vzlogger_form [data-role='collapsible'][id]");
+			$(document).on("collapsibleexpand.smartmeterPersistence collapsiblecollapse.smartmeterPersistence", "#vzlogger_form [data-role='collapsible'][id]", function (event) {
+				try { window.localStorage.setItem(collapsible_storage_key(this), event.type == "collapsibleexpand" ? "open" : "closed"); } catch (error) {}
+			});
+			document.querySelectorAll("#vzlogger_form [data-role='collapsible'][id]").forEach(restore_collapsible_state);
+		}
+
 		function initialize_meter_panel(panel, enhance) {
 			if (!panel) return;
 			var serial = panel.id.substring("meter_".length);
@@ -1474,9 +1679,11 @@
 				try { $(panel.closest("tr")).enhanceWithin(); } catch (error) {}
 			}
 			update_meter_protocol(serial);
+			if (enhance) restore_collapsible_state(panel);
 		}
 
 		$(".meter-panel").each(function () { initialize_meter_panel(this, false); });
+		initialize_collapsible_persistence();
 	</script>
 </TMPL_IF>
 

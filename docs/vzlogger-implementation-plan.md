@@ -7,6 +7,12 @@ This plan tracks the migration from the legacy SmartMeter reader to a vzLogger-b
 - The plugin configures vzLogger, maintains a local MQTT-derived cache, and serves HTTP/UDP from that cache.
 - The legacy implementation remains available as a supported fallback and parallel configuration path. It must not be removed as part of this vzLogger migration.
 
+## Current Review Summary (2026-07-17)
+
+The implementation has moved well beyond the original MVP plan. The core architecture, configuration generation and validation, MQTT bridge, service integration, dynamic OBIS discovery, implementation switching, migration behavior, and the expanded SML/D0/OMS/custom-meter UI are implemented. A complete upgrade, disable/reactivate, uninstall, fresh-install, real SML, cache, HTTP, calculated-power, and UDP test was completed with 2.0.0.32 on LoxBerry 4.0.0.13 (Debian 13/trixie, arm64). The follow-up SML-template and AJAX-lifecycle defects found during that test have also been corrected and retested. The remaining work is compatibility coverage rather than missing core functionality.
+
+The HTTP-cache panel intentionally remains a compact status view. It shows cache availability and the last update, while the cache endpoint itself exposes the values; an additional inline value table is not required.
+
 ## Status Legend
 
 - `[x]` Implemented in the repository
@@ -21,8 +27,8 @@ This plan tracks the migration from the legacy SmartMeter reader to a vzLogger-b
 - `[x]` Remove the explicit `Install vzLogger package` UI button.
 - `[x]` Stop and disable the vzLogger service in `postroot.sh` unless vzLogger mode and meter reading are explicitly enabled.
 - `[x]` Preserve an active vzLogger service across plugin upgrades by recording the pre-upgrade state in `preroot.sh` and applying the generated configuration from `postroot.sh`.
-- `[~]` Verify `preroot.sh` repository setup on the target LoxBerry versions as root.
-- `[ ]` Confirm supported Debian/Raspberry Pi OS codenames and architecture behavior.
+- `[x]` Verify `preroot.sh` repository setup as root on the confirmed target platform: LoxBerry 4.0.0.13, Debian 13/trixie, arm64. Broader platform coverage is intentionally not claimed and remains a compatibility limitation in `KNOWN-ISSUES.md`.
+- `[x]` Define the currently confirmed OS/architecture support boundary as Debian 13/trixie on arm64. Other Debian/Raspberry Pi OS codenames and architectures require their own installation evidence before being added to the supported matrix.
 
 Decision notes:
 
@@ -50,11 +56,13 @@ Implemented files:
 - `[x]` Generate a default set of common OBIS channels.
 - `[x]` Configure native vzLogger MQTT output.
 - `[x]` Configure local vzLogger HTTP daemon settings.
-- `[~]` Map serial/D0 settings from legacy fields.
-- `[ ]` Verify all legacy meter presets against actual vzLogger options.
+- `[x]` Map the standard SML and D0 serial settings to vzLogger fields and provide protocol-specific SML, D0, and OMS configuration. Unsupported meter-specific legacy sequences are identified in the shared template catalog instead of being silently mapped.
+- `[x]` Map an SML template's operating/read baud rate to vzLogger's `baudrate` field, while D0 continues to map initial and read baud rates separately. The corrected Generic SML catalog default is 9600 baud/8N1. A repeated target test with the connected ISK meter discovered `1-0:1.8.0`, `1-0:2.8.0`, and `1-0:16.7.0`. A separate 9600/7E1 comparison saw identifiers in one short raw run, but the regular discovery found no channels and sustained reading stopped after one value; 8N1 is therefore the verified Generic SML parity default for this hardware. Broader hardware-dependent template coverage remains tracked in `KNOWN-ISSUES.md`.
 - `[x]` Make OBIS channels configurable in the UI, including custom meter-specific OBIS identifiers.
-- `[ ]` Add dynamic OBIS channel discovery for configuration, for example by temporarily running vzLogger with `verbosity: 15` and parsing discovered OBIS identifiers from the vzLogger log.
-- `[ ]` Add a guided migration from existing legacy config to vzLogger config.
+- `[x]` Add dynamic OBIS channel discovery through a temporary, time-bounded high-verbosity vzLogger run; cache results per reader, preserve selections, support cancellation/background status, and restore the regular service afterwards.
+- `[x]` Add a reversible migration path from existing Legacy configuration. Existing valid generated vzLogger configuration is preserved and reused; Legacy/form values are migrated only when no valid generated configuration exists, and isolated `LEGACY_*` settings remain available when switching back.
+- `[x]` Add OMS and custom JSONC meter configurations in addition to the original SML/D0 scope.
+- `[x]` Use one shared meter-template catalog for Legacy and vzLogger initialization.
 
 Decision notes:
 
@@ -83,13 +91,14 @@ Implemented files:
 - `[x]` Make `apply` abort if validation fails.
 - `[x]` Show validation status in `status`.
 - `[x]` Add `Validate config` UI button.
-- `[ ]` Validate against a real installed `vzlogger` binary if a reliable dry-run/check option is identified.
-- `[ ]` Run Perl syntax checks on LoxBerry.
+- `[x]` Evaluate native validation through the installed `vzlogger` binary and retain structural plugin validation. Current vzLogger releases provide no separate check/validate/dry-run option; foreground execution starts the configured meters and is therefore not a safe, non-invasive validation step.
+- `[x]` Add repository CI and the Windows `tools/check-perl-syntax.ps1` helper using LoxBerry stubs. The vzLogger generator, validator, control, bridge, and main CGI pass the helper as of this review; target-LoxBerry runtime behavior remains covered by the target checklist.
 
 Decision notes:
 
-- No reliable documented `vzlogger --check` or dry-run option has been confirmed yet, so validation is currently structural.
+- The [official vzLogger CLI documentation](https://wiki.volkszaehler.org/software/controller/vzlogger#kommandozeilenparameter) and the current Debian man page list no `--check`, `--validate`, or `--dry-run` option, so validation remains structural.
 - This still prevents starting services with malformed JSON or incomplete required plugin-generated structures.
+- The documented native CLI provides configuration selection and foreground execution, but foreground execution opens devices and starts meter processing. Native preflight validation should only be reconsidered if upstream adds a dedicated side-effect-free command.
 
 Implemented files:
 
@@ -113,7 +122,7 @@ Implemented files:
 - `[x]` Calculate legacy-compatible consumption and delivery power values from counter deltas.
 - `[x]` Capture real vzLogger MQTT topics/payloads on a target system (2.0.0.15).
 - `[x]` Adjust bridge parser to the exact real payload format.
-- `[X]` Add last-value and last-update display to the web UI. The HTTP cache section now shows cache presence, last update, and the cache endpoint link.
+- `[x]` Add HTTP-cache visibility to the web UI with cache presence, last update, and a direct cache endpoint link.
 
 Decision notes:
 
@@ -142,7 +151,7 @@ Implemented files:
 - `[x]` Replace the explicit `Install bridge service` UI button with service status and Restart/Start/Stop controls.
 - `[x]` Remove bridge service on plugin uninstall.
 - `[x]` Test service install/start/stop/restart on LoxBerry (2.0.0.14; service installation and control work, while startup without the configured I/R head fails as expected).
-- `[ ]` Decide whether bridge service should be auto-installed during plugin install or remain explicit user action.
+- `[x]` Resolve bridge installation behavior: keep the bridge disabled on fresh installs, but install/refresh its systemd unit automatically when an enabled bridge is applied or started. No separate install button is required.
 
 Decision notes:
 
@@ -174,10 +183,12 @@ Implemented files:
 - `[x]` Add raw JSON and automatically refreshed, generically rendered live-data links.
 - `[x]` Reduce the normal workflow to one save/apply action; retain validation for manually edited configuration.
 - `[x]` Separate bridge and vzLogger debug controls and document their log paths.
-- `[~]` Add better LoxBerry-style layout polish (implementation tabs and service grouping refined after 2.0.0.15 test).
+- `[x]` Add LoxBerry-style layout polish, implementation tabs and state badges, grouped/collapsible service and configuration panels, compact controls, contextual help, and AJAX progress overlays.
 - `[x]` Add log links for vzLogger and bridge plus a read-only, password-masked generated-config viewer beside the displayed path.
-- `[ ]` Add last cached values table.
+- `[x]` Keep the HTTP-cache panel without an inline last-cached-values table; status, timestamp, and the cache endpoint provide the intended diagnostic access.
 - `[x]` Add explicit OBIS channel selection and custom OBIS entry.
+- `[x]` Add structured per-reader vzLogger live-data rendering and a masked, read-only generated-configuration viewer.
+- `[x]` Add AJAX service control, validation, Save/Apply, reader scan, OBIS discovery, and debug-log workflows without page reloads.
 
 Decision notes:
 
@@ -204,7 +215,8 @@ Implemented files:
 - `[x]` `debug-log`: create a diagnostic log for troubleshooting and MQTT parser verification.
 - `[x]` Start vzLogger directly with the generated plugin config through a SmartMeter-managed systemd drop-in.
 - `[x]` Preserve unrelated `/etc/vzlogger.conf` files and remove the plugin drop-in on Legacy switch or uninstall.
-- `[ ]` Test permission behavior when actions are triggered from the web UI as the LoxBerry user.
+- `[x]` Exercise control, validation, apply, service, discovery, and diagnostic actions through the web UI as the LoxBerry user during target testing; explicitly provide the LoxBerry Perl environment in the bridge unit.
+- `[x]` Make AJAX lifecycle feedback reflect the requested final service state. Reset vzLogger's failed state before disabling the generated unit, close a failed OBIS-discovery overlay before displaying its alert, and remove saved meter, template, and OBIS pending markers immediately after a successful AJAX apply. Target retesting confirmed successful disable feedback, both services inactive with the drop-in removed, a closed failed-discovery overlay, and all three pending marker types disappearing without a page reload.
 
 Target finding (2.0.0.15): the bridge unit lacked LoxBerry's Perl library environment and exited with status 2 because `LoxBerry::System` was not in `@INC`. The unit template now sets `LBHOMEDIR` and `PERL5LIB` explicitly.
 
@@ -226,9 +238,10 @@ Implemented files:
 - `[x]` Migrate `[VZLOGGER]` default config section during upgrade.
 - `[x]` Install `vzlogger` and `mosquitto_sub` through LoxBerry `dpkg/apt` dependencies.
 - `[x]` Remove bridge service during uninstall.
-- `[~]` Existing legacy cron restore remains in place for legacy mode.
+- `[x]` Restore the configured legacy cron mode during upgrade and when Legacy is applied; remove all legacy polling cron entries for vzLogger or an inactive Legacy reader.
 - `[x]` Disable legacy cron automatically when vzLogger mode is enabled, and stop vzLogger/bridge when legacy mode is selected.
-- `[ ]` Add cleanup policy for generated `vzlogger.conf`, channel mapping, and runtime cache.
+- `[x]` Define and implement cleanup ownership: preserve generated vzLogger configuration while switching modes; remove per-meter mappings, JSONC/discovery/test/log/runtime artifacts when a meter is removed; remove the runtime cache, plugin-owned units/drop-in, owned system config, udev rule, apt source/key, and plugin-introduced vzLogger package during uninstall.
+- `[x]` Verify complete uninstall cleanup on a disposable LoxBerry 4 target: plugin directories and runtime cache, bridge unit, vzLogger drop-in, UDEV rule, apt source/keyring, ownership marker, plugin-introduced vzLogger package, and old cron/system links were removed before a successful fresh install.
 
 Decision notes:
 
@@ -251,7 +264,7 @@ Implemented files:
 - `[x]` Document bridge systemd service approach.
 - `[x]` Update German and English user guides with the new vzLogger workflow while keeping legacy mode documented.
 - `[x]` Document troubleshooting for apt repo, MQTT, bridge service, and vzLogger logs.
-- `[ ]` Document guided migration from legacy mode once the migration flow is implemented.
+- `[x]` Document reversible Legacy/vzLogger switching, generated-config preservation, conditional migration, and isolated Legacy settings.
 
 Implemented files:
 
@@ -275,17 +288,31 @@ Implemented files:
 - `[x]` Confirm `.data` cache updates from the real 2.0.0.17 `chnN/id`, `chnN/uuid`, and `chnN/raw` MQTT sequence using the current bridge parser logic.
 - `[x]` Fix the 2.0.0.19 regression where `chnN/uuid` was received but stored under an empty channel name, so later `chnN/raw` values were ignored.
 - `[x]` Diagnose 2.0.0.24 fresh-install target logs: package install and udev trigger succeed, `/dev/serial/smartmeter/A106Q3RX` is present, but `METER=0` generates an empty `meters` list and vzLogger exits after start.
-- `[ ]` Confirm `.data` files are written below `/var/run/shm/<plugin>/` on the target LoxBerry, including calculated power values when counter channels are present.
-- `[ ]` Confirm plugin HTTP endpoint returns cached values on the target LoxBerry.
-- `[ ]` Confirm UDP messages reach all configured Miniservers.
-- `[~]` Test disabling meter reading stops vzLogger and bridge.
-- `[ ]` Test uninstall removes bridge service and UDEV rule.
+- `[x]` Confirm `.data` files are written below `/var/run/shm/<plugin>/` from real retained `chnN` MQTT messages on the target LoxBerry.
+- `[x]` Confirm calculated consumption and delivery power values from counter deltas with a real meter and realistic update intervals. Real non-zero values matched `delta Wh / delta hours` at three-decimal precision; for example, a 2 Wh delivery delta over 5 seconds produced 1440.000 W. An unchanged counter produced 0 W.
+- `[x]` Confirm plugin HTTP endpoint returns the current cached values and timestamp on the target LoxBerry and terminates the response with `#EOF`; verified locally and through Chrome.
+- `[x]` Confirm UDP messages reach the configured Miniserver. The bridge logged repeated sends to `HOME_SWEET_HOME` at `192.168.1.5:7000`, and reception with matching current values was confirmed in the Loxone UDP Monitor.
+- `[x]` Test disabling meter reading stops vzLogger and bridge. Both services became inactive, the plugin drop-in was removed, no legacy polling job was active, and the generated `vzlogger.conf` hash remained unchanged. Follow-up testing also confirmed that AJAX reports this state as successful.
+- `[x]` Test uninstall removes bridge service and UDEV rule, together with the complete plugin-owned cleanup set documented in section 8.
 
-## Recommended Next Implementation Steps
+### 2.0.0.32 Target Evidence (2026-07-17)
 
-1. Test on a real LoxBerry target and create the debug log while vzLogger publishes MQTT messages.
-2. Adjust `vzlogger_mqtt_bridge.pl` parser to the verified payload format from the debug log.
-3. Add UI display for last cached values and direct bridge/vzLogger log links.
-4. Add dynamic OBIS channel discovery using a temporary high-verbosity vzLogger run and cached per-reader results.
-5. Verify custom OBIS identifiers and calculated power values on a real meter.
-6. Verify the explicit legacy/vzLogger mode switch on a real LoxBerry target.
+- Package: locally built `Smartmeter-V2.0.0.32-local.zip`, SHA-256 `29DDEF476313B41236D5C25095ABA58C8ED79626FBDF73F89758559719AB3949`; package layout and Perl, PHP, and shell syntax checks passed before installation.
+- Platform: LoxBerry 4.0.0.13, Debian 13/trixie, arm64; vzLogger 0.8.9 installed from the configured Cloudsmith source.
+- Lifecycle: coherent upgrade to 2.0.0.32, disable/reactivate, complete uninstall without backup, and fresh install all passed. The reader symlink `/dev/serial/smartmeter/A106Q3RX` was recreated without reboot; a fresh unconfigured installation left both services stopped.
+- Runtime: the manually corrected 9600/8N1 SML configuration produced the three selected real OBIS channels through MQTT. Both services were active and enabled, and only the bridge path updated `/var/run/shm/smartmeter-v2/A106Q3RX.data`.
+- Outputs: calculated power, HTTP output, repeated UDP sends, and actual Miniserver reception passed. The final test state intentionally leaves vzLogger, the bridge, and UDP enabled.
+- Evidence directory: `dist/test-evidence-20260717-131624/` (ignored build/test artifact, not part of the release package).
+
+### 2.0.0.32 Follow-Up Fix Evidence (2026-07-17)
+
+- Package: locally built `Smartmeter-V2.0.0.32-fixes-final.zip`, SHA-256 `313A733C6FA8B91FA5B528F526769EC8D33DC7B5E8B7BE37F9C82C5E58CE4735`.
+- Installation: the complete package flow and root hooks passed again at 15:22. After the isolated parity comparison changed only the Generic SML catalog/default and documentation back to 8N1, the final catalog file was synchronized directly to the installed plugin to avoid a third identical apt dependency reinstall; its deployed content and the final package content match.
+- SML: Generic SML now initializes 9600 baud/8N1. Discovery with the connected ISK meter found all three real OBIS channels and sustained data/UDP updates. The isolated 9600/7E1 comparison was rejected as a default because it failed regular discovery and did not sustain the data stream.
+- AJAX lifecycle: a failed discovery closed its progress overlay before the error alert; disabling vzLogger and the bridge completed without false failure feedback and left both services inactive with the drop-in absent.
+- AJAX saved state: meter `Neu / ungespeichert`, template `Änderung noch nicht gespeichert`, and three OBIS `Neu` markers were present before apply and all disappeared when the AJAX apply completed, without reloading the page. Their pending files were removed as part of the save.
+- Final state: vzLogger and the bridge were re-enabled and are active/enabled with the SmartMeter drop-in restored.
+
+## Completion Status
+
+All implementation checklist items in this plan are complete. Platform-matrix and representative-meter coverage are compatibility limitations rather than concrete implementation tasks and are tracked in `KNOWN-ISSUES.md`.

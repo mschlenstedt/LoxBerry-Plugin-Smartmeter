@@ -85,7 +85,7 @@ if ($action eq "restart-bridge") {
 }
 
 if ($action eq "validate") {
-	exit generate_and_validate();
+	exit run_perl("$bindir/vzlogger_validate.pl");
 }
 
 if ($action eq "start-bridge") {
@@ -438,11 +438,11 @@ sub stop_vzlogger
 		return;
 	}
 	my $rc = run_privileged("stop vzlogger", systemctl_command(), "stop", "vzlogger");
+	run_privileged("reset failed state for vzlogger", systemctl_command(), "reset-failed", "vzlogger") if ($rc == 0);
 	if ($disable && $rc == 0) {
 		my $disable_rc = run_privileged("disable vzlogger autostart", systemctl_command(), "disable", "vzlogger");
 		print "Disabled vzlogger autostart.\n" if ($disable_rc == 0);
 	}
-	run_privileged("reset failed state for vzlogger", systemctl_command(), "reset-failed", "vzlogger") if ($rc == 0);
 }
 
 sub stop_orphaned_obis_discovery_processes

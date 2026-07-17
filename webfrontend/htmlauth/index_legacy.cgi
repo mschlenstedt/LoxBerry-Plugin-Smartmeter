@@ -69,6 +69,7 @@ my  $serial;
 my  $crontabtmp = "$lbplogdir/crontab.temp";
 my  $runtime_dir;
 my  $meter_templates_cache;
+my  @legacy_meter_fields = qw(METER PROTOCOL STARTBAUDRATE BAUDRATE TIMEOUT DELAY HANDSHAKE DATABITS STOPBITS PARITY CRC);
 
 ##########################################################################
 # Read crontab
@@ -154,6 +155,13 @@ foreach (@heads) {
 		$plugin_cfg->param("$serial.STOPBITS", "");
 		$plugin_cfg->param("$serial.PARITY", "");
         $plugin_cfg->param("$serial.CRC", "");
+	}
+	if ( !defined($plugin_cfg->param("$serial.LEGACY_METER")) ) {
+		foreach my $field (@legacy_meter_fields) {
+			my $value = $plugin_cfg->param("$serial.$field");
+			$value = $field eq "METER" ? "0" : "" if (!defined($value));
+			$plugin_cfg->param("$serial.LEGACY_$field", $value);
+		}
 	}
 }
 $plugin_cfg->save;
@@ -278,18 +286,18 @@ sub form
 			$serial = $_;
 			$serial =~ s%/dev/serial/smartmeter/%%g;
 			$plugin_cfg->param("$serial.NAME", $cgi->param("$serial\_name") );
-			$plugin_cfg->param("$serial.METER", &clean_config_value($cgi->param("$serial\_meter"), qr/\A[A-Za-z0-9_.:-]+\z/, "0") );
+			$plugin_cfg->param("$serial.LEGACY_METER", &clean_config_value($cgi->param("$serial\_meter"), qr/\A[A-Za-z0-9_.:-]+\z/, "0") );
 			if ( $cgi->param("$serial\_meter") eq "manual" ) {
-				$plugin_cfg->param("$serial.PROTOCOL", &clean_config_value($cgi->param("$serial\_protocol"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
-				$plugin_cfg->param("$serial.STARTBAUDRATE", &clean_config_value($cgi->param("$serial\_startbaudrate"), qr/\A\d*\z/, "") );
-				$plugin_cfg->param("$serial.BAUDRATE", &clean_config_value($cgi->param("$serial\_baudrate"), qr/\A\d*\z/, "") );
-				$plugin_cfg->param("$serial.TIMEOUT", &clean_config_value($cgi->param("$serial\_timeout"), qr/\A\d*\z/, "") );
-				$plugin_cfg->param("$serial.DELAY", &clean_config_value($cgi->param("$serial\_delay"), qr/\A\d*\z/, "") );
-				$plugin_cfg->param("$serial.HANDSHAKE", &clean_config_value($cgi->param("$serial\_handshake"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
-				$plugin_cfg->param("$serial.DATABITS", &clean_config_value($cgi->param("$serial\_databits"), qr/\A\d*\z/, "") );
-				$plugin_cfg->param("$serial.STOPBITS", &clean_config_value($cgi->param("$serial\_stopbits"), qr/\A\d*\z/, "") );
-				$plugin_cfg->param("$serial.PARITY", &clean_config_value($cgi->param("$serial\_parity"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
-				$plugin_cfg->param("$serial.CRC", &clean_config_value($cgi->param("$serial\_crc"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
+				$plugin_cfg->param("$serial.LEGACY_PROTOCOL", &clean_config_value($cgi->param("$serial\_protocol"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
+				$plugin_cfg->param("$serial.LEGACY_STARTBAUDRATE", &clean_config_value($cgi->param("$serial\_startbaudrate"), qr/\A\d*\z/, "") );
+				$plugin_cfg->param("$serial.LEGACY_BAUDRATE", &clean_config_value($cgi->param("$serial\_baudrate"), qr/\A\d*\z/, "") );
+				$plugin_cfg->param("$serial.LEGACY_TIMEOUT", &clean_config_value($cgi->param("$serial\_timeout"), qr/\A\d*\z/, "") );
+				$plugin_cfg->param("$serial.LEGACY_DELAY", &clean_config_value($cgi->param("$serial\_delay"), qr/\A\d*\z/, "") );
+				$plugin_cfg->param("$serial.LEGACY_HANDSHAKE", &clean_config_value($cgi->param("$serial\_handshake"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
+				$plugin_cfg->param("$serial.LEGACY_DATABITS", &clean_config_value($cgi->param("$serial\_databits"), qr/\A\d*\z/, "") );
+				$plugin_cfg->param("$serial.LEGACY_STOPBITS", &clean_config_value($cgi->param("$serial\_stopbits"), qr/\A\d*\z/, "") );
+				$plugin_cfg->param("$serial.LEGACY_PARITY", &clean_config_value($cgi->param("$serial\_parity"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
+				$plugin_cfg->param("$serial.LEGACY_CRC", &clean_config_value($cgi->param("$serial\_crc"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
 			}
 		}
 		$plugin_cfg->save;
@@ -376,17 +384,17 @@ sub form
 			NAME 		=>	$plugin_cfg->param("$serial.NAME"),
 			SERIAL		=>	$plugin_cfg->param("$serial.SERIAL"),
 			DEVICE		=>	$plugin_cfg->param("$serial.DEVICE"),
-			METER		=>	$plugin_cfg->param("$serial.METER"),
-			PROTOCOL	=>	$plugin_cfg->param("$serial.PROTOCOL"),
-			STARTBAUDRATE	=>	$plugin_cfg->param("$serial.STARTBAUDRATE"),
-			BAUDRATE	=>	$plugin_cfg->param("$serial.BAUDRATE"),
-			TIMEOUT		=>	$plugin_cfg->param("$serial.TIMEOUT"),
-			DELAY		=>	$plugin_cfg->param("$serial.DELAY"),
-			HANDSHAKE	=>	$plugin_cfg->param("$serial.HANDSHAKE"),
-			DATABITS	=>	$plugin_cfg->param("$serial.DATABITS"),
-			STOPBITS	=>	$plugin_cfg->param("$serial.STOPBITS"),
-			PARITY		=>	$plugin_cfg->param("$serial.PARITY"),
-			CRC		    =>	$plugin_cfg->param("$serial.CRC"),
+			METER		=>	$plugin_cfg->param("$serial.LEGACY_METER"),
+			PROTOCOL	=>	$plugin_cfg->param("$serial.LEGACY_PROTOCOL"),
+			STARTBAUDRATE	=>	$plugin_cfg->param("$serial.LEGACY_STARTBAUDRATE"),
+			BAUDRATE	=>	$plugin_cfg->param("$serial.LEGACY_BAUDRATE"),
+			TIMEOUT		=>	$plugin_cfg->param("$serial.LEGACY_TIMEOUT"),
+			DELAY		=>	$plugin_cfg->param("$serial.LEGACY_DELAY"),
+			HANDSHAKE	=>	$plugin_cfg->param("$serial.LEGACY_HANDSHAKE"),
+			DATABITS	=>	$plugin_cfg->param("$serial.LEGACY_DATABITS"),
+			STOPBITS	=>	$plugin_cfg->param("$serial.LEGACY_STOPBITS"),
+			PARITY		=>	$plugin_cfg->param("$serial.LEGACY_PARITY"),
+			CRC		    =>	$plugin_cfg->param("$serial.LEGACY_CRC"),
 			METER_TEMPLATES => $meter_template_options,
 			);
 			push (@rows, \%{"hash".$i});

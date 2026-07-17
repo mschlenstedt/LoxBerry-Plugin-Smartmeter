@@ -4,6 +4,9 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
+- Run generated-config validation, debug-log creation, and Save/Apply through AJAX without a page reload. Validation uses a temporary draft and never changes the saved or generated configuration, while Save/Apply remains the only form action that writes it. Keep validation and apply failures open for acknowledgement, auto-close a successful apply after three seconds, and monitor debug-log creation entirely in its new tab with a 45-second server-side limit. Render the generated configuration in a readable masked view, restore each collapsible panel's browser-local open state after a manual reload, and reject invalid or unreasonably large generated baud rates.
+- Map an SML template's operating/read baud rate to vzLogger instead of its initial communication baud rate, correct Generic SML to the verified 9600 baud/8N1 operating defaults, determine apply success from the requested final service state, reset the vzLogger failure state before disabling its generated unit, close a failed OBIS-discovery overlay before showing the error alert, and clear saved meter/template/OBIS pending markers immediately after AJAX Save/Apply.
+
 ## 2.0.0.32 - 2026-07-17
 
 - Show the effective Legacy meter-template values in the disabled manual-settings fields while preserving the separately saved manual configuration for later reselection.
@@ -13,6 +16,7 @@ All notable user-visible changes should be documented in this file. Use the late
 - Use one neutral meter-template catalog for both Legacy and vzLogger, generate both selectors from it, and map its initial/read baud rates to each implementation's field names without a reversed Legacy fallback.
 - Restore the selected protocol after a page reload from the generated vzLogger configuration for saved meters and from the pending OBIS-discovery draft only for new, unsaved meters.
 - Preserve an existing valid `vzlogger.conf` while Legacy or neither implementation is active and reactivate it unchanged when switching back to vzLogger; migrate Legacy meter settings only when no valid generated vzLogger configuration exists.
+- Store Legacy meter selection and manual serial settings in separate `LEGACY_*` keys, migrate existing values once, and make the Legacy UI and polling runtime use that isolated state so saving vzLogger no longer clears a working Legacy reader configuration.
 
 ## 2.0.0.30 - 2026-07-17
 

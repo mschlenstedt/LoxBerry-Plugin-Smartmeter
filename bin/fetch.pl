@@ -148,17 +148,17 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 		$name 		=	$plugin_cfg->param("$configvalue.NAME");
 		$serial		=	$plugin_cfg->param("$configvalue.SERIAL");
 		$device		=	$plugin_cfg->param("$configvalue.DEVICE");
-		$meter		=	$plugin_cfg->param("$configvalue.METER");
-		$protocol	=	$plugin_cfg->param("$configvalue.PROTOCOL");
-		$startbaudrate	=	$plugin_cfg->param("$configvalue.STARTBAUDRATE");
-		$baudrate	=	$plugin_cfg->param("$configvalue.BAUDRATE");
-		$timeout	=	$plugin_cfg->param("$configvalue.TIMEOUT");
-		$handshake	=	$plugin_cfg->param("$configvalue.HANDSHAKE");
-		$databits	=	$plugin_cfg->param("$configvalue.DATABITS");
-		$stopbits	=	$plugin_cfg->param("$configvalue.STOPBITS");
-		$parity		=	$plugin_cfg->param("$configvalue.PARITY");
-		$delay 		=	$plugin_cfg->param("$configvalue.DELAY");
-		$crc 		=	$plugin_cfg->param("$configvalue.CRC");
+		$meter		=	legacy_meter_value($configvalue, "METER");
+		$protocol	=	legacy_meter_value($configvalue, "PROTOCOL");
+		$startbaudrate	=	legacy_meter_value($configvalue, "STARTBAUDRATE");
+		$baudrate	=	legacy_meter_value($configvalue, "BAUDRATE");
+		$timeout	=	legacy_meter_value($configvalue, "TIMEOUT");
+		$handshake	=	legacy_meter_value($configvalue, "HANDSHAKE");
+		$databits	=	legacy_meter_value($configvalue, "DATABITS");
+		$stopbits	=	legacy_meter_value($configvalue, "STOPBITS");
+		$parity		=	legacy_meter_value($configvalue, "PARITY");
+		$delay 		=	legacy_meter_value($configvalue, "DELAY");
+		$crc 		=	legacy_meter_value($configvalue, "CRC");
 		&LOG ("$serial: Found configuration for $name", "INFO");
 
 		# Check if head is connected and config is complete
@@ -166,7 +166,7 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 			&LOG ("$serial: Device does not exist. Skipping.", "INFO");
 			next;
 		}
-		if ( $plugin_cfg->param("$configvalue.METER") eq "0" ) {
+		if ( ($meter || "0") eq "0" ) {
 			&LOG ("$serial: Configuration for $name is not complete. Skipping.", "INFO");
 			next;
 		}
@@ -290,6 +290,14 @@ if ($plugin_cfg->param("MAIN.CRON") eq "M" && !$force) {
 	goto RERUN;
 	}
 exit;
+
+sub legacy_meter_value
+{
+	my ($section, $field) = @_;
+	my $value = $plugin_cfg->param("$section.LEGACY_$field");
+	return $value if (defined($value));
+	return $plugin_cfg->param("$section.$field");
+}
 
 sub add_option
 {

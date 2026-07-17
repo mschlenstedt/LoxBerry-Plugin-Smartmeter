@@ -23,7 +23,9 @@
 # use CGI::Carp qw(fatalsToBrowser);
 use CGI;
 use Config::Simple;
+use File::Copy qw(copy);
 use File::Path qw(make_path);
+use File::Temp qw(tempdir);
 use JSON::PP;
 use LoxBerry::System;
 #use LoxBerry::Web;
@@ -90,6 +92,12 @@ if( $q->{ajax} ) {
 			die "Service actions require POST." if (($ENV{REQUEST_METHOD} || "") ne "POST");
 			load_service_ajax_config();
 			$response = run_service_ajax_action($q->{service_action});
+		} elsif ($action eq "form-action") {
+			die "Configuration actions require POST." if (($ENV{REQUEST_METHOD} || "") ne "POST");
+			$response = run_form_ajax_action($q->{submitaction});
+		} elsif ($action eq "debug-log") {
+			die "Debug-log creation requires POST." if (($ENV{REQUEST_METHOD} || "") ne "POST");
+			$response = run_debug_log_ajax();
 		} elsif ($action eq "ir-scan") {
 			die "I/R head discovery requires POST." if (($ENV{REQUEST_METHOD} || "") ne "POST");
 			load_service_ajax_config();
@@ -153,9 +161,21 @@ sub form_vzlogger
 	}
 	my @heads = detect_heads();
 	ensure_head_defaults(@heads);
+	ensure_legacy_meter_state(@heads);
 
 	if ($q->{saveformdata}) {
 		my $action = $q->{submitaction} || "apply";
+		if ($action eq "validate") {
+			my $validation = run_draft_validation_ajax();
+			$template->param("VZLOGGER_MESSAGE", $validation->{message});
+		} elsif ($action eq "debug-log") {
+			my $debug = run_debug_log_ajax();
+			if ($debug->{ok} && $debug->{log_url}) {
+				print $cgi->redirect(-url => $debug->{log_url});
+				exit;
+			}
+			$template->param("VZLOGGER_MESSAGE", $debug->{message});
+		} else {
 		my $implementation_before_save = implementation_mode();
 		my $save_output = "";
 		if ($action =~ /\A(?:start|stop|restart)-(?:vzlogger|bridge)\z/) {
@@ -187,15 +207,10 @@ sub form_vzlogger
 			exit;
 		}
 		if ($control_action eq "apply") {
-			my $apply_log = "$lbhomedir/log/plugins/$lbpplugindir/vzlogger_apply.log";
-			make_path("$lbhomedir/log/plugins/$lbpplugindir") if (!-d "$lbhomedir/log/plugins/$lbpplugindir");
-			if (open(my $apply_fh, ">", $apply_log)) {
-				print $apply_fh $output;
-				close($apply_fh);
-				$output .= "\nApply log: $apply_log\n";
-			}
+			write_apply_log($output, \$output);
 		}
 		$template->param("VZLOGGER_MESSAGE", $output);
+		}
 		$plugin_cfg = Config::Simple->new($config_file) or die "Could not reload $config_file";
 		@heads = detect_heads();
 	}
@@ -487,6 +502,148 @@ sub run_service_ajax_action
 	return $response;
 }
 
+sub run_form_ajax_action
+{
+	my ($action) = @_;
+	my %allowed = map { $_ => 1 } qw(validate apply);
+	die "Unknown configuration action." if (!$allowed{$action || ""});
+	return run_draft_validation_ajax() if ($action eq "validate");
+
+	load_service_ajax_config();
+	ensure_vzlogger_defaults();
+	my @heads = detect_heads();
+	ensure_head_defaults(@heads);
+	ensure_legacy_meter_state(@heads);
+	my $implementation_before_save = implementation_mode();
+	my $output = save_vzlogger_form(@heads);
+	my $exit = 0;
+
+	my $activating_vzlogger = $implementation_before_save ne "vzlogger" && implementation_mode() eq "vzlogger";
+	my ($apply_output, $apply_exit) = apply_selected_implementation_result($activating_vzlogger);
+	$output .= $apply_output;
+	$exit = $apply_exit;
+
+	# Reload persisted values before producing the service snapshot.
+	load_service_ajax_config();
+	my $response = service_status_response();
+	my $operation_ok = $exit == 0;
+	$operation_ok = 0 if ($output =~ /(?:\ACould not|\nCould not|\bnot available\b)/i);
+	my $meterless = $output =~ /No meter is configured/i;
+	my $vzlogger_expected = $response->{applied}->{vzlogger_enabled} && !$meterless;
+	my $bridge_expected = $vzlogger_expected && $response->{applied}->{mqtt_enabled} && $response->{applied}->{bridge_enabled};
+	if ($vzlogger_expected && !$response->{services}->{vzlogger}->{running}) {
+		$operation_ok = 0;
+		$output .= "\nApply did not leave the vzLogger service running.\n";
+	}
+	if ($bridge_expected && !$response->{services}->{bridge}->{running}) {
+		$operation_ok = 0;
+		$output .= "\nApply did not leave the SmartMeter bridge running.\n";
+	}
+	if (!$vzlogger_expected && $response->{services}->{vzlogger}->{running}) {
+		$operation_ok = 0;
+		$output .= "\nApply did not stop the vzLogger service.\n";
+	}
+	if (!$bridge_expected && $response->{services}->{bridge}->{running}) {
+		$operation_ok = 0;
+		$output .= "\nApply did not stop the SmartMeter bridge.\n";
+	}
+	write_apply_log($output, \$output);
+	$response->{ok} = $operation_ok ? JSON::PP::true : JSON::PP::false;
+	$response->{action} = $action;
+	$response->{message} = $output;
+	$response->{config_url} = "./vzlogger_config.cgi";
+	return $response;
+}
+
+sub run_draft_validation_ajax
+{
+	my $live_config_dir = $lbpconfigdir;
+	my $draft_dir = tempdir("smartmeter-vzlogger-validation-XXXXXX", TMPDIR => 1, CLEANUP => 1);
+	my $draft_config = "$draft_dir/smartmeter.cfg";
+	copy("$live_config_dir/smartmeter.cfg", $draft_config) or die "Could not prepare temporary configuration: $!";
+	foreach my $source (glob("$live_config_dir/vzlogger_meter_*.jsonc")) {
+		my ($name) = $source =~ m{([^/\\]+)\z};
+		copy($source, "$draft_dir/$name") or die "Could not prepare temporary custom meter configuration: $!";
+	}
+
+	my ($output, $exit);
+	{
+		local $lbpconfigdir = $draft_dir;
+		$plugin_cfg = Config::Simple->new($draft_config) or die "Could not read temporary configuration";
+		ensure_vzlogger_defaults();
+		my @heads = detect_heads();
+		ensure_head_defaults(@heads);
+		ensure_legacy_meter_state(@heads);
+		save_vzlogger_form("__draft__", @heads);
+		foreach my $device (@heads) {
+			my $serial = $device;
+			$serial =~ s%/dev/serial/smartmeter/%%g;
+			my $mode = normalized_meter_mode($plugin_cfg->param("$serial.METER"), $plugin_cfg->param("$serial.PROTOCOL"));
+			save_user_meter_source($serial, $q->{"$serial\_userjson"}) if ($mode eq "user" && defined($q->{"$serial\_userjson"}));
+		}
+		$plugin_cfg->save;
+
+		local $ENV{SMARTMETER_CONFIG_DIR} = $draft_dir;
+		local $ENV{SMARTMETER_CONFIG_FILE} = $draft_config;
+		local $ENV{SMARTMETER_VZLOGGER_CONFIG_FILE} = "$draft_dir/vzlogger.conf";
+		local $ENV{SMARTMETER_VZLOGGER_MAPPING_FILE} = "$draft_dir/vzlogger_channels.json";
+		local $ENV{SMARTMETER_VALIDATION_DRAFT} = "1";
+		my ($generate_output, $generate_exit) = run_perl_file_result("$lbpbindir/vzlogger_config.pl");
+		$output = $generate_output;
+		$exit = $generate_exit;
+		if ($exit == 0) {
+			my ($validate_output, $validate_exit) = run_perl_file_result("$lbpbindir/vzlogger_validate.pl");
+			$output .= $validate_output;
+			$exit = $validate_exit;
+		}
+	}
+
+	return {
+		ok => $exit == 0 ? JSON::PP::true : JSON::PP::false,
+		action => "validate",
+		message => $output,
+	};
+}
+
+sub run_debug_log_ajax
+{
+	my $script = "$lbpbindir/vzlogger_control.pl";
+	die "Control script not found: $script" if (!-e $script);
+	my $output;
+	my $exit;
+	return {
+		ok => JSON::PP::false,
+		state => "failed",
+		message => "The required timeout command is not available; debug-log creation was not started.",
+	} if (!command_exists("timeout"));
+	$output = `timeout --signal=TERM --kill-after=5 45 "$^X" "$script" debug-log 2>&1`;
+	$exit = $? >> 8;
+	$output .= "\nDebug-log creation exceeded the 45-second limit and was stopped.\n" if ($exit == 124 || $exit == 137);
+	$output ||= "No output.";
+	my $response = {
+		ok => $exit == 0 ? JSON::PP::true : JSON::PP::false,
+		state => $exit == 0 ? "completed" : "failed",
+		message => $output,
+	};
+	if ($exit == 0 && $output =~ m{Created debug log: \Q$lbhomedir\E/log/plugins/\Q$lbpplugindir\E/([^/\s]+)}) {
+		$response->{log_url} = log_redirect_url("plugins/$lbpplugindir/$1");
+	} else {
+		$response->{ok} = JSON::PP::false;
+	}
+	return $response;
+}
+
+sub run_perl_file_result
+{
+	my ($script, @arguments) = @_;
+	return ("Script not found: $script", 1) if (!-e $script);
+	my $argument_text = join(" ", map { my $value = $_; $value =~ s/"/\\"/g; qq{"$value"} } @arguments);
+	my $output = `$^X "$script" $argument_text 2>&1`;
+	my $exit = $? >> 8;
+	$output ||= "No output.";
+	return ($output, $exit);
+}
+
 sub save_service_log_settings
 {
 	my ($action) = @_;
@@ -761,6 +918,25 @@ sub ensure_head_defaults
 	$plugin_cfg->save;
 }
 
+sub ensure_legacy_meter_state
+{
+	my (@heads) = @_;
+	my @fields = qw(METER PROTOCOL STARTBAUDRATE BAUDRATE TIMEOUT DELAY HANDSHAKE DATABITS STOPBITS PARITY CRC);
+	my $changed = 0;
+	foreach my $device (@heads) {
+		my $serial = $device;
+		$serial =~ s%/dev/serial/smartmeter/%%g;
+		next if (defined($plugin_cfg->param("$serial.LEGACY_METER")));
+		foreach my $field (@fields) {
+			my $value = $plugin_cfg->param("$serial.$field");
+			$value = $field eq "METER" ? "0" : "" if (!defined($value));
+			$plugin_cfg->param("$serial.LEGACY_$field", $value);
+		}
+		$changed = 1;
+	}
+	$plugin_cfg->save if ($changed);
+}
+
 sub save_vzlogger_form
 {
 	my $draft_only = (@_ && $_[0] eq "__draft__") ? shift : "";
@@ -771,7 +947,7 @@ sub save_vzlogger_form
 		$serial => 1;
 	} @heads;
 	my %remove_serials;
-	if (!$draft_only && ($q->{submitaction} || "") eq "apply") {
+	if ($draft_only || ($q->{submitaction} || "") eq "apply") {
 		foreach my $serial ($cgi->multi_param("remove_meter")) {
 			next if (!defined($serial) || $serial !~ /\A[A-Za-z0-9_.:-]+\z/);
 			$remove_serials{$serial} = 1 if ($known_serials{$serial});
@@ -878,6 +1054,7 @@ sub save_vzlogger_form
 		my %removed_heads = map { $_ => 1 } config_list_values("VZLOGGER.REMOVEDHEADS");
 		foreach my $serial (@removed_serials) {
 			foreach my $key ($plugin_cfg->param()) {
+				next if ($key =~ /\A\Q$serial\E\.(?:NAME|SERIAL|DEVICE|LEGACY_.+)\z/);
 				$plugin_cfg->delete($key) if ($key =~ /\A\Q$serial\E\./);
 			}
 			$removed_heads{$serial} = 1;
@@ -1148,15 +1325,22 @@ sub obis_discovery_cancel_requested
 sub apply_selected_implementation
 {
 	my ($activating_vzlogger) = @_;
+	my ($output) = apply_selected_implementation_result($activating_vzlogger);
+	return $output;
+}
+
+sub apply_selected_implementation_result
+{
+	my ($activating_vzlogger) = @_;
 	if (implementation_mode() eq "legacy") {
-		my $output = run_control("disable-vzlogger");
+		my ($output, $exit) = run_control_result("disable-vzlogger");
 		$output .= apply_legacy_cron();
-		return $output;
+		return ($output, $exit);
 	}
 
 	remove_legacy_cronjobs();
-	return run_control("disable-vzlogger") if (implementation_mode() ne "vzlogger");
-	return run_control($activating_vzlogger ? "activate-vzlogger" : "apply");
+	return run_control_result("disable-vzlogger") if (implementation_mode() ne "vzlogger");
+	return run_control_result($activating_vzlogger ? "activate-vzlogger" : "apply");
 }
 
 sub write_vzlogger_obis_test_config
@@ -2210,6 +2394,18 @@ sub write_control_log
 	print $fh $output;
 	print $fh "\n" if ($output !~ /\n\z/);
 	close($fh);
+}
+
+sub write_apply_log
+{
+	my ($output, $display_output) = @_;
+	my $apply_log = "$lbhomedir/log/plugins/$lbpplugindir/vzlogger_apply.log";
+	make_path("$lbhomedir/log/plugins/$lbpplugindir") if (!-d "$lbhomedir/log/plugins/$lbpplugindir");
+	return if (!open(my $apply_fh, ">", $apply_log));
+	print $apply_fh $output;
+	close($apply_fh);
+	my $notice = "\nApply log: $apply_log\n";
+	${$display_output} .= $notice if ($display_output);
 }
 
 sub timestamp

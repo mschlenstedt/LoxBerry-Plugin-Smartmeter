@@ -9,9 +9,10 @@ use LoxBerry::System;
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
-my $plugin_config_file = "$home/config/plugins/$psubfolder/smartmeter.cfg";
-my $config_file = "$home/config/plugins/$psubfolder/vzlogger.conf";
-my $mapping_file = "$home/config/plugins/$psubfolder/vzlogger_channels.json";
+my $plugin_config_dir = $ENV{SMARTMETER_CONFIG_DIR} || "$home/config/plugins/$psubfolder";
+my $plugin_config_file = $ENV{SMARTMETER_CONFIG_FILE} || "$plugin_config_dir/smartmeter.cfg";
+my $config_file = $ENV{SMARTMETER_VZLOGGER_CONFIG_FILE} || "$plugin_config_dir/vzlogger.conf";
+my $mapping_file = $ENV{SMARTMETER_VZLOGGER_MAPPING_FILE} || "$plugin_config_dir/vzlogger_channels.json";
 
 my @errors;
 my @warnings;
@@ -108,6 +109,10 @@ sub validate_config
 
 		push @errors, "$prefix.protocol must be a non-empty string." if (!defined($meter->{protocol}) || ref($meter->{protocol}) || $meter->{protocol} eq "");
 		push @errors, "$prefix.protocol oms is not supported by the installed vzLogger." if (defined($meter->{protocol}) && !ref($meter->{protocol}) && $meter->{protocol} eq "oms" && !vzlogger_supports_protocol("oms"));
+		foreach my $field (qw(baudrate baudrate_read)) {
+			next if (!exists($meter->{$field}));
+			push @errors, "$prefix.$field must be a positive integer no greater than 4000000." if (!is_positive_integer($meter->{$field}, 4000000));
+		}
 		if (!exists($meter->{channels})) {
 			next;
 		}
@@ -156,6 +161,12 @@ sub is_port
 {
 	my ($value) = @_;
 	return defined($value) && $value =~ /\A\d+\z/ && $value > 0 && $value <= 65535;
+}
+
+sub is_positive_integer
+{
+	my ($value, $maximum) = @_;
+	return defined($value) && !ref($value) && "$value" =~ /\A\d+\z/ && $value > 0 && $value <= $maximum;
 }
 
 sub vzlogger_supports_protocol
