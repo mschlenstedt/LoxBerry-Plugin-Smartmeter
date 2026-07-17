@@ -26,6 +26,7 @@ use Config::Simple;
 use File::Copy qw(copy);
 use File::Path qw(make_path);
 use File::Temp qw(tempdir);
+use FindBin;
 use JSON::PP;
 use LoxBerry::System;
 #use LoxBerry::Web;
@@ -34,6 +35,9 @@ use LoxBerry::Log;
 use POSIX qw(:sys_wait_h setsid);
 use warnings;
 use strict;
+use lib $lbpbindir;
+use lib "$FindBin::Bin/../../bin";
+use SmartMeterVZLoggerChannels qw(parse_obis compose_obis normalize_obis default_output_key stable_uuid read_json write_json_atomic load_catalog lookup_obis new_document migrate_legacy_meter validate_document);
 
 ##########################################################################
 # Variables
@@ -42,6 +46,10 @@ use strict;
 my $log;
 my $meter_templates_cache;
 my $saved_meter_protocols_cache;
+my $channel_document;
+my $obis_catalog;
+our $configuration_action_deadline;
+our $configuration_action_timed_out = 0;
 
 # Read Form
 my $cgi = CGI->new;
@@ -162,6 +170,7 @@ sub form_vzlogger
 	my @heads = detect_heads();
 	ensure_head_defaults(@heads);
 	ensure_legacy_meter_state(@heads);
+	load_or_migrate_channel_document(@heads);
 
 	if ($q->{saveformdata}) {
 		my $action = $q->{submitaction} || "apply";
@@ -213,6 +222,7 @@ sub form_vzlogger
 		}
 		$plugin_cfg = Config::Simple->new($config_file) or die "Could not reload $config_file";
 		@heads = detect_heads();
+		load_or_migrate_channel_document(@heads);
 	}
 
 	my @rows = build_head_rows(@heads);
@@ -276,6 +286,9 @@ sub form_vzlogger
 	$template->param("VZLOGGER_LIVEURL" => "http://$ENV{HTTP_HOST}:$local_port/");
 	$template->param("VZLOGGER_RENDERED_URL" => "./vzlogger_live.cgi");
 	$template->param("METER_TEMPLATES_JSON" => JSON::PP->new->utf8->canonical->encode(load_meter_templates()));
+	$template->param("CHANNEL_DEFINITIONS_JSON" => JSON::PP->new->utf8->canonical->encode($channel_document || new_document()));
+	$template->param("CHANNEL_INDICES_JSON" => JSON::PP->new->utf8->canonical->encode(runtime_channel_indices()));
+	$template->param("OBIS_CATALOG_JSON" => JSON::PP->new->utf8->canonical->encode($obis_catalog || load_catalog("$lbptemplatedir/obis_catalog.json")));
 	add_http_cache_template_params(@rows);
 	$template->param("ROWS" => \@rows);
 	return();
@@ -304,6 +317,8 @@ sub add_service_template_params
 	$template->param("VZLOGGER_LOG_DISABLED" => (-e $vzlogger_log ? "" : "ui-disabled"));
 	$template->param("BRIDGE_LOG_URL" => log_url("plugins/$lbpplugindir/vzlogger_mqtt_bridge.log"));
 	$template->param("BRIDGE_LOG_DISABLED" => (-e $bridge_log ? "" : "ui-disabled"));
+	$template->param("CONTROL_LOG_URL" => log_url("plugins/$lbpplugindir/vzlogger_control.log"));
+	$template->param("CONTROL_LOG_DISABLED" => "");
 }
 
 sub add_http_cache_template_params
@@ -497,7 +512,20 @@ sub run_service_ajax_action
 
 	my ($output, $exit) = run_control_result($action);
 	my $response = service_status_response();
+	my $service_name = $bridge_action ? "bridge" : "vzlogger";
+	my $expected_running = $action =~ /\A(?:start|restart)-/ ? 1 : 0;
+	my $running = $response->{services}->{$service_name}->{running} ? 1 : 0;
+	if ($exit == 0 && $running != $expected_running) {
+		$exit = 1;
+		$output .= "\nService action completed without reaching the requested final state.\n";
+		write_control_log("$action-state-check", "Requested running=$expected_running, observed running=$running.\n");
+	}
+	my $warning = $output =~ /\bwarning\b/i ? 1 : 0;
+	my $failure_output = $output;
+	$failure_output =~ s/^Warning:.*(?:\n|\z)//img;
+	$exit = 1 if ($exit == 0 && $failure_output =~ /(?:\bcould not\b|\bnot available\b|\bnot installed\b|\broot privileges are required\b|\bskipped\b)/i);
 	$response->{ok} = $exit == 0 ? JSON::PP::true : JSON::PP::false;
+	$response->{warning} = $warning ? JSON::PP::true : JSON::PP::false;
 	$response->{message} = $output;
 	return $response;
 }
@@ -507,6 +535,9 @@ sub run_form_ajax_action
 	my ($action) = @_;
 	my %allowed = map { $_ => 1 } qw(validate apply);
 	die "Unknown configuration action." if (!$allowed{$action || ""});
+	die "The required timeout command is not available; the configuration action was not started." if (!command_exists("timeout"));
+	local $configuration_action_deadline = time + 60;
+	local $configuration_action_timed_out = 0;
 	return run_draft_validation_ajax() if ($action eq "validate");
 
 	load_service_ajax_config();
@@ -551,7 +582,9 @@ sub run_form_ajax_action
 	$response->{ok} = $operation_ok ? JSON::PP::true : JSON::PP::false;
 	$response->{action} = $action;
 	$response->{message} = $output;
+	$response->{timed_out} = $configuration_action_timed_out ? JSON::PP::true : JSON::PP::false;
 	$response->{config_url} = "./vzlogger_config.cgi";
+	$response->{channel_indices} = runtime_channel_indices();
 	return $response;
 }
 
@@ -575,6 +608,8 @@ sub run_draft_validation_ajax
 		ensure_head_defaults(@heads);
 		ensure_legacy_meter_state(@heads);
 		save_vzlogger_form("__draft__", @heads);
+		my $draft_channels = submitted_channel_document(@heads);
+		write_json_atomic("$draft_dir/vzlogger_channel_definitions.json", $draft_channels) if ($draft_channels);
 		foreach my $device (@heads) {
 			my $serial = $device;
 			$serial =~ s%/dev/serial/smartmeter/%%g;
@@ -587,6 +622,7 @@ sub run_draft_validation_ajax
 		local $ENV{SMARTMETER_CONFIG_FILE} = $draft_config;
 		local $ENV{SMARTMETER_VZLOGGER_CONFIG_FILE} = "$draft_dir/vzlogger.conf";
 		local $ENV{SMARTMETER_VZLOGGER_MAPPING_FILE} = "$draft_dir/vzlogger_channels.json";
+		local $ENV{SMARTMETER_VZLOGGER_DEFINITIONS_FILE} = "$draft_dir/vzlogger_channel_definitions.json";
 		local $ENV{SMARTMETER_VALIDATION_DRAFT} = "1";
 		my ($generate_output, $generate_exit) = run_perl_file_result("$lbpbindir/vzlogger_config.pl");
 		$output = $generate_output;
@@ -602,6 +638,7 @@ sub run_draft_validation_ajax
 		ok => $exit == 0 ? JSON::PP::true : JSON::PP::false,
 		action => "validate",
 		message => $output,
+		timed_out => $configuration_action_timed_out ? JSON::PP::true : JSON::PP::false,
 	};
 }
 
@@ -637,9 +674,18 @@ sub run_perl_file_result
 {
 	my ($script, @arguments) = @_;
 	return ("Script not found: $script", 1) if (!-e $script);
+	my $remaining = defined($configuration_action_deadline) ? int($configuration_action_deadline - time) : 60;
+	if ($remaining <= 0) {
+		$configuration_action_timed_out = 1;
+		return ("Configuration action exceeded the 60-second limit and was stopped.\n", 124);
+	}
 	my $argument_text = join(" ", map { my $value = $_; $value =~ s/"/\\"/g; qq{"$value"} } @arguments);
-	my $output = `$^X "$script" $argument_text 2>&1`;
+	my $output = `timeout --signal=TERM --kill-after=5s ${remaining}s "$^X" "$script" $argument_text 2>&1`;
 	my $exit = $? >> 8;
+	if ($exit == 124 || $exit == 137) {
+		$configuration_action_timed_out = 1;
+		$output .= "\nConfiguration action exceeded the 60-second limit and was stopped.\n";
+	}
 	$output ||= "No output.";
 	return ($output, $exit);
 }
@@ -941,6 +987,7 @@ sub save_vzlogger_form
 {
 	my $draft_only = (@_ && $_[0] eq "__draft__") ? shift : "";
 	my (@heads) = @_;
+	my $submitted_channels = submitted_channel_document(@heads);
 	my %known_serials = map {
 		my $serial = $_;
 		$serial =~ s%/dev/serial/smartmeter/%%g;
@@ -1040,12 +1087,8 @@ sub save_vzlogger_form
 		if (!$draft_only && $mode eq "user" && defined($q->{"$serial\_userjson"})) {
 			save_user_meter_source($serial, $q->{"$serial\_userjson"});
 		}
-		if ($mode =~ /\A(?:sml|d0|oms)\z/ && $meter_enabled) {
-			my @selected_obis = grep { normalize_obis_identifier($_) ne "" } $cgi->multi_param("$serial\_obis");
-			@selected_obis = map { normalize_obis_identifier($_) } @selected_obis;
-			$plugin_cfg->param("$serial.OBISCHANNELS", join(",", @selected_obis));
-			$plugin_cfg->param("$serial.OBISCUSTOM", clean_multiline_obis($q->{"$serial\_obis_custom"}));
-		}
+		# Legacy keys remain as a rollback fallback. Structured definitions are the
+		# authoritative source and may contain duplicate identifiers.
 		unlink(pending_obis_channels_file($serial)) if (!$draft_only && ($q->{submitaction} || "") eq "apply" && -e pending_obis_channels_file($serial));
 		unlink(pending_meter_draft_file($serial)) if (!$draft_only && ($q->{submitaction} || "") eq "apply" && -e pending_meter_draft_file($serial));
 	}
@@ -1062,11 +1105,88 @@ sub save_vzlogger_form
 		$plugin_cfg->param("VZLOGGER.REMOVEDHEADS", join(",", sort keys %removed_heads));
 	}
 	$plugin_cfg->save if (!$draft_only);
+	if ($submitted_channels && !$draft_only) {
+		$channel_document = $submitted_channels;
+		write_json_atomic("$lbpconfigdir/vzlogger_channel_definitions.json", $channel_document);
+	}
 	my $cleanup_output = "";
 	foreach my $serial ($draft_only ? () : @removed_serials) {
 		$cleanup_output .= remove_meter_artifacts($serial);
 	}
 	return $cleanup_output;
+}
+
+sub submitted_channel_document
+{
+	my (@heads) = @_;
+	return undef if (!defined($q->{channel_definitions_json}) || $q->{channel_definitions_json} eq "");
+	die "Channel definitions exceed 512 KiB.\n" if (length($q->{channel_definitions_json}) > 524288);
+	my $document = eval { JSON::PP->new->utf8->decode($q->{channel_definitions_json}) };
+	die "Invalid channel definitions JSON.\n" if ($@ || ref($document) ne "HASH");
+	my %allowed = map { my $s = $_; $s =~ s%/dev/serial/smartmeter/%%g; $s => 1 } @heads;
+	foreach my $serial (keys %{$document->{meters} || {}}) {
+		die "Unknown meter in channel definitions: $serial.\n" if (!$allowed{$serial});
+		my $mode = normalized_meter_mode($plugin_cfg->param("$serial.METER"), $plugin_cfg->param("$serial.PROTOCOL"));
+		foreach my $channel (@{$document->{meters}->{$serial} || []}) {
+			$channel->{storage} = undef if ($mode eq "oms" || !defined($channel->{storage}) || $channel->{storage} eq "" || $channel->{storage} eq "255");
+		}
+	}
+	my @errors = validate_document($document);
+	die "Invalid channel definitions:\n - " . join("\n - ", @errors) . "\n" if (@errors);
+	return $document;
+}
+
+sub load_or_migrate_channel_document
+{
+	my (@heads) = @_;
+	my $file = "$lbpconfigdir/vzlogger_channel_definitions.json";
+	$channel_document = read_json($file);
+	die "Invalid channel definitions JSON: $file\n" if (-e $file && !defined($channel_document));
+	$channel_document ||= new_document();
+	$channel_document->{meters} ||= {};
+	$obis_catalog = load_catalog("$lbptemplatedir/obis_catalog.json");
+	my $changed = !-e $file;
+	foreach my $device (@heads) {
+		my $serial = $device;
+		$serial =~ s%/dev/serial/smartmeter/%%g;
+		if (ref($channel_document->{meters}->{$serial}) ne "ARRAY") {
+			my @available = available_obis_channels($serial);
+			my @selected = config_list_values("$serial.OBISCHANNELS");
+			my @custom = custom_channels($serial);
+			my $selected_ref = defined($plugin_cfg->param("$serial.OBISCHANNELS")) ? \@selected : undef;
+			migrate_legacy_meter($channel_document, $serial, $lbpplugindir, \@available, $selected_ref, \@custom);
+			$changed = 1;
+		}
+		foreach my $channel (@{$channel_document->{meters}->{$serial}}) {
+			if (defined($channel->{storage}) && ($channel->{storage} eq "" || $channel->{storage} eq "255")) {
+				$channel->{storage} = undef;
+				$changed = 1;
+			}
+		}
+		foreach my $identifier (read_pending_obis_channels($serial)) {
+		my $definitions = $channel_document->{meters}->{$serial};
+		my %existing = map { compose_obis($_->{obis}, $_->{storage}) => 1 } @$definitions;
+		next if ($existing{$identifier});
+		my $parsed = parse_obis($identifier);
+		next if (!$parsed);
+		my $key = default_output_key($identifier);
+		my %used = map { lc($_->{plugin_output}->{key} || "") => 1 } @$definitions;
+		my $suffix = 2;
+		my $base_key = $key;
+		$key = substr($base_key, 0, 61) . "_" . $suffix++ while ($used{lc($key)});
+		my $info = lookup_obis($obis_catalog, $identifier, "en");
+		my $aggtime = clean_integer(config_scalar_value("$serial.AGGTIME"), 0);
+		push @$definitions, {
+			uuid => stable_uuid("$lbpplugindir:$serial:$identifier"), enabled => JSON::PP::true,
+			origin => "discovered", obis => $parsed->{base}, storage => $parsed->{f}, display_name => "",
+			api => "null", aggmode => $aggtime > 0 ? ($info->{recommended_aggmode} || "none") : "none", duplicates => 0,
+			api_options => { volkszaehler => {}, influxdb => {}, mysmartgrid => {} },
+			plugin_output => { enabled => JSON::PP::true, key => $key },
+		};
+			$changed = 1;
+		}
+	}
+	write_json_atomic($file, $channel_document) if ($changed);
 }
 
 sub remove_meter_artifacts
@@ -1093,6 +1213,12 @@ sub remove_meter_artifacts
 	}
 	my $mapping_error = remove_meter_channel_mapping($serial);
 	push @errors, $mapping_error if ($mapping_error);
+	my $definitions_file = "$lbpconfigdir/vzlogger_channel_definitions.json";
+	my $definitions = read_json($definitions_file);
+	if (ref($definitions) eq "HASH" && ref($definitions->{meters}) eq "HASH" && exists($definitions->{meters}->{$serial})) {
+		delete $definitions->{meters}->{$serial};
+		eval { write_json_atomic($definitions_file, $definitions); 1 } or push @errors, "$definitions_file: $@";
+	}
 	my $output = "Removed meter configuration for $serial.\n";
 	$output .= "Could not remove meter artifact $_\n" foreach @errors;
 	return $output;
@@ -1591,7 +1717,7 @@ sub repeated_obis_channel_count
 	my %counts;
 	open(my $fh, "<", $log_file) or return 0;
 	while (my $line = <$fh>) {
-		while ($line =~ /ObisIdentifier:((?:\d+-\d+:)?[A-Za-z0-9]+\.\d+\.\d+)(?:\*\d+)?/g) {
+		while ($line =~ /ObisIdentifier:((?:\d+-\d+:)?[A-Za-z0-9]+\.\d+\.\d+(?:\*\d+)?)/g) {
 			my $identifier = normalize_obis_identifier($1);
 			next if (!$identifier || is_discovery_excluded_identifier($identifier));
 			$counts{$identifier}++;
@@ -1646,7 +1772,7 @@ sub channels_from_vzlogger_log
 	my %seen;
 	if (open(my $fh, "<", $log_file)) {
 		while (my $line = <$fh>) {
-			while ($line =~ /ObisIdentifier:((?:\d+-\d+:)?[A-Za-z0-9]+\.\d+\.\d+)(?:\*\d+)?/g) {
+			while ($line =~ /ObisIdentifier:((?:\d+-\d+:)?[A-Za-z0-9]+\.\d+\.\d+(?:\*\d+)?)/g) {
 				my $identifier = normalize_obis_identifier($1);
 				next if (!$identifier || $seen{$identifier} || is_discovery_excluded_identifier($identifier));
 				push @channels, {
@@ -2029,6 +2155,24 @@ sub build_head_rows
 	return @rows;
 }
 
+sub runtime_channel_indices
+{
+	my $config = read_json("$lbpconfigdir/vzlogger.conf");
+	my %indices;
+	my $index = 0;
+	return \%indices if (ref($config) ne "HASH" || ref($config->{meters}) ne "ARRAY");
+	foreach my $meter (@{$config->{meters}}) {
+		next if (ref($meter) ne "HASH" || ref($meter->{channels}) ne "ARRAY");
+		foreach my $channel (@{$meter->{channels}}) {
+			if (ref($channel) eq "HASH" && defined($channel->{uuid}) && !ref($channel->{uuid}) && $channel->{uuid} ne "") {
+				$indices{lc($channel->{uuid})} = $index;
+			}
+			$index++;
+		}
+	}
+	return \%indices;
+}
+
 sub resolve_meter_mode_for_row
 {
 	my ($saved_protocol, $meter_draft, $stored_meter, $stored_protocol) = @_;
@@ -2143,11 +2287,7 @@ sub custom_channels
 sub normalize_obis_identifier
 {
 	my ($value) = @_;
-	return "" if (!defined($value));
-	$value =~ s/^\s+|\s+$//g;
-	$value =~ s/\*\d+\z//;
-	return $value if ($value =~ /\A(?:\d+-\d+:)?[A-Za-z0-9]+\.\d+\.\d+\z/);
-	return "";
+	return normalize_obis($value);
 }
 
 sub obis_cache_name
@@ -2346,18 +2486,18 @@ sub compare_obis_identifier
 sub obis_sort_parts
 {
 	my ($identifier) = @_;
-	return (999, 999, 999, 999, 999) if (!defined($identifier));
-	if ($identifier =~ /\A(\d+)-(\d+):([A-Za-z0-9]+)\.(\d+)\.(\d+)\z/) {
-		my ($a, $b, $c_part, $d, $e) = ($1, $2, $3, $4, $5);
+	return (999, 999, 999, 999, 999, 999) if (!defined($identifier));
+	if ($identifier =~ /\A(\d+)-(\d+):([A-Za-z0-9]+)\.(\d+)\.(\d+)(?:\*(\d+))?\z/) {
+		my ($a, $b, $c_part, $d, $e, $f) = ($1, $2, $3, $4, $5, $6);
 		my $c = ($c_part =~ /\A\d+\z/) ? int($c_part) : 900 + ord(uc(substr($c_part, 0, 1)));
-		return (int($a), int($b), $c, int($d), int($e));
+		return (int($a), int($b), $c, int($d), int($e), defined($f) ? int($f) : 255);
 	}
-	if ($identifier =~ /\A([A-Za-z0-9]+)\.(\d+)\.(\d+)\z/) {
-		my ($c_part, $d, $e) = ($1, $2, $3);
+	if ($identifier =~ /\A([A-Za-z0-9]+)\.(\d+)\.(\d+)(?:\*(\d+))?\z/) {
+		my ($c_part, $d, $e, $f) = ($1, $2, $3, $4);
 		my $c = ($c_part =~ /\A\d+\z/) ? int($c_part) : 900 + ord(uc(substr($c_part, 0, 1)));
-		return (0, 0, $c, int($d), int($e));
+		return (0, 0, $c, int($d), int($e), defined($f) ? int($f) : 255);
 	}
-	return (999, 999, 999, 999, 999);
+	return (999, 999, 999, 999, 999, 999);
 }
 
 sub run_control
@@ -2372,8 +2512,19 @@ sub run_control_result
 	my ($action) = @_;
 	my $script = "$lbpbindir/vzlogger_control.pl";
 	return ("Control script not found: $script", 1) if (!-e $script);
-	my $output = `$^X "$script" "$action" 2>&1`;
+	my $remaining = defined($configuration_action_deadline) ? int($configuration_action_deadline - time) : 0;
+	if (defined($configuration_action_deadline) && $remaining <= 0) {
+		$configuration_action_timed_out = 1;
+		return ("Configuration action exceeded the 60-second limit and was stopped.\n", 124);
+	}
+	my $output = defined($configuration_action_deadline)
+		? `timeout --signal=TERM --kill-after=5s ${remaining}s "$^X" "$script" "$action" 2>&1`
+		: `$^X "$script" "$action" 2>&1`;
 	my $exit = $? >> 8;
+	if (defined($configuration_action_deadline) && ($exit == 124 || $exit == 137)) {
+		$configuration_action_timed_out = 1;
+		$output .= "\nConfiguration action exceeded the 60-second limit and was stopped.\n";
+	}
 	$output ||= "No output.";
 	write_control_log($action, $output);
 	return ($output, $exit);
@@ -2560,4 +2711,3 @@ sub ajax_header
 	);	
 	return();
 }	
-

@@ -36,13 +36,14 @@ my $config = <$fh>;
 close($fh);
 
 # Keep the generated formatting visible, but never return stored secrets.
-$config =~ s/("(?:key)?pass"\s*:\s*")((?:\\.|[^"\\])*)(")/$1***REDACTED***$3/ig;
+$config =~ s/("(?:key)?pass(?:word)?"\s*:\s*")((?:\\.|[^"\\])*)(")/$1***REDACTED***$3/ig;
+$config =~ s/("(?:token|secretKey)"\s*:\s*")((?:\\.|[^"\\])*)(")/$1***REDACTED***$3/ig;
 
 my @lines = split(/\n/, $config, -1);
 my $rendered = join("\n", map { "<li><code>" . CGI::escapeHTML($_) . "</code></li>" } @lines);
 my $german = ($ENV{HTTP_ACCEPT_LANGUAGE} || "") =~ /(?:\A|,)\s*de(?:-|;|,|\z)/i;
 my $html_language = $german ? "de" : "en";
-my $read_only_note = $german ? "Schreibgeschützt · Passwortwerte sind maskiert" : "Read-only · password values are masked";
+my $read_only_note = $german ? "Schreibgeschützt · Zugangsdaten sind maskiert" : "Read-only · credentials are masked";
 
 print $cgi->header(
 	-type => "text/html",

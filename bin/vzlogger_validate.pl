@@ -4,8 +4,11 @@ use strict;
 use warnings;
 
 use Config::Simple;
+use FindBin;
 use JSON::PP;
 use LoxBerry::System;
+use lib $FindBin::Bin;
+use SmartMeterVZLoggerChannels qw(validate_document);
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
@@ -13,12 +16,14 @@ my $plugin_config_dir = $ENV{SMARTMETER_CONFIG_DIR} || "$home/config/plugins/$ps
 my $plugin_config_file = $ENV{SMARTMETER_CONFIG_FILE} || "$plugin_config_dir/smartmeter.cfg";
 my $config_file = $ENV{SMARTMETER_VZLOGGER_CONFIG_FILE} || "$plugin_config_dir/vzlogger.conf";
 my $mapping_file = $ENV{SMARTMETER_VZLOGGER_MAPPING_FILE} || "$plugin_config_dir/vzlogger_channels.json";
+my $definitions_file = $ENV{SMARTMETER_VZLOGGER_DEFINITIONS_FILE} || "$plugin_config_dir/vzlogger_channel_definitions.json";
 
 my @errors;
 my @warnings;
 
 my $config = read_json_file($config_file, "vzLogger config");
 my $mapping = read_json_file($mapping_file, "channel mapping");
+my $definitions = read_json_file($definitions_file, "channel definitions");
 
 if ($config) {
 	validate_config($config);
@@ -26,6 +31,7 @@ if ($config) {
 if ($mapping) {
 	validate_mapping($mapping);
 }
+push @errors, validate_document($definitions) if ($definitions);
 
 if (@errors) {
 	foreach my $error (@errors) {
@@ -144,6 +150,7 @@ sub validate_mapping
 		return;
 	}
 
+	my %output_keys;
 	foreach my $uuid (keys %$mapping) {
 		my $entry = $mapping->{$uuid};
 		push @errors, "Mapping key $uuid is not a UUID." if ($uuid !~ /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i);
@@ -153,6 +160,8 @@ sub validate_mapping
 		}
 		push @errors, "Mapping entry $uuid has no serial." if (!defined($entry->{serial}) || $entry->{serial} eq "");
 		push @errors, "Mapping entry $uuid has no name." if (!defined($entry->{name}) || $entry->{name} eq "");
+		push @errors, "Mapping entry $uuid has an invalid output key." if ($entry->{managed_output} && defined($entry->{name}) && $entry->{name} !~ /\A[A-Za-z0-9_]{1,64}\z/);
+		push @errors, "Mapping output key $entry->{name} is duplicated for meter $entry->{serial}." if ($entry->{managed_output} && defined($entry->{name}) && defined($entry->{serial}) && $output_keys{lc("$entry->{serial}\0$entry->{name}")}++);
 		push @warnings, "Mapping entry $uuid has no identifier." if (!defined($entry->{identifier}) || $entry->{identifier} eq "");
 	}
 }

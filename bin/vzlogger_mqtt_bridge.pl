@@ -121,7 +121,11 @@ while (my $line = <$mqtt_fh>) {
 	debug_line("MQTT parsed serial=$reading->{serial} name=$reading->{name} uuid=$reading->{uuid} value=$reading->{value}");
 
 	update_timestamp($reading, $values_by_serial{$reading->{serial}});
-	$values_by_serial{$reading->{serial}}->{$reading->{name}} = normalize_cache_value($reading);
+	my $cache_value = normalize_cache_value($reading);
+	$values_by_serial{$reading->{serial}}->{$reading->{name}} = $cache_value;
+	foreach my $legacy_name (@{$reading->{legacy_names} || []}) {
+		$values_by_serial{$reading->{serial}}->{$legacy_name} = $cache_value;
+	}
 	update_calculated_power($reading, $values_by_serial{$reading->{serial}});
 	$dirty_serials{$reading->{serial}} = 1;
 
@@ -185,6 +189,7 @@ sub parse_reading
 	return {
 		serial => $mapping->{$uuid}->{serial},
 		name => $mapping->{$uuid}->{name},
+		legacy_names => ref($mapping->{$uuid}->{legacy_names}) eq "ARRAY" ? $mapping->{$uuid}->{legacy_names} : [],
 		identifier => $mapping->{$uuid}->{identifier} || "",
 		uuid => $uuid,
 		value => $value,
@@ -239,11 +244,17 @@ sub identifier_mapping
 {
 	my ($mapping) = @_;
 	my %identifiers;
+	my %ambiguous;
 	foreach my $uuid (keys %$mapping) {
 		my $entry = $mapping->{$uuid};
-		next if (!ref($entry) || !$entry->{identifier});
-		$identifiers{$entry->{identifier}} = lc($uuid);
+		next if (!ref($entry) || !$entry->{identifier} || $entry->{identifier_ambiguous});
+		if (exists($identifiers{$entry->{identifier}})) {
+			$ambiguous{$entry->{identifier}} = 1;
+		} else {
+			$identifiers{$entry->{identifier}} = lc($uuid);
+		}
 	}
+	delete $identifiers{$_} foreach keys %ambiguous;
 	return %identifiers;
 }
 
@@ -255,7 +266,6 @@ sub clean_scalar_payload
 		$payload = $json;
 	}
 	$payload =~ s/\A\s+|\s+\z//g;
-	$payload =~ s/\*\d+\z// if ($payload =~ /\A\d+-\d+:\d+\.\d+\.\d+\*\d+\z/);
 	return $payload;
 }
 
@@ -294,7 +304,7 @@ sub normalize_cache_value
 sub is_energy_counter
 {
 	my ($identifier) = @_;
-	return defined($identifier) && $identifier =~ /\A1-0:(?:1|2)\.8\.\d+\z/;
+	return defined($identifier) && $identifier =~ /\A1-0:(?:1|2)\.8\.\d+(?:\*\d+)?\z/;
 }
 
 sub format_number
@@ -312,10 +322,10 @@ sub update_calculated_power
 	my ($reading, $values) = @_;
 	my $direction = "";
 	my $target_name = "";
-	if ($reading->{name} eq "Consumption_Total_OBIS_1.8.0") {
+	if (($reading->{identifier} || "") =~ /\A1-0:1\.8\.0(?:\*\d+)?\z/) {
 		$direction = "cons";
 		$target_name = "Consumption_CalculatedPower_OBIS_1.99.0";
-	} elsif ($reading->{name} eq "Delivery_Total_OBIS_2.8.0") {
+	} elsif (($reading->{identifier} || "") =~ /\A1-0:2\.8\.0(?:\*\d+)?\z/) {
 		$direction = "del";
 		$target_name = "Delivery_CalculatedPower_OBIS_2.99.0";
 	} else {

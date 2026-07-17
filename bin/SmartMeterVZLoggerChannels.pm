@@ -1,0 +1,293 @@
+package SmartMeterVZLoggerChannels;
+
+use strict;
+use warnings;
+use Digest::MD5 qw(md5_hex);
+use Exporter qw(import);
+use JSON::PP;
+
+our @EXPORT_OK = qw(
+	parse_obis compose_obis normalize_obis default_output_key stable_uuid
+	read_json write_json_atomic load_catalog lookup_obis
+	new_document migrate_legacy_meter validate_document native_channel
+);
+
+sub stable_uuid
+{
+	my ($seed) = @_;
+	my $hex = md5_hex(defined($seed) ? $seed : "");
+	# Keep the exact legacy layout so the first migrated channel retains the UUID
+	# previously generated from plugin, reader, and identifier.
+	return join("-", substr($hex, 0, 8), substr($hex, 8, 4), substr($hex, 12, 4), substr($hex, 16, 4), substr($hex, 20, 12));
+}
+
+sub parse_obis
+{
+	my ($value) = @_;
+	return undef if (!defined($value) || ref($value));
+	$value =~ s/^\s+|\s+$//g;
+	return undef if ($value !~ /\A(?:(\d+)-(\d+):)?([A-Za-z0-9]+)\.(\d+)\.(\d+)(?:\*(\d+))?\z/);
+	my ($a, $b, $c, $d, $e, $f) = ($1, $2, $3, $4, $5, $6);
+	return undef if (defined($f) && ($f > 255));
+	$f = undef if (defined($f) && $f == 255);
+	return {
+		a => defined($a) ? int($a) : undef,
+		b => defined($b) ? int($b) : undef,
+		c => $c =~ /\A\d+\z/ ? int($c) : $c,
+		d => int($d), e => int($e), f => defined($f) ? int($f) : undef,
+		base => (defined($a) ? "$a-$b:" : "") . "$c.$d.$e",
+	};
+}
+
+sub compose_obis
+{
+	my ($base, $storage) = @_;
+	my $parsed = parse_obis($base);
+	return "" if (!$parsed);
+	$storage = undef if (!defined($storage) || $storage eq "" || $storage eq "255");
+	return "" if (defined($storage) && $storage !~ /\A\d+\z/);
+	return "" if (defined($storage) && ($storage < 0 || $storage > 254));
+	return $parsed->{base} . (defined($storage) ? "*$storage" : "");
+}
+
+sub normalize_obis
+{
+	my ($value) = @_;
+	my $parsed = parse_obis($value);
+	return "" if (!$parsed);
+	return compose_obis($parsed->{base}, $parsed->{f});
+}
+
+sub default_output_key
+{
+	my ($identifier) = @_;
+	my $key = normalize_obis($identifier) || "OBIS";
+	$key =~ s/[^A-Za-z0-9]+/_/g;
+	$key =~ s/^_+|_+$//g;
+	$key = "OBIS_$key";
+	return substr($key, 0, 64);
+}
+
+sub read_json
+{
+	my ($file) = @_;
+	return undef if (!$file || !-e $file || !open(my $fh, "<", $file));
+	local $/;
+	my $text = <$fh>;
+	close($fh);
+	my $value = eval { JSON::PP->new->utf8->decode($text || "") };
+	return $@ ? undef : $value;
+}
+
+sub write_json_atomic
+{
+	my ($file, $value) = @_;
+	my $tmp = "$file.$$";
+	open(my $fh, ">", $tmp) or die "Could not write $tmp: $!\n";
+	print $fh JSON::PP->new->utf8->canonical->pretty->encode($value);
+	close($fh) or die "Could not close $tmp: $!\n";
+	rename($tmp, $file) or die "Could not replace $file: $!\n";
+}
+
+sub new_document
+{
+	return { version => 1, meters => {} };
+}
+
+sub migrate_legacy_meter
+{
+	my ($document, $serial, $plugin_id, $discovered, $selected, $custom) = @_;
+	$document ||= new_document();
+	$document->{meters} ||= {};
+	return $document->{meters}->{$serial} if (ref($document->{meters}->{$serial}) eq "ARRAY");
+	my %selected = map { normalize_obis($_) => 1 } @{ref($selected) eq "ARRAY" ? $selected : []};
+	my $selection_explicit = ref($selected) eq "ARRAY";
+	my @definitions;
+	my %seen;
+	foreach my $item (@{ref($discovered) eq "ARRAY" ? $discovered : []}) {
+		my $raw = ref($item) eq "HASH" ? $item->{identifier} : $item;
+		my $legacy_name = ref($item) eq "HASH" ? $item->{name} : undef;
+		my $identifier = normalize_obis($raw);
+		next if (!$identifier || $seen{$identifier}++);
+		push @definitions, _legacy_definition($serial, $plugin_id, $identifier,
+			$selection_explicit ? !!$selected{$identifier} : 1, "discovered", scalar(@definitions), $legacy_name);
+	}
+	foreach my $raw (@{ref($selected) eq "ARRAY" ? $selected : []}, @{ref($custom) eq "ARRAY" ? $custom : []}) {
+		my $identifier = normalize_obis($raw);
+		next if (!$identifier || $seen{$identifier}++);
+		push @definitions, _legacy_definition($serial, $plugin_id, $identifier, 1,
+			$selected{$identifier} ? "migrated" : "manual", scalar(@definitions));
+	}
+	$document->{meters}->{$serial} = \@definitions;
+	return \@definitions;
+}
+
+sub _legacy_definition
+{
+	my ($serial, $plugin_id, $identifier, $enabled, $origin, $index, $legacy_name) = @_;
+	my $parsed = parse_obis($identifier);
+	my $key = default_output_key($identifier);
+	my @legacy_keys = defined($legacy_name) && $legacy_name ne "" && $legacy_name ne $key ? ($legacy_name) : ();
+	return {
+		uuid => stable_uuid("$plugin_id:$serial:$identifier"),
+		enabled => $enabled ? JSON::PP::true : JSON::PP::false,
+		origin => $origin,
+		obis => $parsed->{base}, storage => $parsed->{f}, display_name => "",
+		api => "null", aggmode => "none", duplicates => 0,
+		api_options => { volkszaehler => {}, influxdb => {}, mysmartgrid => {} },
+		plugin_output => { enabled => $enabled ? JSON::PP::true : JSON::PP::false, key => $key, legacy_keys => \@legacy_keys },
+	};
+}
+
+sub load_catalog
+{
+	my ($file) = @_;
+	my $catalog = read_json($file);
+	return $catalog if (ref($catalog) eq "HASH" && ref($catalog->{entries}) eq "ARRAY");
+	return { version => 1, sources => {}, entries => [], rules => [] };
+}
+
+sub lookup_obis
+{
+	my ($catalog, $identifier, $language) = @_;
+	$language = ($language || "en") eq "de" ? "de" : "en";
+	my $parsed = parse_obis($identifier);
+	return { known => JSON::PP::false, short => $identifier || "Unknown OBIS", long => "The identifier is not a valid OBIS code." } if (!$parsed);
+	my $full = compose_obis($parsed->{base}, $parsed->{f});
+	my @candidates = ($full, $parsed->{base});
+	foreach my $candidate (@candidates) {
+		foreach my $entry (@{$catalog->{entries} || []}) {
+			next if (($entry->{code} || "") ne $candidate);
+			return _catalog_result($entry, $parsed, $language, "exact");
+		}
+	}
+	foreach my $rule (sort { ($a->{priority} || 9999) <=> ($b->{priority} || 9999) } @{$catalog->{rules} || []}) {
+		my $match = $rule->{match} || {};
+		my $ok = 1;
+		foreach my $group (qw(a b c d e)) {
+			next if (!exists($match->{$group}));
+			my $wanted = $match->{$group};
+			my $actual = $parsed->{$group};
+			$ok = 0 if (ref($wanted) eq "ARRAY" ? !grep { defined($actual) && "$_" eq "$actual" } @$wanted : !defined($actual) || "$wanted" ne "$actual");
+		}
+		return _catalog_result($rule, $parsed, $language, "rule") if ($ok);
+	}
+	my $groups = _groups_text($parsed, $language);
+	return {
+		known => JSON::PP::false,
+		short => $language eq "de" ? "Unbekannter oder herstellerspezifischer OBIS-Code" : "Unknown or manufacturer-specific OBIS code",
+		long => ($language eq "de" ? "Für diesen Code ist kein belegter Standardname hinterlegt. " : "No verified standard name is recorded for this code. ") . $groups,
+		unit => "", category => "unknown", source => "", match => "fallback", groups => $parsed,
+		warning => $language eq "de" ? "Die Bedeutung ist am Zählerhandbuch zu prüfen." : "Check the meter documentation for its meaning.",
+	};
+}
+
+sub _catalog_result
+{
+	my ($entry, $parsed, $language, $kind) = @_;
+	my $result = {
+		known => JSON::PP::true,
+		short => $entry->{short}->{$language} || $entry->{short}->{en} || $parsed->{base},
+		long => $entry->{long}->{$language} || $entry->{long}->{en} || "",
+		unit => $entry->{unit} || "", category => $entry->{category} || "",
+		source => $entry->{source} || "", match => $kind, groups => $parsed,
+		recommended_aggmode => $entry->{recommended_aggmode} || "none",
+	};
+	if (defined($parsed->{f})) {
+		$result->{long} .= $language eq "de" ? " Speicher-/Abrechnungsindex: $parsed->{f}." : " Storage/billing index: $parsed->{f}.";
+	}
+	$result->{long} .= " " . _groups_text($parsed, $language);
+	$result->{warning} = $entry->{limitations}->{$language} if (ref($entry->{limitations}) eq "HASH");
+	return $result;
+}
+
+sub _groups_text
+{
+	my ($p, $language) = @_;
+	my $prefix = $language eq "de" ? "Gruppen:" : "Groups:";
+	my $a = defined($p->{a}) ? $p->{a} : ($language eq "de" ? "nicht angegeben" : "not specified");
+	my $b = defined($p->{b}) ? $p->{b} : ($language eq "de" ? "nicht angegeben" : "not specified");
+	my $f = defined($p->{f}) ? $p->{f} : ($language eq "de" ? "nicht angegeben" : "not specified");
+	return "$prefix A=$a, B=$b, C=$p->{c}, D=$p->{d}, E=$p->{e}, F=$f.";
+}
+
+sub validate_document
+{
+	my ($document) = @_;
+	my @errors;
+	return ("Channel definitions must be a JSON object.") if (ref($document) ne "HASH");
+	push @errors, "Unsupported channel-definition version." if (($document->{version} || 0) != 1);
+	push @errors, "The meters member must be an object." if (ref($document->{meters}) ne "HASH");
+	return @errors if (@errors);
+	foreach my $serial (sort keys %{$document->{meters}}) {
+		my $channels = $document->{meters}->{$serial};
+		if (ref($channels) ne "ARRAY") { push @errors, "$serial: channels must be an array."; next; }
+		my (%uuids, %keys);
+		foreach my $channel (@$channels) {
+			if (ref($channel) ne "HASH") { push @errors, "$serial: invalid channel entry."; next; }
+			my $uuid = $channel->{uuid} || "";
+			push @errors, "$serial: invalid channel UUID." if ($uuid !~ /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i);
+			push @errors, "$serial: duplicate channel UUID $uuid." if ($uuid && $uuids{lc($uuid)}++);
+			push @errors, "$serial/$uuid: invalid channel origin." if (($channel->{origin} || "") !~ /\A(?:discovered|manual|migrated)\z/);
+			my $identifier = compose_obis($channel->{obis}, $channel->{storage});
+			push @errors, "$serial/$uuid: invalid OBIS identifier." if (!$identifier);
+			my $base = parse_obis($channel->{obis});
+			push @errors, "$serial/$uuid: obis must contain the base code without *F." if ($base && $channel->{obis} ne $base->{base});
+			push @errors, "$serial/$uuid: invalid API option blocks." if (ref($channel->{api_options}) ne "HASH" || grep { ref($channel->{api_options}->{$_}) ne "HASH" } qw(volkszaehler influxdb mysmartgrid));
+			push @errors, "$serial/$uuid: invalid plugin output block." if (ref($channel->{plugin_output}) ne "HASH");
+			my $api = $channel->{api} || "null";
+			push @errors, "$serial/$uuid: unsupported API $api." if ($api !~ /\A(?:null|volkszaehler|influxdb|mysmartgrid)\z/);
+			my $agg = $channel->{aggmode} || "none";
+			push @errors, "$serial/$uuid: invalid aggregation mode." if ($agg !~ /\A(?:none|avg|max|sum)\z/);
+			if ($channel->{enabled} && $channel->{plugin_output}->{enabled}) {
+				my $key = $channel->{plugin_output}->{key} || "";
+				push @errors, "$serial/$uuid: invalid output key." if ($key !~ /\A[A-Za-z0-9_]{1,64}\z/);
+				push @errors, "$serial: duplicate output key $key." if ($key && $keys{lc($key)}++);
+			}
+			next if (!$channel->{enabled});
+			my $options = $channel->{api_options}->{$api} || {};
+			push @errors, "$serial/$uuid: Volkszaehler middleware is required." if ($api eq "volkszaehler" && !($options->{middleware} || ""));
+			push @errors, "$serial/$uuid: InfluxDB host is required." if ($api eq "influxdb" && !($options->{host} || ""));
+			if ($api eq "mysmartgrid") {
+				foreach my $field (grep { !($options->{$_} || "") } qw(middleware secretKey device type)) {
+					push @errors, "$serial/$uuid: MySmartGrid $field is required.";
+				}
+			}
+		}
+	}
+	return @errors;
+}
+
+sub native_channel
+{
+	my ($definition, $aggtime) = @_;
+	my $api = $definition->{api} || "null";
+	my $native = {
+		api => $api,
+		uuid => $definition->{uuid},
+		identifier => compose_obis($definition->{obis}, $definition->{storage}),
+	};
+	$native->{aggmode} = ($aggtime || 0) > 0 ? ($definition->{aggmode} || "none") : "none";
+	$native->{duplicates} = int($definition->{duplicates} || 0) if ($api eq "volkszaehler" || $api eq "influxdb");
+	my $options = $definition->{api_options}->{$api} || {};
+	my %allowed = (
+		volkszaehler => [qw(middleware timeout)],
+		influxdb => [qw(host token organization username password database measurement_name tags timeout max_batch_inserts max_buffer_size send_uuid ssl_verifypeer)],
+		mysmartgrid => [qw(middleware secretKey device type interval scaler timeout name)],
+	);
+	foreach my $key (@{$allowed{$api} || []}) {
+		next if (!exists($options->{$key}) || !defined($options->{$key}) || $options->{$key} eq "");
+		my $value = $options->{$key};
+		if ($key =~ /\A(?:timeout|max_batch_inserts|max_buffer_size|interval)\z/ && !ref($value) && $value =~ /\A-?\d+\z/) {
+			$value = int($value);
+		} elsif ($key eq "scaler" && !ref($value) && $value =~ /\A-?\d+(?:\.\d+)?\z/) {
+			$value = 0 + $value;
+		} elsif ($key =~ /\A(?:send_uuid|ssl_verifypeer)\z/) {
+			$value = $value ? JSON::PP::true : JSON::PP::false;
+		}
+		$native->{$key} = $value;
+	}
+	return $native;
+}
+
+1;

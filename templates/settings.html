@@ -52,13 +52,45 @@
 	.service-status-ok { background: #d7f0d2; color: #245b1d; }
 	.service-status-warning { background: #ffe0b2; color: #7a4100; }
 	.service-status-error { background: #f5c6cb; color: #721c24; }
-	.service-action-message { background-color: rgba(255,255,200,0.4); border: 1px solid #888; padding: 10px; white-space: pre-wrap; }
-	.service-action-message:empty { display: none; }
+	.service-action-feedback { display: none; margin: 0 0 10px 0; padding: 8px 10px; background: #d7f0d2; border: 1px solid #8fbd87; color: #245b1d; }
+	.service-action-feedback.is-visible { display: block; }
+	.service-control-log { margin: -3px 0 14px 0; text-align: right; }
 	.service-action-reason { color: #8a5a00; font-size: 85%; margin-top: .25em; }
 	.service-action-reason:empty { display: none; }
 	.obis-channel-option { display: block; }
 	.obis-channel-label { font-size: 13px; line-height: 1.35; }
 	.obis-channel-new { display: block; color: #8a5a00; font-size: 85%; margin: .15em 0 .35em 2em; }
+	.obis-editor { display: grid; gap: 8px; margin-top: 8px; }
+	.obis-channel-card { border: 1px solid #bbb; border-radius: 5px; padding: 8px; background: rgba(255,255,255,.65); }
+	.channel-json-state { display: none !important; }
+	.obis-channel-summary { display: grid; grid-template-columns: 2.2em 5.8em minmax(10em,1.3fr) minmax(12em,2fr) auto auto auto; gap: 8px; align-items: center; }
+	.obis-channel-summary code { overflow-wrap: anywhere; }
+	.obis-channel-number, .obis-channel-uuid { color: #68737d; font-size: 82%; font-weight: normal; }
+	.obis-channel-uuid { margin-left: .45em; overflow-wrap: anywhere; }
+	.obis-channel-origin { font-size: 85%; color: #555; }
+	.obis-channel-details { margin-top: 7px; }
+	.obis-channel-grid { display: grid; grid-template-columns: repeat(2,minmax(15em,1fr)); gap: 7px 12px; margin-top: 8px; }
+	.obis-channel-details[open] > .obis-channel-grid { padding: 10px; background: #fffbed; border: 1px solid #eadfa6; border-radius: 4px; }
+	.obis-channel-field label { display: block; font-weight: bold; }
+	.channel-select-api .ui-select .ui-btn,
+	.channel-select-aggregation .ui-select .ui-btn { min-height: 0; padding: 5px 30px 5px 8px; font-size: 13px; line-height: 1.25; font-weight: normal; text-align: left; }
+	#vzlogger_form input.obis-number-spinner { width: 8em; max-width: 100%; height: auto; box-sizing: border-box; padding: 5px 6px; border: 1px solid #aaa; border-radius: 4px; background: #fff; font-size: 13px; line-height: 1.35; appearance: auto; }
+	.obis-number-spinner::-webkit-inner-spin-button { opacity: 1; -webkit-appearance: inner-spin-button; }
+	.obis-number-spinner:disabled { background: #eee; color: #777; }
+	.obis-storage-control { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+	.obis-storage-clear { min-height: 0; padding: 5px 8px; border: 1px solid #aaa; border-radius: 4px; background: #f6f6f6; color: #333; font-size: 12px; line-height: 1.35; cursor: pointer; }
+	.obis-storage-clear.is-active { border-color: #4985a8; background: #e6f1f8; font-weight: bold; }
+	.obis-storage-clear:disabled { background: #eee; color: #777; cursor: default; }
+	.obis-channel-help { display: block; margin-top: .22em; color: #5f6872; font-size: 82%; line-height: 1.3; font-weight: normal; }
+	.obis-channel-info { grid-column: 1 / -1; padding: 7px; background: #eef4f8; border-left: 3px solid #4985a8; }
+	.obis-api-fields { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2,minmax(15em,1fr)); gap: 7px 12px; }
+	.obis-output-fields { grid-column: 1 / -1; border-top: 1px solid #ccc; padding-top: 7px; }
+	.obis-channel-remove { grid-column: 1 / -1; border-top: 1px solid #ddd; padding-top: 8px; }
+	.obis-channel-remove-button.ui-btn { color: #9c1c1c; }
+	.obis-channel-toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; }
+	.obis-channel-toolbar-title { margin-right: auto; font-weight: bold; }
+	.meter-obis-settings > td { width: auto !important; }
+	@media (max-width: 800px) { .obis-channel-summary,.obis-channel-grid,.obis-api-fields { grid-template-columns: 1fr; } }
 	.activation-unsaved { display: block; color: #8a5a00; font-size: 85%; margin-top: .2em; }
 	.activation-unsaved[hidden] { display: none; }
 	.meter-template-note { display: block; color: #8a5a00; font-size: 85%; margin-top: .2em; }
@@ -257,8 +289,11 @@
 	<input type="hidden" name="saveformdata" value="1">
 	<input type="hidden" id="implementation_changed" name="implementation_changed" value="0">
 	<input type="hidden" id="obis_serial" name="obis_serial" value="">
+	<textarea id="channel_definitions_json" name="channel_definitions_json" class="channel-json-state" hidden aria-hidden="true" tabindex="-1"><TMPL_VAR NAME=CHANNEL_DEFINITIONS_JSON ESCAPE=HTML></textarea>
+	<textarea id="channel_indices_json" class="channel-json-state" hidden aria-hidden="true" tabindex="-1"><TMPL_VAR NAME=CHANNEL_INDICES_JSON ESCAPE=HTML></textarea>
+	<textarea id="obis_catalog_json" class="channel-json-state" hidden aria-hidden="true" tabindex="-1"><TMPL_VAR NAME=OBIS_CATALOG_JSON ESCAPE=HTML></textarea>
 
-	<pre id="service_action_message" class="service-action-message" role="status" aria-live="polite"><TMPL_VAR VZLOGGER_MESSAGE ESCAPE=HTML></pre>
+	<div id="service_action_feedback" class="service-action-feedback" role="status" aria-live="polite"></div>
 
 	<div class="service-panel">
 		<h3><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_SERVICE></h3>
@@ -319,6 +354,7 @@
 		</tr>
 		</table>
 	</div>
+	<div class="service-control-log"><span><TMPL_VAR NAME=T::VZLOGGER.SERVICE_CONTROL_LOG_LABEL></span> <a href="<TMPL_VAR CONTROL_LOG_URL>" target="log" class="<TMPL_VAR CONTROL_LOG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_CONTROL_LOG></a></div>
 
 	<div id="vzlogger_configuration_section" class="configuration-section">
 	<h2><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_CONFIGURATION></h2>
@@ -508,7 +544,7 @@
 			<tr><td><label for="<TMPL_VAR NAME=SERIAL>_meter"><TMPL_VAR NAME=T::VZLOGGER.METER_PROTOCOL></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_meter" name="<TMPL_VAR NAME=SERIAL>_meter" data-mini="true" data-native-menu="true" onchange="update_meter_protocol(this.id.substring(0, this.id.length - 6));"><option value="0"><TMPL_VAR NAME=T::FORMTABLEROWS.PLEASESELECT></option><option value="sml">SML</option><option value="d0">D0</option><option value="oms">OMS</option><option value="user"><TMPL_VAR NAME=T::VZLOGGER.PROTOCOL_USER></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_PROTOCOL_HELP></td></tr>
 			<tr class="meter-template-row"><td><label for="<TMPL_VAR NAME=SERIAL>_template"><TMPL_VAR NAME=T::VZLOGGER.METER_TEMPLATE></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_template" class="meter-template-select" data-placeholder="<TMPL_VAR NAME=T::VZLOGGER.METER_TEMPLATE_SELECT ESCAPE=HTML>" data-mini="true" data-native-menu="true" onchange="apply_meter_template('<TMPL_VAR NAME=SERIAL>');"><option value=""><TMPL_VAR NAME=T::VZLOGGER.METER_TEMPLATE_SELECT></option></select><span id="<TMPL_VAR NAME=SERIAL>_template_unsaved" class="meter-template-note" hidden><TMPL_VAR NAME=T::VZLOGGER.ACTIVATION_UNSAVED></span><span id="<TMPL_VAR NAME=SERIAL>_template_warning" class="meter-template-note" hidden><TMPL_VAR NAME=T::VZLOGGER.METER_TEMPLATE_LIMITED></span></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_TEMPLATE_HELP></td></tr>
 			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_allowskip"><TMPL_VAR NAME=T::VZLOGGER.METER_ALLOWSKIP></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_allowskip" name="<TMPL_VAR NAME=SERIAL>_allowskip" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_ALLOWSKIP_HELP></td></tr>
-			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_aggtime"><TMPL_VAR NAME=T::VZLOGGER.METER_AGGTIME></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_aggtime" name="<TMPL_VAR NAME=SERIAL>_aggtime" type="number" value="<TMPL_VAR NAME=AGGTIME>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_AGGTIME_HELP></td></tr>
+			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_aggtime"><TMPL_VAR NAME=T::VZLOGGER.METER_AGGTIME></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_aggtime" name="<TMPL_VAR NAME=SERIAL>_aggtime" type="number" value="<TMPL_VAR NAME=AGGTIME>" oninput="render_channel_editor('<TMPL_VAR NAME=SERIAL>'); update_meter_enabled('<TMPL_VAR NAME=SERIAL>');"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_AGGTIME_HELP></td></tr>
 
 			<tr class="meter-field" data-meter-field="interval" data-protocols="sml d0"><td><label for="<TMPL_VAR NAME=SERIAL>_interval"><TMPL_VAR NAME=T::VZLOGGER.METER_INTERVAL></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_interval" name="<TMPL_VAR NAME=SERIAL>_interval" type="number" value="<TMPL_VAR NAME=INTERVAL>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_INTERVAL_HELP></td></tr>
 			<tr class="meter-field" data-meter-field="pullseq" data-protocols="sml d0"><td><label for="<TMPL_VAR NAME=SERIAL>_pullseq"><TMPL_VAR NAME=T::VZLOGGER.METER_PULLSEQ></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_pullseq" name="<TMPL_VAR NAME=SERIAL>_pullseq" type="text" value="<TMPL_VAR NAME=PULLSEQ ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_PULLSEQ_HELP></td></tr>
@@ -528,8 +564,7 @@
 
 			<tr class="meter-user-settings"><td><label for="<TMPL_VAR NAME=SERIAL>_userjson"><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON></label></td><td><textarea class="meter-json-editor" id="<TMPL_VAR NAME=SERIAL>_userjson" name="<TMPL_VAR NAME=SERIAL>_userjson" maxlength="65536"><TMPL_VAR NAME=USER_JSON ESCAPE=HTML></textarea><div class="meter-doc-links"><a href="https://wiki.volkszaehler.org/software/controller/vzlogger/vzlogger_conf_parameter" target="_blank" rel="noopener"><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON_DOCS></a> · <a href="https://github.com/volkszaehler/vzlogger/tree/master/etc" target="_blank" rel="noopener"><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON_EXAMPLES></a></div></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON_HELP></td></tr>
 
-			<tr class="meter-obis-settings"><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS></td><td><button class="obis-discovery" type="button" onclick="start_obis_discovery('<TMPL_VAR NAME=SERIAL>');" title="<TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search" <TMPL_VAR NAME=OBIS_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.READ_OBIS_CHANNELS></button><p id="<TMPL_VAR NAME=SERIAL>_obis_empty" <TMPL_IF NAME=OBIS_CHANNELS_EMPTY><TMPL_ELSE>hidden</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_EMPTY></p><div id="<TMPL_VAR NAME=SERIAL>_obis_channels" class="obis-channel-list"><TMPL_LOOP NAME=OBIS_CHANNELS><label class="obis-channel-option" data-obis-identifier="<TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML>"><input type="checkbox" name="<TMPL_VAR NAME=FIELD_NAME>" value="<TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML>" <TMPL_VAR NAME=CHECKED>><span class="obis-channel-label"><TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML> - <TMPL_VAR NAME=NAME ESCAPE=HTML></span><TMPL_IF NAME=IS_NEW><span class="obis-channel-new"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNEL_NEW></span></TMPL_IF></label></TMPL_LOOP></div></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_HELP></td></tr>
-			<tr class="meter-obis-settings"><td><label for="<TMPL_VAR NAME=SERIAL>_obis_custom"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CUSTOM></label></td><td><textarea id="<TMPL_VAR NAME=SERIAL>_obis_custom" name="<TMPL_VAR NAME=SERIAL>_obis_custom" rows="4"><TMPL_VAR NAME=OBIS_CUSTOM ESCAPE=HTML></textarea></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CUSTOM_HELP></td></tr>
+			<tr class="meter-obis-settings"><td colspan="4"><div class="obis-channel-toolbar"><span class="obis-channel-toolbar-title"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS></span><button class="obis-discovery" type="button" onclick="start_obis_discovery('<TMPL_VAR NAME=SERIAL>');" title="<TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search" <TMPL_VAR NAME=OBIS_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.READ_OBIS_CHANNELS></button><button type="button" onclick="add_manual_obis_channel('<TMPL_VAR NAME=SERIAL>');" data-role="button" data-inline="true" data-mini="true" data-icon="plus"><TMPL_VAR NAME=T::VZLOGGER.CHANNEL_ADD></button></div><span class="obis-channel-help"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_HELP></span><p id="<TMPL_VAR NAME=SERIAL>_obis_empty"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_EMPTY></p><div id="<TMPL_VAR NAME=SERIAL>_obis_channels" class="obis-editor" data-protocol="<TMPL_VAR NAME=METER ESCAPE=HTML>"></div></td></tr>
 			<tr class="meter-remove-row"><td colspan="4"><input class="meter-remove-marker" type="hidden" name="remove_meter" value="<TMPL_VAR NAME=SERIAL>" disabled><button class="meter-remove-button" type="button" onclick="stage_meter_removal('<TMPL_VAR NAME=SERIAL>');" data-role="button" data-inline="true" data-mini="true" data-icon="delete"><TMPL_VAR NAME=T::VZLOGGER.REMOVE_METER></button><span class="meter-remove-help"><TMPL_VAR NAME=T::VZLOGGER.REMOVE_METER_HELP></span></td></tr>
 			</table>
 		</div>
@@ -659,6 +694,8 @@
 			<span id="service_action_restart_bridge_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_RESTART_BRIDGE></span>
 			<span id="service_action_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_WAIT></span>
 			<span id="service_action_slow_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_SLOW></span>
+			<span id="service_action_success_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_SUCCESS></span>
+			<span id="service_action_warning_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_WARNING></span>
 			<span id="service_action_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_FAILED></span>
 		</div>
 	</div>
@@ -667,6 +704,7 @@
 			<div id="configuration_action_spinner" class="obis-search-spinner" aria-hidden="true"></div>
 			<div id="configuration_action_title" class="obis-search-title"></div>
 			<div id="configuration_action_message" class="obis-search-message" role="status" aria-live="polite"></div>
+			<div id="configuration_action_elapsed" class="ir-scan-countdown" aria-live="polite" hidden></div>
 			<pre id="configuration_action_details" class="service-action-details" hidden></pre>
 			<div id="configuration_action_countdown" class="ir-scan-countdown" aria-live="polite" hidden></div>
 			<div class="obis-search-actions"><button id="configuration_action_close" type="button" data-role="button" data-inline="true" data-mini="true" onclick="close_configuration_action_overlay();" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_CLOSE></button></div>
@@ -679,6 +717,8 @@
 			<span id="configuration_action_success_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_SUCCESS></span>
 			<span id="configuration_action_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_FAILED></span>
 			<span id="configuration_action_autoclose_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_AUTOCLOSE></span>
+			<span id="configuration_action_elapsed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_ELAPSED></span>
+			<span id="configuration_action_timeout_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_TIMEOUT></span>
 			<span id="configuration_action_debug_tab_title_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_TAB_TITLE></span>
 			<span id="configuration_action_debug_tab_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_TAB_WAIT></span>
 			<span id="configuration_action_debug_elapsed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_ELAPSED></span>
@@ -697,20 +737,35 @@
 		var service_poll_in_flight = false;
 		var service_action_running = false;
 		var service_action_timeout_timer = null;
+		var service_action_feedback_timer = null;
 		var last_service_snapshot = null;
 		var ir_scan_running = false;
 		var ir_scan_close_timer = null;
 		var configuration_action_running = false;
 		var configuration_action_close_timer = null;
+		var configuration_action_elapsed_timer = null;
 		var debug_log_tab = null;
 
 		function service_ajax_url(action) {
 			return "./index.cgi?ajax=1&ajaxaction=" + encodeURIComponent(action) + "&_=" + Date.now();
 		}
 
-		function show_service_message(message) {
-			var element = document.getElementById("service_action_message");
-			if (element) element.textContent = message || "";
+		function show_service_success() {
+			var element = document.getElementById("service_action_feedback");
+			if (service_action_feedback_timer) window.clearTimeout(service_action_feedback_timer);
+			element.textContent = obis_text("service_action_success_text");
+			element.classList.add("is-visible");
+			service_action_feedback_timer = window.setTimeout(function () {
+				element.classList.remove("is-visible");
+				service_action_feedback_timer = null;
+			}, 4000);
+		}
+
+		function clear_service_success() {
+			if (service_action_feedback_timer) window.clearTimeout(service_action_feedback_timer);
+			service_action_feedback_timer = null;
+			var element = document.getElementById("service_action_feedback");
+			if (element) element.classList.remove("is-visible");
 		}
 
 		function set_service_button_state(id, visible, enabled, reason) {
@@ -799,18 +854,18 @@
 			hide_service_action_overlay();
 		}
 
-		function finish_service_action_overlay(ok, message) {
+		function finish_service_action_overlay(result, message) {
 			if (service_action_timeout_timer) window.clearTimeout(service_action_timeout_timer);
 			service_action_timeout_timer = null;
 			document.getElementById("service_action_spinner").style.display = "none";
-			document.getElementById("service_action_overlay_message").textContent = obis_text("service_action_failed_text");
+			document.getElementById("service_action_overlay_message").textContent = obis_text("service_action_" + result + "_text");
 			var details = document.getElementById("service_action_details");
 			details.textContent = message || "";
 			details.hidden = !message;
 			document.getElementById("service_action_hide").hidden = true;
 			document.getElementById("service_action_close").hidden = false;
 			document.getElementById("vzlogger_form").removeAttribute("aria-busy");
-			if (ok) {
+			if (result == "success") {
 				hide_service_action_overlay();
 			} else {
 				var overlay = document.getElementById("service_action_overlay");
@@ -826,9 +881,10 @@
 			if (service_poll_timer) window.clearTimeout(service_poll_timer);
 			service_poll_timer = null;
 			update_all_control_states();
-			show_service_message("");
+			clear_service_success();
 			show_service_action_overlay(action);
 			var action_ok = false;
+			var action_result = "failed";
 			var action_message = "";
 			var needs_status_refresh = false;
 			var data = new FormData();
@@ -851,8 +907,9 @@
 				})
 				.then(function (response) {
 					action_ok = !!response.ok;
+					action_result = !action_ok ? "failed" : (response.warning ? "warning" : "success");
 					action_message = response.message || (response.ok ? "OK" : obis_text("service_action_failed_text"));
-					show_service_message(action_message);
+					if (action_result == "success") show_service_success();
 					if (response.ok && /^(?:start|restart)-/.test(action)) {
 						initial_implementation_value = $("#implementation").val();
 						saved_implementation = initial_implementation_value;
@@ -864,13 +921,13 @@
 				})
 				.catch(function (error) {
 					action_message = obis_text("service_action_failed_text") + ": " + error.message;
-					show_service_message(action_message);
+					action_result = "failed";
 					needs_status_refresh = true;
 				})
 				.then(function () {
 					service_action_running = false;
 					update_all_control_states();
-					finish_service_action_overlay(action_ok, action_message);
+					finish_service_action_overlay(action_result, action_message);
 					if (needs_status_refresh) poll_service_status();
 					else schedule_service_poll();
 				});
@@ -909,6 +966,16 @@
 			document.getElementById("configuration_action_details").hidden = true;
 			document.getElementById("configuration_action_details").textContent = "";
 			document.getElementById("configuration_action_countdown").hidden = true;
+			var elapsed = document.getElementById("configuration_action_elapsed");
+			var started = Date.now();
+			function render_elapsed() {
+				var seconds = Math.floor((Date.now() - started) / 1000);
+				elapsed.textContent = obis_text("configuration_action_elapsed_text").replace("{seconds}", seconds);
+				elapsed.hidden = false;
+			}
+			if (configuration_action_elapsed_timer) window.clearInterval(configuration_action_elapsed_timer);
+			render_elapsed();
+			configuration_action_elapsed_timer = window.setInterval(render_elapsed, 1000);
 			document.getElementById("configuration_action_close").hidden = true;
 			overlay.classList.add("is-visible");
 			overlay.setAttribute("aria-hidden", "false");
@@ -943,6 +1010,8 @@
 		}
 
 		function finish_configuration_action_overlay(action, ok, message) {
+			if (configuration_action_elapsed_timer) window.clearInterval(configuration_action_elapsed_timer);
+			configuration_action_elapsed_timer = null;
 			document.getElementById("configuration_action_spinner").style.display = "none";
 			document.getElementById("configuration_action_message").textContent = obis_text(ok ? "configuration_action_success_text" : "configuration_action_failed_text");
 			var details = document.getElementById("configuration_action_details");
@@ -1019,7 +1088,11 @@
 			data.set("ajax", "1");
 			data.set("ajaxaction", "form-action");
 			data.set("submitaction", action);
-			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
+			var controller = window.AbortController ? new AbortController() : null;
+			var request_timeout = window.setTimeout(function () {
+				if (controller) controller.abort();
+			}, 70000);
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store", signal: controller ? controller.signal : undefined })
 				.then(function (result) {
 					if (!result.ok) throw new Error("HTTP " + result.status);
 					return result.json();
@@ -1027,13 +1100,22 @@
 				.then(function (response) {
 					ok = !!response.ok;
 					message = response.message || (ok ? obis_text("configuration_action_success_text") : obis_text("configuration_action_failed_text"));
-					if (action == "apply") mark_configuration_form_saved(response);
+					if (response.timed_out) message = obis_text("configuration_action_timeout_text") + (response.message ? "\n\n" + response.message : "");
+					if (action == "apply") {
+						mark_configuration_form_saved(response);
+						if (response.ok && response.channel_indices) {
+							runtime_channel_indices = response.channel_indices;
+							document.getElementById("channel_indices_json").value = JSON.stringify(runtime_channel_indices);
+							document.querySelectorAll('.obis-editor').forEach(function(container){ render_channel_editor(container.id.replace(/_obis_channels$/,'')); });
+						}
+					}
 					render_service_snapshot(response);
 				})
 				.catch(function (error) {
-					message = obis_text("configuration_action_failed_text") + ": " + error.message;
+					message = error.name === "AbortError" ? obis_text("configuration_action_timeout_text") : obis_text("configuration_action_failed_text") + ": " + error.message;
 				})
 				.then(function () {
+					window.clearTimeout(request_timeout);
 					configuration_action_running = false;
 					set_configuration_action_buttons(false);
 					finish_configuration_action_overlay(action, ok, message);
@@ -1226,6 +1308,134 @@
 			return "./index.cgi?ajax=1&ajaxaction=" + encodeURIComponent(action) + "&_=" + Date.now();
 		}
 
+		var channel_definitions = (function () {
+			try { return JSON.parse(document.getElementById("channel_definitions_json").value || "{}"); }
+			catch (error) { return { version: 1, meters: {} }; }
+		})();
+		var runtime_channel_indices = (function () {
+			try { return JSON.parse(document.getElementById("channel_indices_json").value || "{}"); }
+			catch (error) { return {}; }
+		})();
+		var obis_catalog = (function () {
+			try { return JSON.parse(document.getElementById("obis_catalog_json").value || "{}"); }
+			catch (error) { return { entries: [], rules: [] }; }
+		})();
+		var channel_labels = {
+			active: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_ACTIVE ESCAPE=JS>", details: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_DETAILS ESCAPE=JS>",
+			display: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_DISPLAY_NAME ESCAPE=JS>", storage: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_STORAGE ESCAPE=JS>", storageClear: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_STORAGE_CLEAR ESCAPE=JS>",
+			aggregation: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_AGGREGATION ESCAPE=JS>", duplicates: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_DUPLICATES ESCAPE=JS>",
+			output: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_OUTPUT ESCAPE=JS>", outputKey: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_OUTPUT_KEY ESCAPE=JS>",
+			originFound: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_ORIGIN_FOUND ESCAPE=JS>", originManual: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_ORIGIN_MANUAL ESCAPE=JS>",
+			identifier: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_IDENTIFIER ESCAPE=JS>", api: "API", unknown: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_UNKNOWN ESCAPE=JS>",
+			channelNumber: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_NUMBER ESCAPE=JS>", channelUnassigned: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_NUMBER_UNASSIGNED ESCAPE=JS>",
+			channelNumberHelp: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_NUMBER_HELP ESCAPE=JS>", channelUnassignedHelp: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_NUMBER_UNASSIGNED_HELP ESCAPE=JS>",
+			remove: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_REMOVE ESCAPE=JS>", removeHelp: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_REMOVE_HELP ESCAPE=JS>", removeConfirm: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_REMOVE_CONFIRM ESCAPE=JS>",
+			manualPrompt: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_MANUAL_PROMPT ESCAPE=JS>", storageOms: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_STORAGE_OMS ESCAPE=JS>",
+			apiOptions: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_OPTIONS ESCAPE=JS>", registrationName: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_MSG_NAME ESCAPE=JS>"
+		};
+		var channel_help = {
+			identifier: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_IDENTIFIER_HELP ESCAPE=JS>", storage: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_STORAGE_HELP ESCAPE=JS>",
+			display: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_DISPLAY_NAME_HELP ESCAPE=JS>", api: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_HELP ESCAPE=JS>",
+			aggregation: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_AGGREGATION_HELP ESCAPE=JS>", duplicates: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_DUPLICATES_HELP ESCAPE=JS>",
+			output: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_OUTPUT_HELP ESCAPE=JS>", outputKey: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_OUTPUT_KEY_HELP ESCAPE=JS>"
+		};
+		var api_field_help = {
+			middleware: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_MIDDLEWARE_HELP ESCAPE=JS>", timeout: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_TIMEOUT_HELP ESCAPE=JS>",
+			version: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_VERSION_HELP ESCAPE=JS>", host: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_HOST_HELP ESCAPE=JS>",
+			database: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_DATABASE_HELP ESCAPE=JS>", organization: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_ORGANIZATION_HELP ESCAPE=JS>",
+			measurement_name: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_MEASUREMENT_HELP ESCAPE=JS>", tags: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_TAGS_HELP ESCAPE=JS>",
+			token: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_TOKEN_HELP ESCAPE=JS>", username: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_USERNAME_HELP ESCAPE=JS>",
+			password: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_PASSWORD_HELP ESCAPE=JS>", max_batch_inserts: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_BATCH_HELP ESCAPE=JS>",
+			max_buffer_size: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_BUFFER_HELP ESCAPE=JS>", send_uuid: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_SEND_UUID_HELP ESCAPE=JS>",
+			ssl_verifypeer: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_TLS_HELP ESCAPE=JS>", secretKey: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_SECRET_HELP ESCAPE=JS>",
+			device: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_DEVICE_HELP ESCAPE=JS>", type: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_TYPE_HELP ESCAPE=JS>",
+			interval: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_INTERVAL_HELP ESCAPE=JS>", scaler: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_SCALER_HELP ESCAPE=JS>",
+			name: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_REGISTRATION_NAME_HELP ESCAPE=JS>"
+		};
+
+		function html_text(value) {
+			return String(value == null ? "" : value).replace(/[&<>"']/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; });
+		}
+		function channel_help_html(value) { return value ? '<small class="obis-channel-help">'+html_text(value)+'</small>' : ''; }
+		function channel_uuid() {
+			if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+			return "xxxxxxxx-xxxx-4xxx-axxx-xxxxxxxxxxxx".replace(/x/g, function () { return Math.floor(Math.random() * 16).toString(16); });
+		}
+		function parse_obis_ui(value) {
+			var match = String(value || "").trim().match(/^(?:(\d+)-(\d+):)?([A-Za-z0-9]+)\.(\d+)\.(\d+)(?:\*(\d+))?$/);
+			if (!match) return null;
+			var f = match[6] == null || match[6] == "255" ? null : Number(match[6]);
+			if (f != null && (f < 0 || f > 254)) return null;
+			return { a: match[1] == null ? null : Number(match[1]), b: match[2] == null ? null : Number(match[2]), c: /^\d+$/.test(match[3]) ? Number(match[3]) : match[3], d:Number(match[4]), e:Number(match[5]), f:f, base:(match[1] == null ? "" : match[1]+"-"+match[2]+":")+match[3]+"."+match[4]+"."+match[5] };
+		}
+		function full_obis(channel) { return channel.obis + (channel.storage == null || channel.storage === "" || String(channel.storage) === "255" ? "" : "*" + channel.storage); }
+		function catalog_info(identifier) {
+			var parsed = parse_obis_ui(identifier);
+			if (!parsed) return { short: channel_labels.unknown, long: channel_labels.unknown, unit:"", recommended_aggmode:"none" };
+			var full = parsed.base + (parsed.f == null ? "" : "*" + parsed.f);
+			var entry = (obis_catalog.entries || []).find(function (item) { return item.code === full; }) || (obis_catalog.entries || []).find(function (item) { return item.code === parsed.base; });
+			if (!entry) entry = (obis_catalog.rules || []).slice().sort(function(a,b){return (a.priority||9999)-(b.priority||9999);}).find(function (item) { return Object.keys(item.match || {}).every(function(group){ var wanted=item.match[group], actual=parsed[group]; return Array.isArray(wanted) ? wanted.map(String).indexOf(String(actual))>=0 : String(wanted)===String(actual); }); });
+			var lang = (document.documentElement.lang && document.documentElement.lang.toLowerCase().indexOf("de") === 0) || channel_labels.active === "Aktiv" ? "de" : "en";
+			var groups=(lang==='de'?' Gruppen A (Medium)=':' Groups A (medium)=')+(parsed.a==null?(lang==='de'?'nicht angegeben':'not specified'):parsed.a)+', B ('+(lang==='de'?'Kanal':'channel')+')='+(parsed.b==null?(lang==='de'?'nicht angegeben':'not specified'):parsed.b)+', C ('+(lang==='de'?'Messgröße':'quantity')+')='+parsed.c+', D ('+(lang==='de'?'Verarbeitung':'processing')+')='+parsed.d+', E ('+(lang==='de'?'Tarif/Ausprägung':'tariff/variant')+')='+parsed.e+', F ('+(lang==='de'?'Speicher':'storage')+')='+(parsed.f==null?(lang==='de'?'nicht angegeben':'not specified'):parsed.f)+'.';
+			if (!entry) return { short:channel_labels.unknown, long:channel_labels.unknown+groups, unit:"", recommended_aggmode:"none" };
+			return { short:(entry.short||{})[lang] || (entry.short||{}).en || parsed.base, long:((entry.long||{})[lang] || (entry.long||{}).en || "")+groups, unit:entry.unit||"", recommended_aggmode:entry.recommended_aggmode||"none", warning:((entry.limitations||{})[lang]||"") };
+		}
+		function sync_channel_definitions() { document.getElementById("channel_definitions_json").value = JSON.stringify(channel_definitions); }
+		function api_option_fields(api, options) {
+			var fields = [];
+			if (api === "volkszaehler") fields = [["middleware","Middleware",true],["timeout","Timeout",false]];
+			if (api === "influxdb") fields = [["version","Version (1 / 2)"],["host","Host",true],["database","Database / Bucket"],["organization","Organization"],["measurement_name","Measurement"],["tags","Tags (JSON)"],["token","Token"],["username","Username"],["password","Password"],["timeout","Timeout"],["max_batch_inserts","Batch"],["max_buffer_size","Buffer"],["send_uuid","Send UUID",false,"checkbox"],["ssl_verifypeer","TLS verify peer",false,"checkbox"]];
+			if (api === "mysmartgrid") fields = [["middleware","Middleware",true],["secretKey","Secret key",true],["device","Device",true],["type","Type",true],["interval","Interval"],["scaler","Scaler"],["timeout","Timeout"],["name",channel_labels.registrationName]];
+			return fields.map(function(field){ var value=options[field[0]]; if(value==null && (field[0]==='send_uuid'||field[0]==='ssl_verifypeer')) value=true; var type=field[3]||((/password|token|secretKey/.test(field[0]))?"password":"text"); return '<div class="obis-channel-field"><label>'+html_text(field[1])+(field[2]?' *':'')+'</label><input data-option="'+field[0]+'" type="'+type+'" '+(field[2]?'required ':'')+(type==='checkbox'?(value?'checked':''):'value="'+html_text(value==null?"":(typeof value==='object'?JSON.stringify(value):value))+'"')+'>'+channel_help_html(api_field_help[field[0]])+'</div>'; }).join("");
+		}
+		function render_channel_editor(serial) {
+			channel_definitions.meters = channel_definitions.meters || {};
+			var channels = channel_definitions.meters[serial] || (channel_definitions.meters[serial] = []);
+			var container = document.getElementById(serial + "_obis_channels"); if (!container) return;
+			var protocol = container.getAttribute("data-protocol") || "";
+			var aggtime = Number((document.getElementById(serial + "_aggtime") || {}).value || 0);
+			var open_by_uuid = {};
+			container.querySelectorAll('.obis-channel-card').forEach(function(card) { var existing=channels[Number(card.getAttribute('data-index'))], details=card.querySelector('details.obis-channel-details'); if(existing && existing.uuid && details && details.open) open_by_uuid[existing.uuid]=true; });
+			container.innerHTML = "";
+			channels.forEach(function(channel, index) {
+				channel.api_options = channel.api_options || {volkszaehler:{},influxdb:{},mysmartgrid:{}}; channel.plugin_output=channel.plugin_output||{enabled:true,key:""}; if(channel.storage==null || channel.storage==="" || String(channel.storage)==="255") channel.storage=null;
+				var info=catalog_info(full_obis(channel)), title=channel.display_name||info.short, api=channel.api||"null", options=channel.api_options[api]||{};
+				var applied_index=runtime_channel_indices[String(channel.uuid||'').toLowerCase()], has_applied_index=Number.isInteger(applied_index), channel_number=has_applied_index?channel_labels.channelNumber.replace('{number}',applied_index):channel_labels.channelUnassigned;
+				var remove_html=channel.origin==='manual'?'<div class="obis-channel-remove"><button class="ch-remove obis-channel-remove-button ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-delete ui-btn-icon-left" type="button" data-role="button" data-inline="true" data-mini="true" data-icon="delete">'+html_text(channel_labels.remove)+'</button>'+channel_help_html(channel_labels.removeHelp)+'</div>':'';
+				var card=document.createElement("div"); card.className="obis-channel-card"; card.setAttribute("data-index",index);
+				card.innerHTML='<div class="obis-channel-summary"><input class="ch-enabled" type="checkbox" '+(channel.enabled?'checked':'')+' title="'+html_text(channel_labels.active)+'"><span class="obis-channel-number" title="'+html_text(has_applied_index?channel_labels.channelNumberHelp:channel_labels.channelUnassignedHelp)+'">'+html_text(channel_number)+'</span><code>'+html_text(full_obis(channel))+'</code><span title="'+html_text(info.long+(info.unit?' ['+info.unit+']':''))+'">'+html_text(title)+'</span><span class="obis-channel-origin">'+html_text(channel.origin==='manual'?channel_labels.originManual:channel_labels.originFound)+'</span><span>'+html_text(api)+'</span><span>'+html_text(channel.plugin_output.enabled?channel_labels.output:'–')+'</span></div>'+
+				'<details class="obis-channel-details" '+(open_by_uuid[channel.uuid]?'open':'')+'><summary>'+html_text(channel_labels.details)+'<span class="obis-channel-uuid">· UUID: '+html_text(channel.uuid||'–')+'</span></summary><div class="obis-channel-grid"><div class="obis-channel-info"><strong>'+html_text(info.short)+'</strong>'+(info.unit?' · '+html_text(info.unit):'')+'<br>'+html_text(info.long)+(info.warning?'<br>'+html_text(info.warning):'')+'</div>'+
+				'<div class="obis-channel-field"><label>'+html_text(channel_labels.identifier)+'</label><input class="ch-obis" required value="'+html_text(channel.obis)+'">'+channel_help_html(channel_help.identifier)+'</div><div class="obis-channel-field"><label>'+html_text(channel_labels.storage)+'</label><div class="obis-storage-control"><input class="ch-storage obis-number-spinner" type="number" min="0" max="254" step="1" inputmode="numeric" data-role="none" '+(protocol==='oms'?'disabled title="'+html_text(channel_labels.storageOms)+'"':'')+' value="'+html_text(channel.storage==null?'':channel.storage)+'"><button class="ch-storage-clear obis-storage-clear '+(channel.storage==null?'is-active':'')+'" type="button" data-role="none" aria-pressed="'+(channel.storage==null?'true':'false')+'" '+(protocol==='oms'?'disabled ':'')+'title="'+html_text(channel_labels.storageClear)+'">'+html_text(channel_labels.storageClear)+'</button></div>'+channel_help_html(protocol==='oms'?channel_labels.storageOms:channel_help.storage)+'</div>'+
+				'<div class="obis-channel-field"><label>'+html_text(channel_labels.display)+'</label><input class="ch-display" value="'+html_text(channel.display_name||'')+'">'+channel_help_html(channel_help.display)+'</div><div class="obis-channel-field"><label>'+html_text(channel_labels.api)+'</label><div class="channel-select-api"><select class="ch-api" data-mini="true" data-native-menu="true"><option value="null">null</option><option value="volkszaehler">volkszaehler</option><option value="influxdb">influxdb</option><option value="mysmartgrid">mysmartgrid</option></select></div>'+channel_help_html(channel_help.api)+'</div>'+
+				'<div class="obis-channel-field"><label>'+html_text(channel_labels.aggregation)+'</label><div class="channel-select-aggregation"><select class="ch-agg" data-mini="true" data-native-menu="true" '+(aggtime>0?'':'disabled')+'><option value="none">none</option><option value="avg">avg</option><option value="max">max</option><option value="sum">sum</option></select></div>'+channel_help_html(channel_help.aggregation)+'</div><div class="obis-channel-field"><label>'+html_text(channel_labels.duplicates)+'</label><input class="ch-duplicates" type="number" min="0" '+((api==='volkszaehler'||api==='influxdb')?'':'disabled')+' value="'+html_text(channel.duplicates||0)+'">'+channel_help_html(channel_help.duplicates)+'</div>'+
+				'<div class="obis-api-fields"><strong>'+html_text(channel_labels.apiOptions)+'</strong>'+api_option_fields(api,options)+'</div><div class="obis-output-fields"><label><input class="ch-output" type="checkbox" '+(channel.plugin_output.enabled?'checked':'')+'> '+html_text(channel_labels.output)+'</label>'+channel_help_html(channel_help.output)+'<div class="obis-channel-field"><label>'+html_text(channel_labels.outputKey)+'</label><input class="ch-output-key" pattern="[A-Za-z0-9_]{1,64}" maxlength="64" '+(channel.plugin_output.enabled?'required':'disabled')+' value="'+html_text(channel.plugin_output.key||'')+'">'+channel_help_html(channel_help.outputKey)+'</div></div>'+remove_html+'</div></details>';
+				container.appendChild(card); card.querySelector('select.ch-api').value=api; card.querySelector('select.ch-agg').value=aggtime>0?(channel.aggmode||'none'):'none';
+				card.querySelector('button.ch-storage-clear').addEventListener('click',function(){ var input=card.querySelector('input.ch-storage'); input.value=''; update_channel_card(serial,index,card,protocol,aggtime); this.classList.add('is-active'); this.setAttribute('aria-pressed','true'); });
+				var remove_button=card.querySelector('button.ch-remove'); if(remove_button) remove_button.addEventListener('click',function(){ remove_manual_channel(serial,index,channel_number); });
+				card.addEventListener('change',function(event){ update_channel_card(serial,index,card,protocol,aggtime); var refresh=['ch-api','ch-output','ch-obis','ch-storage','ch-display'].some(function(name){return event.target.classList.contains(name);}); if(refresh) render_channel_editor(serial); if(refresh) update_meter_enabled(serial); });
+				card.addEventListener('input',function(event){ update_channel_card(serial,index,card,protocol,aggtime); if(event.target.classList.contains('ch-storage')) { var clear=card.querySelector('button.ch-storage-clear'), unspecified=event.target.value===''; clear.classList.toggle('is-active',unspecified); clear.setAttribute('aria-pressed',unspecified?'true':'false'); } });
+			});
+			var empty=document.getElementById(serial+'_obis_empty'); if(empty) empty.hidden=channels.length>0; sync_channel_definitions();
+		}
+		function update_channel_card(serial,index,card,protocol,aggtime) {
+			var ch=channel_definitions.meters[serial][index], parsed=parse_obis_ui(card.querySelector('input.ch-obis').value); if(parsed) ch.obis=parsed.base;
+			ch.enabled=card.querySelector('input.ch-enabled').checked; ch.storage=protocol==='oms'?null:(card.querySelector('input.ch-storage').value===''?null:Number(card.querySelector('input.ch-storage').value)); ch.display_name=card.querySelector('input.ch-display').value; ch.api=card.querySelector('select.ch-api').value; ch.aggmode=aggtime>0?card.querySelector('select.ch-agg').value:'none'; ch.duplicates=Number(card.querySelector('input.ch-duplicates').value||0); ch.plugin_output.enabled=card.querySelector('input.ch-output').checked; ch.plugin_output.key=card.querySelector('input.ch-output-key').value;
+			var opts=ch.api_options[ch.api]||(ch.api_options[ch.api]={}); card.querySelectorAll('[data-option]').forEach(function(input){ var value=input.type==='checkbox'?input.checked:input.value; if(input.getAttribute('data-option')==='tags'&&value){try{value=JSON.parse(value);}catch(e){}} opts[input.getAttribute('data-option')]=value; }); sync_channel_definitions();
+		}
+		function remove_manual_channel(serial,index,channel_number) {
+			var channels=channel_definitions.meters[serial]||[], channel=channels[index];
+			if(!channel || channel.origin!=='manual') return;
+			var message=channel_labels.removeConfirm.replace('{channel}',channel_number).replace('{obis}',full_obis(channel)).replace('{uuid}',channel.uuid||'–');
+			if(!window.confirm(message)) return;
+			channels.splice(index,1); render_channel_editor(serial); update_meter_enabled(serial);
+		}
+		function add_manual_obis_channel(serial) {
+			var value=window.prompt(channel_labels.manualPrompt,'1-0:1.8.0'); var parsed=parse_obis_ui(value); if(!parsed){ if(value!=null) window.alert(channel_labels.unknown); return; }
+			var info=catalog_info(value), aggtime=Number((document.getElementById(serial+'_aggtime')||{}).value||0), key='OBIS_'+(parsed.a==null?'':parsed.a+'_'+parsed.b+'_')+parsed.c+'_'+parsed.d+'_'+parsed.e+(parsed.f==null?'':'_'+parsed.f);
+			(channel_definitions.meters[serial]||(channel_definitions.meters[serial]=[])).push({uuid:channel_uuid(),enabled:true,origin:'manual',obis:parsed.base,storage:parsed.f,display_name:'',api:'null',aggmode:aggtime>0?info.recommended_aggmode:'none',duplicates:0,api_options:{volkszaehler:{},influxdb:{},mysmartgrid:{}},plugin_output:{enabled:true,key:key.substring(0,64)}}); render_channel_editor(serial);
+		}
+		document.querySelectorAll('.obis-editor').forEach(function(container){ render_channel_editor(container.id.replace(/_obis_channels$/,'')); });
+
 		function start_obis_discovery(serial) {
 			var form = document.getElementById("vzlogger_form");
 			if (!form || (form.reportValidity && !form.reportValidity())) return;
@@ -1287,52 +1497,15 @@
 		}
 
 		function render_discovered_obis_channels(serial, channels) {
-			var container = document.getElementById(serial + "_obis_channels");
-			if (!container) return;
 			var existing = {};
-			container.querySelectorAll(".obis-channel-option").forEach(function (label) {
-				existing[label.getAttribute("data-obis-identifier")] = label;
-				var old_new = label.querySelector(".obis-channel-new");
-				if (old_new) old_new.remove();
-			});
+			(channel_definitions.meters[serial] || []).forEach(function(ch){ existing[full_obis(ch)]=true; });
 			channels.forEach(function (channel) {
 				var identifier = channel.identifier || "";
-				if (!identifier) return;
-				var label = existing[identifier];
-				if (!label) {
-					label = document.createElement("label");
-					label.className = "obis-channel-option";
-					label.setAttribute("data-obis-identifier", identifier);
-					var checkbox = document.createElement("input");
-					checkbox.type = "checkbox";
-					checkbox.name = serial + "_obis";
-					checkbox.value = identifier;
-					checkbox.checked = !!channel.selected;
-					label.appendChild(checkbox);
-					var text = document.createElement("span");
-					text.className = "obis-channel-label";
-					label.appendChild(text);
-					container.appendChild(label);
-					existing[identifier] = label;
-				} else {
-					var text = label.querySelector(".obis-channel-label");
-					if (!text) {
-						text = document.createElement("span");
-						text.className = "obis-channel-label";
-						label.appendChild(text);
-					}
-				}
-				text.textContent = identifier + " - " + (channel.name || identifier);
-				if (channel.is_new) {
-					var new_marker = document.createElement("span");
-					new_marker.className = "obis-channel-new";
-					new_marker.textContent = obis_text("obis_channel_new_text");
-					label.appendChild(new_marker);
-				}
+				var parsed=parse_obis_ui(identifier); if(!parsed || existing[identifier]) return;
+				var info=catalog_info(identifier), aggtime=Number((document.getElementById(serial+'_aggtime')||{}).value||0);
+				(channel_definitions.meters[serial]||(channel_definitions.meters[serial]=[])).push({uuid:channel_uuid(),enabled:true,origin:'discovered',obis:parsed.base,storage:parsed.f,display_name:'',api:'null',aggmode:aggtime>0?info.recommended_aggmode:'none',duplicates:0,api_options:{volkszaehler:{},influxdb:{},mysmartgrid:{}},plugin_output:{enabled:true,key:('OBIS_'+(parsed.a==null?'':parsed.a+'_'+parsed.b+'_')+parsed.c+'_'+parsed.d+'_'+parsed.e+(parsed.f==null?'':'_'+parsed.f)).substring(0,64)}}); existing[identifier]=true;
 			});
-			var empty = document.getElementById(serial + "_obis_empty");
-			if (empty) empty.hidden = !!container.querySelector(".obis-channel-option");
-			try { $(container).enhanceWithin(); } catch (error) {}
+			render_channel_editor(serial);
 		}
 
 		function cancel_obis_discovery() {
@@ -1557,6 +1730,8 @@
 			panel.find(".meter-user-settings").toggle(mode == "user");
 			panel.find(".meter-common-field").toggle(["sml", "d0", "oms"].indexOf(mode) >= 0);
 			panel.find(".meter-obis-settings").toggle(["sml", "d0", "oms"].indexOf(mode) >= 0);
+			var channelEditor = document.getElementById(serial + "_obis_channels");
+			if (channelEditor) { channelEditor.setAttribute("data-protocol", mode); render_channel_editor(serial); }
 			panel.find(".meter-template-row").toggle(["sml", "d0"].indexOf(mode) >= 0);
 			update_meter_template_options(serial, mode);
 			var omsUnsupported = mode == "oms" && panel.attr("data-oms-supported") != "1";
@@ -1621,6 +1796,14 @@
 			set_control_disabled(name_control, global_disabled);
 			set_control_disabled(enabled_control, global_disabled);
 			set_control_disabled(dependent_controls, global_disabled || meter_disabled);
+			set_control_disabled(panel.find("input.ch-storage"), global_disabled || meter_disabled || mode == "oms");
+			set_control_disabled(panel.find("button.ch-storage-clear"), global_disabled || meter_disabled || mode == "oms");
+			set_control_disabled(panel.find("select.ch-agg"), global_disabled || meter_disabled || Number($("#" + serial + "_aggtime").val() || 0) <= 0);
+			panel.find(".obis-channel-card").each(function () {
+				var api = $(this).find("select.ch-api").val();
+				set_control_disabled($(this).find("input.ch-duplicates"), global_disabled || meter_disabled || ["volkszaehler", "influxdb"].indexOf(api) < 0);
+				set_control_disabled($(this).find("input.ch-output-key"), global_disabled || meter_disabled || !$(this).find("input.ch-output").prop("checked"));
+			});
 			set_control_disabled(remove_control, global_disabled);
 			var rows = panel.find("table.settings-table").first().children("tbody").children("tr");
 			rows.each(function () {
@@ -1688,4 +1871,3 @@
 </TMPL_IF>
 
 <!-- ****************************************************************************************** -->
-

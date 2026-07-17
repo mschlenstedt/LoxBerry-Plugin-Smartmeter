@@ -1,6 +1,12 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
+# LoxBerry executes these files directly; CRLF breaks Linux shebang lines.
+*.pl  text eol=lf
+*.pm  text eol=lf
+*.cgi text eol=lf
+*.sh  text eol=lf
+
 # Custom for Visual Studio
 *.cs     diff=csharp
 

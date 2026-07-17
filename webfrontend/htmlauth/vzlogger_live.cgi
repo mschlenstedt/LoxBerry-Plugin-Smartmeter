@@ -65,6 +65,16 @@ let metadata={channels:{}};
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function readableName(value){return String(value||'Unbenannter Kanal').replace(/_/g,' ');}
+function displayValue(value,meta){
+	const numeric=Number(value);
+	const factor=Number(meta.display_factor??1);
+	const unit=String(meta.unit||'');
+	if(!Number.isFinite(numeric)||!Number.isFinite(factor))return esc(value)+(unit?' '+esc(unit):'');
+	const scaled=numeric*factor;
+	const formatted=new Intl.NumberFormat('de-DE',{maximumFractionDigits:6,useGrouping:false}).format(scaled);
+	const title=factor!==1?' title="vzLogger-Rohwert: '+esc(value)+'"':'';
+	return '<span'+title+'>'+esc(formatted)+(unit?' '+esc(unit):'')+'</span>';
+}
 function channelUuid(channel){return String(channel.uuid||channel.id||'').toLowerCase();}
 function channelNumber(meta,index){return Number.isInteger(meta.channel_index)?meta.channel_index:index;}
 function timestampText(value){
@@ -105,14 +115,14 @@ function render(data){
 		group.channels.sort((a,b)=>channelNumber(a.meta,a.index)-channelNumber(b.meta,b.index)).forEach(item=>{
 			const number=channelNumber(item.meta,item.index);
 			const identifier=item.meta.identifier||item.channel.identifier||'';
-			const name=readableName(item.meta.name||identifier||item.uuid);
+			const name=item.meta.display_name||item.meta.catalog_name_de||readableName(item.meta.name||identifier||item.uuid);
 			output.push('<tr class="channel-heading"><th colspan="2"><span class="channel-title">Kanal '+esc(number)+' - '+esc(name)+'</span><span class="channel-meta">OBIS: '+esc(identifier||'-')+' | UUID: '+esc(item.uuid||'-')+'</span></th></tr>');
 			const tuples=Array.isArray(item.channel.tuples)?item.channel.tuples:[];
 			if(!tuples.length){output.push('<tr><td colspan="2" class="empty">Noch kein Messwert vorhanden.</td></tr>');return;}
 			tuples.forEach(tuple=>{
 				const timestamp=Array.isArray(tuple)?tuple[0]:'';
 				const value=Array.isArray(tuple)?tuple[1]:tuple;
-				output.push('<tr><td>'+timestampText(timestamp)+'</td><td class="value">'+esc(value)+'</td></tr>');
+				output.push('<tr><td>'+timestampText(timestamp)+'</td><td class="value">'+displayValue(value,item.meta)+'</td></tr>');
 			});
 		});
 		output.push('</tbody></table></div></section>');
@@ -165,6 +175,11 @@ sub read_channel_metadata {
 					serial => $serial,
 					head_name => $plugin_cfg ? ($plugin_cfg->param("$serial.NAME") || $serial) : $serial,
 					name => $entry->{name} || "",
+					display_name => $entry->{display_name} || "",
+					catalog_name_de => $entry->{catalog_name_de} || "",
+					catalog_name_en => $entry->{catalog_name_en} || "",
+					unit => $entry->{unit} || "",
+					display_factor => defined($entry->{display_factor}) ? 0 + $entry->{display_factor} : 1,
 					identifier => $entry->{identifier} || "",
 					channel => $entry->{channel} || "",
 					channel_index => defined($entry->{channel_index}) ? int($entry->{channel_index}) : 0,

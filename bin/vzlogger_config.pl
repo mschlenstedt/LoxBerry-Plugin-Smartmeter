@@ -6,8 +6,11 @@ use warnings;
 use Config::Simple;
 use Digest::MD5 qw(md5_hex);
 use File::Path qw(make_path);
+use FindBin;
 use JSON::PP;
 use LoxBerry::System;
+use lib $FindBin::Bin;
+use SmartMeterVZLoggerChannels qw(read_json write_json_atomic load_catalog lookup_obis new_document migrate_legacy_meter validate_document native_channel);
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
@@ -15,13 +18,21 @@ my $plugin_config_dir = $ENV{SMARTMETER_CONFIG_DIR} || "$home/config/plugins/$ps
 my $config_file = $ENV{SMARTMETER_CONFIG_FILE} || "$plugin_config_dir/smartmeter.cfg";
 my $target_file = $ENV{SMARTMETER_VZLOGGER_CONFIG_FILE} || "$plugin_config_dir/vzlogger.conf";
 my $mapping_file = $ENV{SMARTMETER_VZLOGGER_MAPPING_FILE} || "$plugin_config_dir/vzlogger_channels.json";
+my $definitions_file = $ENV{SMARTMETER_VZLOGGER_DEFINITIONS_FILE} || "$plugin_config_dir/vzlogger_channel_definitions.json";
+my $catalog_file = $ENV{SMARTMETER_OBIS_CATALOG_FILE} || "$home/templates/plugins/$psubfolder/obis_catalog.json";
 my $plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file\n";
+my $obis_catalog = load_catalog($catalog_file);
 my $debug_enabled = ($plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0") eq "1";
 my $log_level = int(clean_log_level($plugin_cfg->param("VZLOGGER.LOGLEVEL"), 0));
 my $log_file = $debug_enabled ? "$home/log/plugins/$psubfolder/vzlogger.log" : "/dev/null";
 
 my %flat_config;
 Config::Simple->import_from($config_file, \%flat_config);
+my $channel_document = read_json($definitions_file);
+die "Invalid channel definitions JSON: $definitions_file\n" if (-e $definitions_file && !defined($channel_document));
+$channel_document ||= new_document();
+$channel_document->{meters} ||= {};
+my $channel_document_changed = !-e $definitions_file;
 
 my $mqtt = read_mqtt_settings();
 my $base_topic = sanitize_topic($plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter");
@@ -59,27 +70,78 @@ foreach my $config_key (sort keys %flat_config) {
 		my $device = $plugin_cfg->param("$section.DEVICE") || next;
 		$meter_config = standard_meter_config($section, $mode, $device, $vzlogger_mode);
 
+		my $definitions = $channel_document->{meters}->{$serial};
+		if (ref($definitions) ne "ARRAY") {
+			my @available = available_channels($section);
+			my @selected = config_list_values("$section.OBISCHANNELS");
+			my @custom = custom_channels($section);
+			my $selected_ref = defined($plugin_cfg->param("$section.OBISCHANNELS")) ? \@selected : undef;
+			$definitions = migrate_legacy_meter($channel_document, $serial, $psubfolder, \@available, $selected_ref, \@custom);
+			$channel_document_changed = 1;
+		}
 		my @channels;
-		foreach my $channel (configured_channels($section)) {
-			my $uuid = stable_uuid("$psubfolder:$serial:$channel->{identifier}");
-			push @channels, {
-				api => "null",
-				uuid => $uuid,
-				identifier => $channel->{identifier},
-			};
-			$channel_mapping{$uuid} = {
+		my $aggtime = clean_integer(config_scalar_value("$section.AGGTIME"), 0);
+		my %legacy_name_by_identifier = map {
+			($_->{identifier} || "") => ($_->{name} || "")
+		} available_channels($section);
+		foreach my $definition (@$definitions) {
+			next if (($definition->{origin} || "") eq "manual");
+			next if (exists($definition->{plugin_output}->{legacy_keys}));
+			my $identifier = native_channel($definition, $aggtime)->{identifier};
+			my $legacy_name = $legacy_name_by_identifier{$identifier} || "";
+			$definition->{plugin_output}->{legacy_keys} = $legacy_name ne "" && $legacy_name ne ($definition->{plugin_output}->{key} || "") ? [$legacy_name] : [];
+			$channel_document_changed = 1;
+		}
+		my %identifier_counts;
+		foreach my $definition (@$definitions) {
+			next if (!$definition->{enabled});
+			$identifier_counts{native_channel($definition, $aggtime)->{identifier}}++;
+		}
+		foreach my $definition (@$definitions) {
+			next if (!$definition->{enabled});
+			my $channel = native_channel($definition, $aggtime);
+			push @channels, $channel;
+			my $uuid = $definition->{uuid};
+			if ($definition->{plugin_output}->{enabled}) {
+				my $catalog_de = lookup_obis($obis_catalog, $channel->{identifier}, "de");
+				my $catalog_en = lookup_obis($obis_catalog, $channel->{identifier}, "en");
+				my $mapping_entry = {
 				serial => $serial,
-				name => $channel->{name},
+				name => $definition->{plugin_output}->{key},
+				managed_output => JSON::PP::true,
+				display_name => $definition->{display_name} || "",
+				catalog_name_de => $catalog_de->{known} ? ($catalog_de->{short} || "") : "",
+				catalog_name_en => $catalog_en->{known} ? ($catalog_en->{short} || "") : "",
+				unit => $catalog_de->{unit} || $catalog_en->{unit} || "",
+				display_factor => live_display_factor($channel->{identifier}),
 				identifier => $channel->{identifier},
+				identifier_ambiguous => $identifier_counts{$channel->{identifier}} > 1 ? JSON::PP::true : JSON::PP::false,
 				channel => "chn$channel_index",
 				channel_index => $channel_index,
 			};
+				if ($identifier_counts{$channel->{identifier}} == 1 && ref($definition->{plugin_output}->{legacy_keys}) eq "ARRAY") {
+					my @legacy_names = grep { defined($_) && $_ ne "" && $_ ne $definition->{plugin_output}->{key} } @{$definition->{plugin_output}->{legacy_keys}};
+					$mapping_entry->{legacy_names} = \@legacy_names if (@legacy_names);
+				}
+				$channel_mapping{$uuid} = $mapping_entry;
+			}
 			$channel_index++;
 		}
 		$meter_config->{channels} = \@channels;
 	}
 	push @meters, $meter_config;
 }
+
+sub live_display_factor
+{
+	my ($identifier) = @_;
+	# vzLogger exposes SML electricity counters in Wh; the catalog and plugin cache use kWh.
+	return 0.001 if (defined($identifier) && $identifier =~ /\A1-0:(?:1|2)\.8\.\d+(?:\*\d+)?\z/);
+	return 1;
+}
+
+my @definition_errors = validate_document($channel_document);
+die "Invalid vzLogger channel definitions:\n - " . join("\n - ", @definition_errors) . "\n" if (@definition_errors);
 
 my $mqtt_config = {
 	enabled => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTENABLED"), 1) ? JSON::PP::true : JSON::PP::false,
@@ -124,6 +186,7 @@ my $config = {
 
 write_ordered_vzlogger_json($target_file, $config);
 write_json($mapping_file, \%channel_mapping);
+write_json_atomic($definitions_file, $channel_document) if ($channel_document_changed && !($ENV{SMARTMETER_VALIDATION_DRAFT} || ""));
 
 if (($ENV{SMARTMETER_VALIDATION_DRAFT} || "") eq "1") {
 	print "Generated temporary vzLogger configuration with " . scalar(@meters) . " configured meter(s). No saved configuration files were changed.\n";
@@ -649,8 +712,7 @@ sub normalize_obis_identifier
 	my ($value) = @_;
 	return "" if (!defined($value));
 	$value =~ s/^\s+|\s+$//g;
-	$value =~ s/\*\d+\z//;
-	return $value if ($value =~ /\A(?:\d+-\d+:)?[A-Za-z0-9]+\.\d+\.\d+\z/);
+	return $value if ($value =~ /\A(?:\d+-\d+:)?[A-Za-z0-9]+\.\d+\.\d+(?:\*(?:[0-9]|[1-9][0-9]|255))?\z/);
 	return "";
 }
 
@@ -725,16 +787,16 @@ sub compare_obis_identifier
 sub obis_sort_parts
 {
 	my ($identifier) = @_;
-	return (999, 999, 999, 999, 999) if (!defined($identifier));
-	if ($identifier =~ /\A(\d+)-(\d+):([A-Za-z0-9]+)\.(\d+)\.(\d+)\z/) {
-		my ($a, $b, $c_part, $d, $e) = ($1, $2, $3, $4, $5);
+	return (999, 999, 999, 999, 999, 999) if (!defined($identifier));
+	if ($identifier =~ /\A(\d+)-(\d+):([A-Za-z0-9]+)\.(\d+)\.(\d+)(?:\*(\d+))?\z/) {
+		my ($a, $b, $c_part, $d, $e, $f) = ($1, $2, $3, $4, $5, $6);
 		my $c = ($c_part =~ /\A\d+\z/) ? int($c_part) : 900 + ord(uc(substr($c_part, 0, 1)));
-		return (int($a), int($b), $c, int($d), int($e));
+		return (int($a), int($b), $c, int($d), int($e), defined($f) ? int($f) : 255);
 	}
-	if ($identifier =~ /\A([A-Za-z0-9]+)\.(\d+)\.(\d+)\z/) {
-		my ($a_part, $b, $c) = ($1, $2, $3);
+	if ($identifier =~ /\A([A-Za-z0-9]+)\.(\d+)\.(\d+)(?:\*(\d+))?\z/) {
+		my ($a_part, $b, $c, $f) = ($1, $2, $3, $4);
 		my $a = ($a_part =~ /\A\d+\z/) ? int($a_part) : 900 + ord(uc(substr($a_part, 0, 1)));
-		return (0, 0, $a, int($b), int($c));
+		return (0, 0, $a, int($b), int($c), defined($f) ? int($f) : 255);
 	}
-	return (999, 999, 999, 999, 999);
+	return (999, 999, 999, 999, 999, 999);
 }
