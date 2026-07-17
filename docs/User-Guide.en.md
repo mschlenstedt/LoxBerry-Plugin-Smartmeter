@@ -63,6 +63,8 @@ Use **Save and apply** for the normal workflow; it saves the current form values
 
 The bridge service for HTTP cache and UDP is optional and is switched off by default on fresh installs.
 
+In the mobile vzLogger view, each setting name is grouped more closely with its control; help text is subdued in grey with a subtle guide line and followed by a clearer gap before the next setting. Text inputs, select controls, and switches now share the same left edge, including within desktop configuration groups.
+
 For each reader, the editor manages every channel instance with activation, OBIS identifier, origin, API, and optional SmartMeter output. Channel cards use the full width of the expanded reader panel; on phones, configuration sections, collapsibles, tables, and input controls remain within the available display width. Only the currently open settings content is highlighted with a very light pastel-yellow background and a subtle border. Short, permanently visible help text appears directly below every common and API-specific control. Changing a field preserves the expanded/collapsed state of that channel's advanced settings. The internal OBIS catalog provides an English or German short name, long explanation, expected unit, and semantic category. Unknown or manufacturer-specific codes remain fully configurable and their A–F groups are shown in a readable form. A custom semantic display name changes only presentation. Neither it nor the technical **Output key (cache/UDP)** is written to `vzlogger.conf`, because vzLogger has no general channel-name field. The output key is prefilled from the OBIS identifier when a channel is created, remains editable, and is the only identifier published through HTTP cache and UDP. Active plugin output keys must be unique per reader without regard to case, use at most 64 characters, and contain only letters, digits, and underscores.
 
 Each channel row shows the currently applied vzLogger/MQTT DATA index as **Channel N**. The number is read from the generated `vzlogger.conf` and therefore matches the channel number on the rendered live-data page; unapplied or inactive definitions show **Channel –**. The advanced-settings heading additionally displays the persistent UUID in grey. After a successful **Save and apply**, the page refreshes the applied numbers without reloading.
@@ -151,7 +153,9 @@ This debug log contains the information needed to verify the real vzLogger MQTT 
 
 ## Legacy Configuration
 
-The legacy implementation is still available through **Smartmeter Configuration (Legacy)**. It supports optical I/R reading heads connected below `/dev/serial/smartmeter/` and can periodically read meters with the older SmartMeter scripts.
+The mobile Legacy view uses the same closer setting-name/control grouping and the same subdued grey help text, guide line, and larger separation before the next setting. Its different input types are aligned to a consistent horizontal edge as well.
+
+The legacy implementation is still available through **Smartmeter Configuration (Legacy)**. It supports optical I/R reading heads connected below `/dev/serial/smartmeter/` and can periodically read meters with the older SmartMeter scripts. On phones, general settings, meter fields, manual serial settings, and help text are stacked vertically, while selects and inputs remain within the available display width. Both implementation tabs retain the same height even when their labels wrap.
 
 When a meter template is selected, the still-disabled **Manual settings** section shows the effective values used by that template. This preview does not overwrite the saved manual configuration. Selecting **Manual configuration** again therefore restores the previously saved manual values.
 

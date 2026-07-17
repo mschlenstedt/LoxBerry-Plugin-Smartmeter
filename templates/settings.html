@@ -124,7 +124,7 @@
 		padding: 5px 8px;
 	}
 	#vzlogger_form .ui-input-text,
-	#vzlogger_form .ui-select { margin-top: 3px; margin-bottom: 3px; }
+	#vzlogger_form .ui-select { margin: 3px 0; }
 	.inline-link { margin-right: 1em; }
 	.vzlogger-live-links { margin-top: 0.4em; }
 	.service-panel {
@@ -307,6 +307,12 @@
 		.settings-table { table-layout: fixed; }
 		.settings-table > tbody > tr > td { display: block; box-sizing: border-box; width: 100% !important; max-width: 100%; }
 		.settings-table > tbody > tr > td:nth-child(3) { display: none; }
+		.service-panel tr > td:first-child:not([colspan]),
+		.settings-table > tbody > tr > td:first-child:not([colspan]) { padding-bottom: 0; }
+		.service-panel tr > td:nth-child(2),
+		.settings-table > tbody > tr > td:nth-child(2) { padding-top: 1px; }
+		.service-panel tr > td:nth-child(4),
+		.settings-table > tbody > tr > td:nth-child(4) { padding-top: 2px; padding-bottom: 12px; padding-left: 8px; border-left: 2px solid #d6dce1; color: #66717b; }
 		.service-inline-setting { width: 100%; min-width: 0; max-width: 100%; flex-wrap: wrap; white-space: normal; }
 		.service-inline-setting .ui-select { flex: 1 1 10em; min-width: 0; max-width: 100%; }
 		#vzlogger_form .ui-collapsible,
@@ -324,6 +330,11 @@
 		#vzlogger_form label,
 		#vzlogger_form code,
 		#vzlogger_form .obis-channel-help { overflow-wrap: anywhere; }
+		#vzlogger_form .obis-channel-help { color: #66717b; }
+		#vzlogger_form label { margin-bottom: 0; }
+		#vzlogger_form .ui-input-text,
+		#vzlogger_form .ui-select,
+		#vzlogger_form .ui-flipswitch { margin-top: 1px; }
 	}
 	@media (max-width: 420px) {
 		.configuration-section { padding: 8px; }
