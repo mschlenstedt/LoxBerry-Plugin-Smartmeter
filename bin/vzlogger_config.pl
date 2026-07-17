@@ -76,7 +76,7 @@ foreach my $config_key (sort keys %flat_config) {
 			my @selected = config_list_values("$section.OBISCHANNELS");
 			my @custom = custom_channels($section);
 			my $selected_ref = defined($plugin_cfg->param("$section.OBISCHANNELS")) ? \@selected : undef;
-			$definitions = migrate_legacy_meter($channel_document, $serial, $psubfolder, \@available, $selected_ref, \@custom);
+			$definitions = migrate_legacy_meter($channel_document, $serial, $psubfolder, \@available, $selected_ref, \@custom, $obis_catalog);
 			$channel_document_changed = 1;
 		}
 		my @channels;

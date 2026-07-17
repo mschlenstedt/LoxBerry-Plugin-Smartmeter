@@ -94,6 +94,18 @@ is($exit, 0, "valid generated configuration passes");
 like($output, qr/<OK>/, "success marker is emitted");
 
 ($config, $mapping, $definitions) = base_case();
+$definitions->{meters}->{reader}->[0]->{plugin_output}->{key} = "Readable value #1|Main*(test).8-0";
+$mapping->{$uuid}->{name} = "Readable value #1|Main*(test).8-0";
+($exit, $output) = run_validator(config=>$config, mapping=>$mapping, definitions=>$definitions);
+is($exit, 0, "expanded cache/UDP output-key characters pass generated mapping validation");
+
+($config, $mapping, $definitions) = base_case();
+$definitions->{meters}->{reader}->[0]->{plugin_output}->{key} = "invalid:key";
+$mapping->{$uuid}->{name} = "invalid:key";
+($exit, $output) = run_validator(config=>$config, mapping=>$mapping, definitions=>$definitions);
+like($output, qr/required format: 1-64 characters/, "invalid mapping key reports the required format");
+
+($config, $mapping, $definitions) = base_case();
 $config->{meters}->[0]->{enabled} = JSON::PP::false;
 ($exit, $output) = run_validator(config=>$config, mapping=>$mapping, definitions=>$definitions);
 isnt($exit, 0, "vzLogger mode requires an active meter");

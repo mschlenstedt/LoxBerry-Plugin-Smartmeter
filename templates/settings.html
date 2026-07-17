@@ -1417,7 +1417,7 @@
 			active: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_ACTIVE ESCAPE=JS>", details: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_DETAILS ESCAPE=JS>",
 			display: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_DISPLAY_NAME ESCAPE=JS>", storage: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_STORAGE ESCAPE=JS>", storageClear: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_STORAGE_CLEAR ESCAPE=JS>",
 			aggregation: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_AGGREGATION ESCAPE=JS>", duplicates: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_DUPLICATES ESCAPE=JS>",
-			output: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_OUTPUT ESCAPE=JS>", outputKey: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_OUTPUT_KEY ESCAPE=JS>",
+			output: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_OUTPUT ESCAPE=JS>", outputKey: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_OUTPUT_KEY ESCAPE=JS>", outputKeyFormat: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_OUTPUT_KEY_FORMAT ESCAPE=JS>",
 			originFound: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_ORIGIN_FOUND ESCAPE=JS>", originManual: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_ORIGIN_MANUAL ESCAPE=JS>",
 			identifier: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_IDENTIFIER ESCAPE=JS>", api: "API", unknown: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_UNKNOWN ESCAPE=JS>",
 			channelNumber: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_NUMBER ESCAPE=JS>", channelUnassigned: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_NUMBER_UNASSIGNED ESCAPE=JS>",
@@ -1464,14 +1464,28 @@
 		function full_obis(channel) { return channel.obis + (channel.storage == null || channel.storage === "" || String(channel.storage) === "255" ? "" : "*" + channel.storage); }
 		function catalog_info(identifier) {
 			var parsed = parse_obis_ui(identifier);
-			if (!parsed) return { short: channel_labels.unknown, long: channel_labels.unknown, unit:"", recommended_aggmode:"none" };
+			if (!parsed) return { short: channel_labels.unknown, long: channel_labels.unknown, unit:"", recommended_aggmode:"none", output_name:"Unknown" };
 			var full = parsed.base + (parsed.f == null ? "" : "*" + parsed.f);
 			var entry = (obis_catalog.entries || []).find(function (item) { return item.code === full; }) || (obis_catalog.entries || []).find(function (item) { return item.code === parsed.base; });
 			if (!entry) entry = (obis_catalog.rules || []).slice().sort(function(a,b){return (a.priority||9999)-(b.priority||9999);}).find(function (item) { return Object.keys(item.match || {}).every(function(group){ var wanted=item.match[group], actual=parsed[group]; return Array.isArray(wanted) ? wanted.map(String).indexOf(String(actual))>=0 : String(wanted)===String(actual); }); });
 			var lang = (document.documentElement.lang && document.documentElement.lang.toLowerCase().indexOf("de") === 0) || channel_labels.active === "Aktiv" ? "de" : "en";
 			var groups=(lang==='de'?' Gruppen A (Medium)=':' Groups A (medium)=')+(parsed.a==null?(lang==='de'?'nicht angegeben':'not specified'):parsed.a)+', B ('+(lang==='de'?'Kanal':'channel')+')='+(parsed.b==null?(lang==='de'?'nicht angegeben':'not specified'):parsed.b)+', C ('+(lang==='de'?'Messgröße':'quantity')+')='+parsed.c+', D ('+(lang==='de'?'Verarbeitung':'processing')+')='+parsed.d+', E ('+(lang==='de'?'Tarif/Ausprägung':'tariff/variant')+')='+parsed.e+', F ('+(lang==='de'?'Speicher':'storage')+')='+(parsed.f==null?(lang==='de'?'nicht angegeben':'not specified'):parsed.f)+'.';
-			if (!entry) return { short:channel_labels.unknown, long:channel_labels.unknown+groups, unit:"", recommended_aggmode:"none" };
-			return { short:(entry.short||{})[lang] || (entry.short||{}).en || parsed.base, long:((entry.long||{})[lang] || (entry.long||{}).en || "")+groups, unit:entry.unit||"", recommended_aggmode:entry.recommended_aggmode||"none", warning:((entry.limitations||{})[lang]||"") };
+			if (!entry) return { short:channel_labels.unknown, long:channel_labels.unknown+groups, unit:"", recommended_aggmode:"none", output_name:"Unknown" };
+			return { short:(entry.short||{})[lang] || (entry.short||{}).en || parsed.base, long:((entry.long||{})[lang] || (entry.long||{}).en || "")+groups, unit:entry.unit||"", recommended_aggmode:entry.recommended_aggmode||"none", warning:((entry.limitations||{})[lang]||""), output_name:entry.output_name||((entry.short||{}).en||"") };
+		}
+		function default_output_key_ui(parsed, info) {
+			var name=String((info||{}).output_name||(info||{}).short||"Unknown").replace(/\s+/g,"_").replace(/[^A-Za-z0-9_]+/g,"_").replace(/^_+|_+$/g,"")||"Value";
+			var shortObis=parsed.c+"."+parsed.d+"."+parsed.e+(parsed.f==null?"":"*"+parsed.f), suffix="_OBIS_"+shortObis, available=64-suffix.length; if(available<1)return ("Value"+suffix).substring(0,64);
+			if(name.length>available) name=name.substring(0,available).replace(/_+$/g,"");
+			return name+suffix;
+		}
+		function unique_output_key_ui(serial, key) {
+			var used={}; (channel_definitions.meters[serial]||[]).forEach(function(ch){var existing=((ch.plugin_output||{}).key||"").toLowerCase();if(existing)used[existing]=true;});
+			var candidate=key, number=2; while(used[candidate.toLowerCase()]){var suffix="_"+number++;candidate=key.substring(0,64-suffix.length)+suffix;} return candidate;
+		}
+		function validate_output_key_input(input) {
+			if(!input||input.disabled||input.value===""){if(input)input.setCustomValidity("");return;}
+			input.setCustomValidity(/^[A-Za-z0-9 _#|()\[\]\/\'%$!.*-]{1,64}$/.test(input.value)?"":channel_labels.outputKeyFormat);
 		}
 		function sync_channel_definitions() { document.getElementById("channel_definitions_json").value = JSON.stringify(channel_definitions); }
 		function api_option_fields(api, options) {
@@ -1501,8 +1515,9 @@
 				'<div class="obis-channel-field"><label>'+html_text(channel_labels.identifier)+'</label><input class="ch-obis" required value="'+html_text(channel.obis)+'">'+channel_help_html(channel_help.identifier)+'</div><div class="obis-channel-field"><label>'+html_text(channel_labels.storage)+'</label><div class="obis-storage-control"><input class="ch-storage obis-number-spinner" type="number" min="0" max="254" step="1" inputmode="numeric" data-role="none" '+(protocol==='oms'?'disabled title="'+html_text(channel_labels.storageOms)+'"':'')+' value="'+html_text(channel.storage==null?'':channel.storage)+'"><button class="ch-storage-clear obis-storage-clear '+(channel.storage==null?'is-active':'')+'" type="button" data-role="none" aria-pressed="'+(channel.storage==null?'true':'false')+'" '+(protocol==='oms'?'disabled ':'')+'title="'+html_text(channel_labels.storageClear)+'">'+html_text(channel_labels.storageClear)+'</button></div>'+channel_help_html(protocol==='oms'?channel_labels.storageOms:channel_help.storage)+'</div>'+
 				'<div class="obis-channel-field"><label>'+html_text(channel_labels.display)+'</label><input class="ch-display" value="'+html_text(channel.display_name||'')+'">'+channel_help_html(channel_help.display)+'</div><div class="obis-channel-field"><label>'+html_text(channel_labels.api)+'</label><div class="channel-select-api"><select class="ch-api" data-mini="true" data-native-menu="true"><option value="null">null</option><option value="volkszaehler">volkszaehler</option><option value="influxdb">influxdb</option><option value="mysmartgrid">mysmartgrid</option></select></div>'+channel_help_html(channel_help.api)+'</div>'+
 				'<div class="obis-channel-field"><label>'+html_text(channel_labels.aggregation)+'</label><div class="channel-select-aggregation"><select class="ch-agg" data-mini="true" data-native-menu="true" '+(aggtime>0?'':'disabled')+'><option value="none">none</option><option value="avg">avg</option><option value="max">max</option><option value="sum">sum</option></select></div>'+channel_help_html(channel_help.aggregation)+'</div><div class="obis-channel-field"><label>'+html_text(channel_labels.duplicates)+'</label><input class="ch-duplicates" type="number" min="0" '+((api==='volkszaehler'||api==='influxdb')?'':'disabled')+' value="'+html_text(channel.duplicates||0)+'">'+channel_help_html(channel_help.duplicates)+'</div>'+
-				'<div class="obis-api-fields"><strong>'+html_text(channel_labels.apiOptions)+'</strong>'+api_option_fields(api,options)+'</div><div class="obis-output-fields"><label><input class="ch-output" type="checkbox" '+(channel.plugin_output.enabled?'checked':'')+'> '+html_text(channel_labels.output)+'</label>'+channel_help_html(channel_help.output)+'<div class="obis-channel-field"><label>'+html_text(channel_labels.outputKey)+'</label><input class="ch-output-key" pattern="[A-Za-z0-9_]{1,64}" maxlength="64" '+(channel.plugin_output.enabled?'required':'disabled')+' value="'+html_text(channel.plugin_output.key||'')+'">'+channel_help_html(channel_help.outputKey)+'</div></div>'+remove_html+'</div></details>';
+				'<div class="obis-api-fields"><strong>'+html_text(channel_labels.apiOptions)+'</strong>'+api_option_fields(api,options)+'</div><div class="obis-output-fields"><label><input class="ch-output" type="checkbox" '+(channel.plugin_output.enabled?'checked':'')+'> '+html_text(channel_labels.output)+'</label>'+channel_help_html(channel_help.output)+'<div class="obis-channel-field"><label>'+html_text(channel_labels.outputKey)+'</label><input class="ch-output-key" maxlength="64" title="'+html_text(channel_labels.outputKeyFormat)+'" '+(channel.plugin_output.enabled?'required':'disabled')+' value="'+html_text(channel.plugin_output.key||'')+'">'+channel_help_html(channel_help.outputKey)+'</div></div>'+remove_html+'</div></details>';
 				container.appendChild(card); card.querySelector('select.ch-api').value=api; card.querySelector('select.ch-agg').value=aggtime>0?(channel.aggmode||'none'):'none';
+				var output_key_input=card.querySelector('input.ch-output-key'); validate_output_key_input(output_key_input); output_key_input.addEventListener('input',function(){validate_output_key_input(this);});
 				card.querySelector('button.ch-storage-clear').addEventListener('click',function(){ var input=card.querySelector('input.ch-storage'); input.value=''; update_channel_card(serial,index,card,protocol,aggtime); this.classList.add('is-active'); this.setAttribute('aria-pressed','true'); });
 				var remove_button=card.querySelector('button.ch-remove'); if(remove_button) remove_button.addEventListener('click',function(){ remove_manual_channel(serial,index,channel_number); });
 				card.addEventListener('change',function(event){ update_channel_card(serial,index,card,protocol,aggtime); var refresh=['ch-api','ch-output','ch-obis','ch-storage','ch-display'].some(function(name){return event.target.classList.contains(name);}); if(refresh) render_channel_editor(serial); if(refresh) update_meter_enabled(serial); });
@@ -1524,7 +1539,7 @@
 		}
 		function add_manual_obis_channel(serial) {
 			var value=window.prompt(channel_labels.manualPrompt,'1-0:1.8.0'); var parsed=parse_obis_ui(value); if(!parsed){ if(value!=null) window.alert(channel_labels.unknown); return; }
-			var info=catalog_info(value), aggtime=Number((document.getElementById(serial+'_aggtime')||{}).value||0), key='OBIS_'+(parsed.a==null?'':parsed.a+'_'+parsed.b+'_')+parsed.c+'_'+parsed.d+'_'+parsed.e+(parsed.f==null?'':'_'+parsed.f);
+			var info=catalog_info(value), aggtime=Number((document.getElementById(serial+'_aggtime')||{}).value||0), key=unique_output_key_ui(serial,default_output_key_ui(parsed,info));
 			(channel_definitions.meters[serial]||(channel_definitions.meters[serial]=[])).push({uuid:channel_uuid(),enabled:true,origin:'manual',obis:parsed.base,storage:parsed.f,display_name:'',api:'null',aggmode:aggtime>0?info.recommended_aggmode:'none',duplicates:0,api_options:{volkszaehler:{},influxdb:{},mysmartgrid:{}},plugin_output:{enabled:true,key:key.substring(0,64)}}); render_channel_editor(serial);
 		}
 		document.querySelectorAll('.obis-editor').forEach(function(container){ render_channel_editor(container.id.replace(/_obis_channels$/,'')); });
@@ -1596,7 +1611,7 @@
 				var identifier = channel.identifier || "";
 				var parsed=parse_obis_ui(identifier); if(!parsed || existing[identifier]) return;
 				var info=catalog_info(identifier), aggtime=Number((document.getElementById(serial+'_aggtime')||{}).value||0);
-				(channel_definitions.meters[serial]||(channel_definitions.meters[serial]=[])).push({uuid:channel_uuid(),enabled:true,origin:'discovered',obis:parsed.base,storage:parsed.f,display_name:'',api:'null',aggmode:aggtime>0?info.recommended_aggmode:'none',duplicates:0,api_options:{volkszaehler:{},influxdb:{},mysmartgrid:{}},plugin_output:{enabled:true,key:('OBIS_'+(parsed.a==null?'':parsed.a+'_'+parsed.b+'_')+parsed.c+'_'+parsed.d+'_'+parsed.e+(parsed.f==null?'':'_'+parsed.f)).substring(0,64)}}); existing[identifier]=true;
+				(channel_definitions.meters[serial]||(channel_definitions.meters[serial]=[])).push({uuid:channel_uuid(),enabled:true,origin:'discovered',obis:parsed.base,storage:parsed.f,display_name:'',api:'null',aggmode:aggtime>0?info.recommended_aggmode:'none',duplicates:0,api_options:{volkszaehler:{},influxdb:{},mysmartgrid:{}},plugin_output:{enabled:true,key:unique_output_key_ui(serial,default_output_key_ui(parsed,info))}}); existing[identifier]=true;
 			});
 			render_channel_editor(serial);
 		}

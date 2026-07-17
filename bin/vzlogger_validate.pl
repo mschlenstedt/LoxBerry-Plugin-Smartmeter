@@ -9,7 +9,7 @@ use FindBin;
 use JSON::PP;
 use LoxBerry::System;
 use lib $FindBin::Bin;
-use SmartMeterVZLoggerChannels qw(compose_obis parse_obis validate_document);
+use SmartMeterVZLoggerChannels qw(compose_obis parse_obis validate_document valid_output_key output_key_format);
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
@@ -345,8 +345,8 @@ sub validate_mapping
 		push @errors, "Mapping entry $uuid has no serial." if (!is_nonempty_scalar($entry->{serial}));
 		push @errors, "Mapping entry $uuid has no name." if (!is_nonempty_scalar($entry->{name}));
 		validate_boolean($entry->{managed_output}, "Mapping entry $uuid managed_output") if (exists($entry->{managed_output}));
-		push @errors, "Mapping entry $uuid has an invalid output key."
-			if ($entry->{managed_output} && scalar_text($entry->{name}) !~ /\A[A-Za-z0-9_]{1,64}\z/);
+		push @errors, "Mapping entry $uuid has an invalid output key (required format: " . output_key_format() . ")."
+			if ($entry->{managed_output} && !valid_output_key(scalar_text($entry->{name})));
 		push @errors, "Mapping output key $entry->{name} is duplicated for meter $entry->{serial}."
 			if ($entry->{managed_output} && is_nonempty_scalar($entry->{name}) && is_nonempty_scalar($entry->{serial}) && $output_keys{lc("$entry->{serial}\0$entry->{name}")}++);
 		my $native_entry = $native_by_uuid{lc($uuid)};

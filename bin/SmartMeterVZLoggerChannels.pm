@@ -7,7 +7,7 @@ use Exporter qw(import);
 use JSON::PP;
 
 our @EXPORT_OK = qw(
-	parse_obis compose_obis normalize_obis default_output_key stable_uuid
+	parse_obis compose_obis normalize_obis default_output_key valid_output_key output_key_format stable_uuid
 	read_json write_json_atomic load_catalog lookup_obis
 	new_document migrate_legacy_meter validate_document native_channel
 	output_order_mapping ordered_output_names
@@ -114,12 +114,34 @@ sub normalize_obis
 
 sub default_output_key
 {
-	my ($identifier) = @_;
-	my $key = normalize_obis($identifier) || "OBIS";
-	$key =~ s/[^A-Za-z0-9]+/_/g;
-	$key =~ s/^_+|_+$//g;
-	$key = "OBIS_$key";
-	return substr($key, 0, 64);
+	my ($identifier, $catalog) = @_;
+	my $parsed = parse_obis($identifier);
+	return "Value_OBIS_Unknown" if (!$parsed);
+	my $info = ref($catalog) eq "HASH" ? lookup_obis($catalog, $identifier, "en") : {};
+	my $name = $info->{output_name} || ($info->{known} ? $info->{short} : "Unknown") || "Unknown";
+	$name =~ s/\s+/_/g;
+	$name =~ s/[^A-Za-z0-9_]+/_/g;
+	$name =~ s/^_+|_+$//g;
+	$name = "Value" if ($name eq "");
+	my $short_obis = join(".", $parsed->{c}, $parsed->{d}, $parsed->{e});
+	$short_obis .= "*$parsed->{f}" if (defined($parsed->{f}));
+	my $suffix = "_OBIS_$short_obis";
+	my $available = 64 - length($suffix);
+	return substr("Value" . $suffix, 0, 64) if ($available < 1);
+	$name = substr($name, 0, $available) if ($available >= 1 && length($name) > $available);
+	$name =~ s/_+$//;
+	return $name . $suffix;
+}
+
+sub valid_output_key
+{
+	my ($key) = @_;
+	return defined($key) && !ref($key) && $key =~ /\A[A-Za-z0-9 _#|()\[\]\/\'%\$!.*\-]{1,64}\z/;
+}
+
+sub output_key_format
+{
+	return "1-64 characters; allowed: letters, digits, spaces, underscore, # | ( ) [ ] / ' % \$ ! . * -";
 }
 
 sub read_json
@@ -150,7 +172,7 @@ sub new_document
 
 sub migrate_legacy_meter
 {
-	my ($document, $serial, $plugin_id, $discovered, $selected, $custom) = @_;
+	my ($document, $serial, $plugin_id, $discovered, $selected, $custom, $catalog) = @_;
 	$document ||= new_document();
 	$document->{meters} ||= {};
 	return $document->{meters}->{$serial} if (ref($document->{meters}->{$serial}) eq "ARRAY");
@@ -163,13 +185,13 @@ sub migrate_legacy_meter
 		my $identifier = normalize_obis($raw);
 		next if (!$identifier || $seen{$identifier}++);
 		push @definitions, _legacy_definition($serial, $plugin_id, $identifier,
-			$selection_explicit ? !!$selected{$identifier} : 1, "discovered", scalar(@definitions));
+			$selection_explicit ? !!$selected{$identifier} : 1, "discovered", scalar(@definitions), $catalog);
 	}
 	foreach my $raw (@{ref($selected) eq "ARRAY" ? $selected : []}, @{ref($custom) eq "ARRAY" ? $custom : []}) {
 		my $identifier = normalize_obis($raw);
 		next if (!$identifier || $seen{$identifier}++);
 		push @definitions, _legacy_definition($serial, $plugin_id, $identifier, 1,
-			$selected{$identifier} ? "migrated" : "manual", scalar(@definitions));
+			$selected{$identifier} ? "migrated" : "manual", scalar(@definitions), $catalog);
 	}
 	$document->{meters}->{$serial} = \@definitions;
 	return \@definitions;
@@ -177,9 +199,9 @@ sub migrate_legacy_meter
 
 sub _legacy_definition
 {
-	my ($serial, $plugin_id, $identifier, $enabled, $origin, $index) = @_;
+	my ($serial, $plugin_id, $identifier, $enabled, $origin, $index, $catalog) = @_;
 	my $parsed = parse_obis($identifier);
-	my $key = default_output_key($identifier);
+	my $key = default_output_key($identifier, $catalog);
 	return {
 		uuid => stable_uuid("$plugin_id:$serial:$identifier"),
 		enabled => $enabled ? JSON::PP::true : JSON::PP::false,
@@ -245,6 +267,7 @@ sub _catalog_result
 		source => $entry->{source} || "", match => $kind, groups => $parsed,
 		recommended_aggmode => $entry->{recommended_aggmode} || "none",
 	};
+	$result->{output_name} = $entry->{output_name} if (defined($entry->{output_name}) && !ref($entry->{output_name}));
 	if (defined($parsed->{f})) {
 		$result->{long} .= $language eq "de" ? " Speicher-/Abrechnungsindex: $parsed->{f}." : " Storage/billing index: $parsed->{f}.";
 	}
@@ -305,7 +328,7 @@ sub validate_document
 				if (!is_nonnegative_integer($channel->{duplicates}));
 			if ($channel->{enabled} && $output_valid && $channel->{plugin_output}->{enabled}) {
 				my $key = $channel->{plugin_output}->{key} || "";
-				push @errors, "$serial/$uuid: invalid output key." if ($key !~ /\A[A-Za-z0-9_]{1,64}\z/);
+				push @errors, "$serial/$uuid: invalid output key (required format: " . output_key_format() . ")." if (!valid_output_key($key));
 				push @errors, "$serial: duplicate output key $key." if ($key && $keys{lc($key)}++);
 			}
 			next if (!$channel->{enabled} || !$options_valid || $api !~ /\A(?:null|volkszaehler|influxdb|mysmartgrid)\z/);

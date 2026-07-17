@@ -19,6 +19,7 @@ All notable user-visible changes should be documented in this file. Use the late
 - Show each channel's applied vzLogger/MQTT DATA index in the editor and its persistent UUID in the advanced-settings heading; refresh channel numbers directly after Save/Apply and mark unapplied or inactive definitions without inventing an index.
 - Allow manually created OBIS channels to be staged for removal from their advanced settings, with channel/OBIS/UUID confirmation and persistence only on Save/Apply; keep discovered channels available for deactivation instead.
 - Expand Validate config and Save/Apply checks to cover submitted numeric ranges, protocol-specific SML/D0/OMS fields, aggregation dependencies, MQTT topics and TLS combinations, API-specific channel requirements, device and certificate paths, active-meter/bridge requirements, and UUID/identifier/`chnN` consistency across generated configuration, definitions, and bridge mapping.
+- Prefill new cache/UDP output keys from independent OBIS-catalog metadata using `<Clear_Name>_OBIS_<short-code>` (including `*F` when present), retain existing configured keys, allow parser-friendly spaces and selected punctuation, and report the complete required format in UI and backend validation errors.
 
 ## 2.0.0.33 - 2026-07-17
 

@@ -1247,7 +1247,7 @@ sub load_or_migrate_channel_document
 			my @selected = config_list_values("$serial.OBISCHANNELS");
 			my @custom = custom_channels($serial);
 			my $selected_ref = defined($plugin_cfg->param("$serial.OBISCHANNELS")) ? \@selected : undef;
-			migrate_legacy_meter($channel_document, $serial, $lbpplugindir, \@available, $selected_ref, \@custom);
+			migrate_legacy_meter($channel_document, $serial, $lbpplugindir, \@available, $selected_ref, \@custom, $obis_catalog);
 			$changed = 1;
 		}
 		foreach my $channel (@{$channel_document->{meters}->{$serial}}) {
@@ -1262,7 +1262,7 @@ sub load_or_migrate_channel_document
 		next if ($existing{$identifier});
 		my $parsed = parse_obis($identifier);
 		next if (!$parsed);
-		my $key = default_output_key($identifier);
+		my $key = default_output_key($identifier, $obis_catalog);
 		my %used = map { lc($_->{plugin_output}->{key} || "") => 1 } @$definitions;
 		my $suffix = 2;
 		my $base_key = $key;
