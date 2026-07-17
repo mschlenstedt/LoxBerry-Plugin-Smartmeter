@@ -85,7 +85,7 @@ is($mapping->{$first_uuid}->{channel_index}, 0, "mapping channel number matches 
 is($mapping->{$first_uuid}->{catalog_name_de}, "Bezogene Wirkenergie, gesamt", "mapping carries the catalog display name");
 is($mapping->{$first_uuid}->{unit}, "kWh", "mapping carries the catalog unit");
 is($mapping->{$first_uuid}->{display_factor}, 0.001, "mapping converts the vzLogger Wh value to catalog kWh for display");
-ok(!exists($mapping->{$first_uuid}->{legacy_names}), "ambiguous identifiers suppress migrated output aliases");
+ok(!exists($mapping->{$first_uuid}->{legacy_names}), "mapping emits only the configured output key and no aliases");
 ok($mapping->{$first_uuid}->{identifier_ambiguous}, "identifier fallback is disabled when another active channel has the same identifier");
 
 done_testing();

@@ -10,7 +10,61 @@ our @EXPORT_OK = qw(
 	parse_obis compose_obis normalize_obis default_output_key stable_uuid
 	read_json write_json_atomic load_catalog lookup_obis
 	new_document migrate_legacy_meter validate_document native_channel
+	output_order_mapping ordered_output_names
 );
+
+sub output_order_mapping
+{
+	my ($mapping) = @_;
+	my %order;
+	foreach my $uuid (sort keys %{ref($mapping) eq "HASH" ? $mapping : {}}) {
+		my $entry = $mapping->{$uuid};
+		next if (ref($entry) ne "HASH");
+		my $serial = $entry->{serial};
+		my $index = $entry->{channel_index};
+		next if (!defined($serial) || ref($serial) || $serial eq "");
+		next if (!defined($index) || ref($index) || $index !~ /\A\d+\z/);
+
+		my $name = $entry->{name};
+		if (defined($name) && !ref($name) && $name ne "") {
+			$order{$serial}->{$name} = { channel_index => int($index), kind => 0 };
+		}
+	}
+	return \%order;
+}
+
+sub ordered_output_names
+{
+	my ($values, $order) = @_;
+	$values = {} if (ref($values) ne "HASH");
+	$order = {} if (ref($order) ne "HASH");
+	my %timestamp_rank = (Last_Update => 0, Last_UpdateLoxEpoche => 1);
+	return sort {
+		my $a_timestamp = exists($timestamp_rank{$a}) ? $timestamp_rank{$a} : undef;
+		my $b_timestamp = exists($timestamp_rank{$b}) ? $timestamp_rank{$b} : undef;
+		defined($a_timestamp) || defined($b_timestamp)
+			? (defined($a_timestamp) && defined($b_timestamp)
+				? $a_timestamp <=> $b_timestamp
+				: defined($a_timestamp) ? -1 : 1)
+			: _compare_channel_output($a, $b, $order);
+	} keys %$values;
+}
+
+sub _compare_channel_output
+{
+	my ($a, $b, $order) = @_;
+	my $a_order = ref($order->{$a}) eq "HASH" ? $order->{$a} : undef;
+	my $b_order = ref($order->{$b}) eq "HASH" ? $order->{$b} : undef;
+	if ($a_order && $b_order) {
+		return $a_order->{channel_index} <=> $b_order->{channel_index}
+			|| ($a_order->{kind} || 0) <=> ($b_order->{kind} || 0)
+			|| lc($a) cmp lc($b)
+			|| $a cmp $b;
+	}
+	return -1 if ($a_order);
+	return 1 if ($b_order);
+	return lc($a) cmp lc($b) || $a cmp $b;
+}
 
 sub stable_uuid
 {
@@ -106,11 +160,10 @@ sub migrate_legacy_meter
 	my %seen;
 	foreach my $item (@{ref($discovered) eq "ARRAY" ? $discovered : []}) {
 		my $raw = ref($item) eq "HASH" ? $item->{identifier} : $item;
-		my $legacy_name = ref($item) eq "HASH" ? $item->{name} : undef;
 		my $identifier = normalize_obis($raw);
 		next if (!$identifier || $seen{$identifier}++);
 		push @definitions, _legacy_definition($serial, $plugin_id, $identifier,
-			$selection_explicit ? !!$selected{$identifier} : 1, "discovered", scalar(@definitions), $legacy_name);
+			$selection_explicit ? !!$selected{$identifier} : 1, "discovered", scalar(@definitions));
 	}
 	foreach my $raw (@{ref($selected) eq "ARRAY" ? $selected : []}, @{ref($custom) eq "ARRAY" ? $custom : []}) {
 		my $identifier = normalize_obis($raw);
@@ -124,10 +177,9 @@ sub migrate_legacy_meter
 
 sub _legacy_definition
 {
-	my ($serial, $plugin_id, $identifier, $enabled, $origin, $index, $legacy_name) = @_;
+	my ($serial, $plugin_id, $identifier, $enabled, $origin, $index) = @_;
 	my $parsed = parse_obis($identifier);
 	my $key = default_output_key($identifier);
-	my @legacy_keys = defined($legacy_name) && $legacy_name ne "" && $legacy_name ne $key ? ($legacy_name) : ();
 	return {
 		uuid => stable_uuid("$plugin_id:$serial:$identifier"),
 		enabled => $enabled ? JSON::PP::true : JSON::PP::false,
@@ -135,7 +187,7 @@ sub _legacy_definition
 		obis => $parsed->{base}, storage => $parsed->{f}, display_name => "",
 		api => "null", aggmode => "none", duplicates => 0,
 		api_options => { volkszaehler => {}, influxdb => {}, mysmartgrid => {} },
-		plugin_output => { enabled => $enabled ? JSON::PP::true : JSON::PP::false, key => $key, legacy_keys => \@legacy_keys },
+		plugin_output => { enabled => $enabled ? JSON::PP::true : JSON::PP::false, key => $key },
 	};
 }
 

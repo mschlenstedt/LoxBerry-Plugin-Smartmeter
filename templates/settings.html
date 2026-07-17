@@ -1057,10 +1057,17 @@
 			$("#vzlogger_mqttpass, #vzlogger_mqttkeypass").val("");
 			$("#vzlogger_mqttpass_reset, #vzlogger_mqttkeypass_reset").prop("checked", false).checkboxradio("refresh");
 			if (response && response.action == "apply") {
+				var removed_channel_state = false;
 				document.querySelectorAll(".meter-remove-marker:not(:disabled)").forEach(function (marker) {
 					var row = marker.closest("tr.meter-row");
+					var serial = marker.value || (row && row.getAttribute("data-meter-serial")) || "";
+					if (serial && channel_definitions.meters && Object.prototype.hasOwnProperty.call(channel_definitions.meters, serial)) {
+						delete channel_definitions.meters[serial];
+						removed_channel_state = true;
+					}
 					if (row) row.remove();
 				});
+				if (removed_channel_state) sync_channel_definitions();
 				document.querySelectorAll(".meter-pending-badge, .obis-channel-new").forEach(function (marker) { marker.remove(); });
 				document.querySelectorAll(".meter-template-note[id$='_template_unsaved']").forEach(function (note) { note.hidden = true; });
 			}
@@ -1192,15 +1199,30 @@
 				})
 				.then(function (html) {
 					var parsed = new DOMParser().parseFromString(html, "text/html");
+					var parsed_channel_definitions = { meters: {} };
+					try {
+						parsed_channel_definitions = JSON.parse((parsed.getElementById("channel_definitions_json") || {}).value || "{}");
+					} catch (error) {}
+					parsed_channel_definitions.meters = parsed_channel_definitions.meters || {};
 					var end = document.getElementById("meter_rows_end");
 					if (!end) throw new Error("Meter insertion point not found.");
 					parsed.querySelectorAll("tr.meter-row").forEach(function (source_row) {
 						var source_panel = source_row.querySelector(".meter-panel");
 						if (!source_panel || document.getElementById(source_panel.id)) return;
+						var serial = source_row.getAttribute("data-meter-serial") || source_panel.id.substring("meter_".length);
+						// A re-detected reader must use the freshly loaded server state. In
+						// particular, never resurrect channels removed with the meter earlier
+						// in this browser session.
+						if (Object.prototype.hasOwnProperty.call(parsed_channel_definitions.meters, serial)) {
+							channel_definitions.meters[serial] = parsed_channel_definitions.meters[serial];
+						} else {
+							delete channel_definitions.meters[serial];
+						}
 						var row = document.importNode(source_row, true);
 						end.parentNode.insertBefore(row, end);
 						initialize_meter_panel(row.querySelector(".meter-panel"), true);
 					});
+					sync_channel_definitions();
 					update_all_control_states();
 				});
 		}
@@ -1594,7 +1616,12 @@
 				control.closest(".ui-input-text, .ui-select, .ui-flipswitch, .ui-checkbox").toggleClass("ui-disabled", disabled);
 				try {
 					if (control.is("select[data-role='flipswitch']")) control.flipswitch(disabled ? "disable" : "enable");
-					else if (control.is("select")) control.selectmenu(disabled ? "disable" : "enable");
+					else if (control.is("select")) {
+						control.selectmenu(disabled ? "disable" : "enable");
+						// Native select state and the generated jQuery Mobile button can diverge
+						// after an AJAX apply. Rebuild the visible widget from the final state.
+						control.selectmenu("refresh", true);
+					}
 					else if (control.is("input[type='text'], input[type='number'], input[type='password']")) control.textinput(disabled ? "disable" : "enable");
 				} catch (error) {}
 				var inline_setting = control.closest(".service-inline-setting");

@@ -81,16 +81,12 @@ foreach my $config_key (sort keys %flat_config) {
 		}
 		my @channels;
 		my $aggtime = clean_integer(config_scalar_value("$section.AGGTIME"), 0);
-		my %legacy_name_by_identifier = map {
-			($_->{identifier} || "") => ($_->{name} || "")
-		} available_channels($section);
 		foreach my $definition (@$definitions) {
-			next if (($definition->{origin} || "") eq "manual");
-			next if (exists($definition->{plugin_output}->{legacy_keys}));
-			my $identifier = native_channel($definition, $aggtime)->{identifier};
-			my $legacy_name = $legacy_name_by_identifier{$identifier} || "";
-			$definition->{plugin_output}->{legacy_keys} = $legacy_name ne "" && $legacy_name ne ($definition->{plugin_output}->{key} || "") ? [$legacy_name] : [];
-			$channel_document_changed = 1;
+			next if (ref($definition->{plugin_output}) ne "HASH");
+			if (exists($definition->{plugin_output}->{legacy_keys})) {
+				delete $definition->{plugin_output}->{legacy_keys};
+				$channel_document_changed = 1;
+			}
 		}
 		my %identifier_counts;
 		foreach my $definition (@$definitions) {
@@ -119,10 +115,6 @@ foreach my $config_key (sort keys %flat_config) {
 				channel => "chn$channel_index",
 				channel_index => $channel_index,
 			};
-				if ($identifier_counts{$channel->{identifier}} == 1 && ref($definition->{plugin_output}->{legacy_keys}) eq "ARRAY") {
-					my @legacy_names = grep { defined($_) && $_ ne "" && $_ ne $definition->{plugin_output}->{key} } @{$definition->{plugin_output}->{legacy_keys}};
-					$mapping_entry->{legacy_names} = \@legacy_names if (@legacy_names);
-				}
 				$channel_mapping{$uuid} = $mapping_entry;
 			}
 			$channel_index++;

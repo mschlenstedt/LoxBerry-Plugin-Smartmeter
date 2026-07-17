@@ -6,7 +6,7 @@ use FindBin;
 use JSON::PP;
 use Test::More;
 use lib "$FindBin::Bin/../bin";
-use SmartMeterVZLoggerChannels qw(parse_obis compose_obis normalize_obis stable_uuid load_catalog lookup_obis new_document migrate_legacy_meter validate_document native_channel);
+use SmartMeterVZLoggerChannels qw(parse_obis compose_obis normalize_obis stable_uuid load_catalog lookup_obis new_document migrate_legacy_meter validate_document native_channel output_order_mapping ordered_output_names);
 
 my $catalog = load_catalog("$FindBin::Bin/../templates/obis_catalog.json");
 is($catalog->{version}, 1, "catalog schema version");
@@ -27,7 +27,8 @@ my $legacy_rows = migrate_legacy_meter($migrated, "reader", "smartmeter-v2",
 is(scalar(@$legacy_rows), 3, "migration retains discovered, deselected, and custom identifiers");
 ok($legacy_rows->[0]->{enabled} && !$legacy_rows->[1]->{enabled}, "legacy selection and deselection are retained");
 is($legacy_rows->[0]->{uuid}, stable_uuid("smartmeter-v2:reader:1-0:1.8.0"), "first migrated instance keeps its previous UUID");
-is_deeply($legacy_rows->[0]->{plugin_output}->{legacy_keys}, ["Import_Total_OBIS_1.8.0"], "migration retains the previous cache name as a compatibility alias");
+is($legacy_rows->[0]->{plugin_output}->{key}, "OBIS_1_0_1_8_0", "migration uses the generated OBIS output key");
+ok(!exists($legacy_rows->[0]->{plugin_output}->{legacy_keys}), "migration does not create additional cache aliases");
 is(compose_obis($legacy_rows->[2]->{obis}, $legacy_rows->[2]->{storage}), "1-0:1.8.0*5", "legacy custom F value is retained");
 
 for my $case (
@@ -82,5 +83,20 @@ ok(!exists($native->{tokenx}), "unknown API values are not emitted");
 is(native_channel($doc->{meters}->{reader}->[0], 0)->{aggmode}, "none", "aggregation forced to none without aggtime");
 $doc->{meters}->{reader}->[1]->{plugin_output}->{key} = "grid_import";
 like(join("\n", validate_document($doc)), qr/duplicate output key/i, "output keys are unique case-insensitively per reader");
+
+my $output_order = output_order_mapping({
+	"uuid-2" => { serial => "reader", name => "Second", channel_index => 2 },
+	"uuid-0" => { serial => "reader", name => "First", channel_index => 0, legacy_names => ["Ignored_Legacy"] },
+	"uuid-x" => { serial => "reader", name => "No_Index" },
+});
+my %output_values = (
+	Second => 2, Last_UpdateLoxEpoche => 3, Extra_Z => 9,
+	Last_Update => "2026-07-17 12:00:00", First => 1, Extra_A => 8, No_Index => 7,
+);
+is_deeply(
+	[ordered_output_names(\%output_values, $output_order->{reader})],
+	[qw(Last_Update Last_UpdateLoxEpoche First Second Extra_A Extra_Z No_Index)],
+	"cache and UDP names are ordered by timestamps, channel number, then unmapped name",
+);
 
 done_testing();

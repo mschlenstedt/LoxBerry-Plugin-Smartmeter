@@ -5,9 +5,12 @@ use warnings;
 
 use Config::Simple;
 use File::Path qw(make_path);
+use FindBin;
 use IO::Socket;
 use JSON::PP;
 use LoxBerry::System;
+use lib $FindBin::Bin;
+use SmartMeterVZLoggerChannels qw(output_order_mapping ordered_output_names);
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
@@ -60,6 +63,7 @@ my $udp_port = clean_number($plugin_cfg->param("MAIN.UDPPORT"), 7000);
 my $mqtt = read_mqtt_settings();
 my %uuid_by_channel = channel_mapping($mapping);
 my %uuid_by_identifier = identifier_mapping($mapping);
+my $output_order_by_serial = output_order_mapping($mapping);
 
 log_line("Starting MQTT bridge. Topic=$subscribe_topic Host=$mqtt->{host}:$mqtt->{port}");
 log_line("Debug logging is enabled.") if ($debug_enabled);
@@ -123,15 +127,12 @@ while (my $line = <$mqtt_fh>) {
 	update_timestamp($reading, $values_by_serial{$reading->{serial}});
 	my $cache_value = normalize_cache_value($reading);
 	$values_by_serial{$reading->{serial}}->{$reading->{name}} = $cache_value;
-	foreach my $legacy_name (@{$reading->{legacy_names} || []}) {
-		$values_by_serial{$reading->{serial}}->{$legacy_name} = $cache_value;
-	}
 	update_calculated_power($reading, $values_by_serial{$reading->{serial}});
 	$dirty_serials{$reading->{serial}} = 1;
 
 	if (time() - $last_update_cycle >= $update_interval) {
-		flush_cache(\%values_by_serial, \%dirty_serials);
-		send_udp(\%values_by_serial, $udp_port) if ($send_udp);
+		flush_cache(\%values_by_serial, \%dirty_serials, $output_order_by_serial);
+		send_udp(\%values_by_serial, $udp_port, $output_order_by_serial) if ($send_udp);
 		$last_update_cycle = time();
 	}
 }
@@ -189,7 +190,6 @@ sub parse_reading
 	return {
 		serial => $mapping->{$uuid}->{serial},
 		name => $mapping->{$uuid}->{name},
-		legacy_names => ref($mapping->{$uuid}->{legacy_names}) eq "ARRAY" ? $mapping->{$uuid}->{legacy_names} : [],
 		identifier => $mapping->{$uuid}->{identifier} || "",
 		uuid => $uuid,
 		value => $value,
@@ -199,7 +199,7 @@ sub parse_reading
 
 sub write_cache
 {
-	my ($serial, $values) = @_;
+	my ($serial, $values, $order) = @_;
 	my $target = "$runtime_dir/$serial.data";
 	my $tmp = "$target.$$";
 
@@ -207,7 +207,7 @@ sub write_cache
 		log_line("Could not write $tmp: $!");
 		return;
 	};
-	foreach my $name (sort keys %$values) {
+	foreach my $name (ordered_output_names($values, $order)) {
 		print $fh "$serial:$name:$values->{$name}\n";
 	}
 	close($fh);
@@ -216,10 +216,10 @@ sub write_cache
 
 sub flush_cache
 {
-	my ($values_by_serial, $dirty_serials) = @_;
+	my ($values_by_serial, $dirty_serials, $output_order_by_serial) = @_;
 	foreach my $serial (sort keys %$dirty_serials) {
 		next if (!exists($values_by_serial->{$serial}));
-		write_cache($serial, $values_by_serial->{$serial});
+		write_cache($serial, $values_by_serial->{$serial}, $output_order_by_serial->{$serial});
 	}
 	%$dirty_serials = ();
 }
@@ -379,11 +379,12 @@ sub write_power_state
 
 sub send_udp
 {
-	my ($values, $port) = @_;
+	my ($values, $port, $output_order_by_serial) = @_;
 	my @targets = miniserver_targets();
 
 	foreach my $serial (sort keys %$values) {
-		my $payload = join("; ", map { "$serial:$_:$values->{$serial}->{$_}" } sort keys %{$values->{$serial}});
+		my $payload = join("; ", map { "$serial:$_:$values->{$serial}->{$_}" }
+			ordered_output_names($values->{$serial}, $output_order_by_serial->{$serial}));
 		next if ($payload eq "");
 
 		foreach my $target (@targets) {
