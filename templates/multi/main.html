@@ -2,22 +2,58 @@
 .implementation-tabs { width: 100%; }
 .implementation-tabs ul { display: flex !important; width: 100% !important; }
 .implementation-tabs li { float: none !important; flex: 1 1 50%; width: 50% !important; }
-.implementation-tabs .ui-btn { min-height: 2.8em; padding: .6em .8em; font-size: 1.08em; line-height: 1.2; text-align: center; white-space: normal; overflow-wrap: anywhere; border-right-width: 1px !important; }
+.implementation-tabs .ui-btn { display: flex !important; align-items: center; justify-content: center; gap: .55em; min-height: 3.2em; padding: .65em .9em; box-sizing: border-box; font-size: 1.28em; line-height: 1.2; text-align: center; white-space: normal; overflow-wrap: anywhere; border-right-width: 1px !important; }
+.implementation-tab-label { line-height: 1.2; }
+.implementation-state { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 1.75em; height: 1.75em; margin: 0; box-sizing: border-box; border: 2px solid; border-radius: 50%; background: #fff; font-size: 1em; line-height: 1; font-weight: bold; text-shadow: none; }
+.implementation-state-icon { display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-family: Arial, sans-serif; font-size: 1.15em; line-height: 1; }
+.implementation-state.is-active { border-color: #247021; color: #247021; }
+.implementation-state.is-inactive { border-color: #666; color: #555; }
+.activation-unsaved { display: block; color: #8a5a00; font-size: 85%; margin-top: .2em; }
+.activation-unsaved[hidden] { display: none; }
+#main_form { font-size: 13.5px; line-height: 1.35; }
+#main_form label { font-size: 13px; line-height: 1.35; }
+#main_form font { font-size: 12.5px; line-height: 1.4; }
+#main_form h2 { margin: 14px 0 8px; font-size: 1.5em; line-height: 1.35; }
+#main_form > table { border-collapse: collapse; table-layout: fixed; }
+#main_form > table > tbody > tr > td { padding: 4px 5px; vertical-align: top; }
+#main_form .ui-mini.ui-btn,
+#main_form .ui-mini .ui-btn {
+	font-size: 12px;
+	line-height: 1.3;
+	padding-top: 6px;
+	padding-bottom: 6px;
+}
+#main_form .ui-flipswitch { width: 5.25em; font-size: 14px; }
+#main_form .ui-flipswitch.ui-flipswitch-active { width: 1.875em; padding-left: 3.375em; }
+#main_form .ui-flipswitch .ui-btn.ui-flipswitch-on { font-size: inherit; }
+#main_form .ui-flipswitch .ui-flipswitch-off { box-sizing: border-box; }
+#main_form .ui-input-text > input,
+#main_form textarea.ui-input-text {
+	font-size: 13px;
+	line-height: 1.35;
+	padding: 5px 8px;
+}
+#main_form .ui-input-text,
+#main_form .ui-select { margin-top: 3px; margin-bottom: 3px; }
+#main_form .legacy-inline-field { table-layout: fixed; }
+#main_form .legacy-inline-field > tbody > tr > .legacy-inline-label { width: 24%; }
+#main_form .legacy-inline-field > tbody > tr > .legacy-inline-control { width: 76%; }
 </style>
 <div data-role="navbar" class="ui-navbar implementation-tabs" role="navigation" style="margin: 0 0 12px 0;">
 
 	<ul> 
 		<li>
-			<a href="./index.cgi?form=vzlogger"><TMPL_VAR NAME=T::MENU.VZLOGGER></a>
+			<a href="./index.cgi?form=vzlogger"><span id="vzlogger_tab_state" class="implementation-state <TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE>is-active<TMPL_ELSE>is-inactive</TMPL_IF>" data-active-label="<TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE>" data-inactive-label="<TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE>" title="<TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE></TMPL_IF>" aria-label="<TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE></TMPL_IF>"><span class="implementation-state-icon" aria-hidden="true"><TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE>✓<TMPL_ELSE>–</TMPL_IF></span></span><span class="implementation-tab-label"><TMPL_VAR NAME=T::MENU.VZLOGGER></span></a>
 		</li> 
 		<li>
-			<a href="./index_legacy.cgi?form=legacy" class="ui-btn-active"><TMPL_VAR NAME=T::MENU.LEGACY></a>
+			<a href="./index_legacy.cgi?form=legacy" class="ui-btn-active"><span id="legacy_tab_state" class="implementation-state <TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE>is-active<TMPL_ELSE>is-inactive</TMPL_IF>" data-active-label="<TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE>" data-inactive-label="<TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE>" title="<TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE></TMPL_IF>" aria-label="<TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE></TMPL_IF>"><span class="implementation-state-icon" aria-hidden="true"><TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE>✓<TMPL_ELSE>–</TMPL_IF></span></span><span class="implementation-tab-label"><TMPL_VAR NAME=T::MENU.LEGACY></span></a>
 		</li>
 	</ul>
 </div>
 
 <form method="post" data-ajax="false" name="main_form" id="main_form" action="./index_legacy.cgi">
 <input type="hidden" name="saveformdata" value="1">
+<input type="hidden" id="implementation_changed" name="implementation_changed" value="0">
 
 <table border=0 width="100%" cellpadding="10">
 <tr>
@@ -25,13 +61,11 @@
 	<label id="labelimplementation"><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_MODE></label>
 	</td>
 	<td width="55%">
-		<select id="implementation" name="implementation" data-role="flipswitch">
-			<option value="vzlogger"><TMPL_VAR NAME=T::GENERIC.OFF></option>
+		<select id="implementation" name="implementation" data-role="flipswitch" onChange="update_legacy_activation_state();">
+			<option value="none"><TMPL_VAR NAME=T::GENERIC.OFF></option>
 			<option value="legacy"><TMPL_VAR NAME=T::GENERIC.ON></option>
 		</select>
-		<script>
-			$( "#implementation").val( "<TMPL_VAR NAME=IMPLEMENTATION>" );
-		</script>
+		<span id="implementation_unsaved" class="activation-unsaved" hidden><TMPL_VAR NAME=T::VZLOGGER.ACTIVATION_UNSAVED></span>
 	</td>
 	<td width="5%">
 	&nbsp;
@@ -123,12 +157,12 @@
 			</script>
 			</td>
 			<td>
-			<table border=0 width="100%">
+			<table border=0 width="100%" class="legacy-inline-field">
 			<tr>
-				<td>
+				<td class="legacy-inline-label">
 				<label id="labeludpport"><TMPL_VAR NAME=T::FORMTABLE.UDP_PORT></label>
 				</td>
-				<td>
+				<td class="legacy-inline-control">
 				<input id="udpport" name="udpport" type="text" data-validation="number" class="textfield" value="<TMPL_VAR NAME=UDPPORT>"
 				data-validation-allowing="range[1;65000]"
 				data-validation-error-msg="<TMPL_VAR NAME=SERIAL> <TMPL_VAR NAME=T::FORMTABLE.UDP_PORT> <TMPL_VAR NAME=T::FORMTABLE.UDP_PORT_VALIDATION>">
@@ -166,12 +200,12 @@
 			</script>
 			</td>
 			<td>
-			<table border=0 width="100%">
+			<table border=0 width="100%" class="legacy-inline-field">
 			<tr>
-				<td>
+				<td class="legacy-inline-label">
 				<label id="labelmqtttopic"><TMPL_VAR NAME=T::FORMTABLE.MQTT_TOPIC></label>
 				</td>
-				<td>
+				<td class="legacy-inline-control">
 				<input id="mqtttopic" name="mqtttopic" type="text" class="textfield" value="<TMPL_VAR NAME=MQTTTOPIC>"
 				data-validation="custom" data-validation-regexp="^[^#+]+$"
 				data-validation-error-msg="<TMPL_VAR NAME=T::FORMTABLE.MQTT_TOPIC_VALIDATION>">
@@ -254,122 +288,66 @@
 	<select onChange="disable_<TMPL_VAR NAME=SERIAL>_meter();" id="<TMPL_VAR NAME=SERIAL>_meter" name="<TMPL_VAR NAME=SERIAL>_meter" data-mini="true" data-native-menu="true">
 	<option value="0"><TMPL_VAR NAME=T::FORMTABLEROWS.PLEASESELECT></option>
 	<option value="manual"><TMPL_VAR NAME=T::FORMTABLEROWS.MANUAL></option>
-	<option value="genericd0">Generic D0-Protocol</option>
-	<option value="genericsml">Generic SML-Protocol</option>
-	<option value="emhed300sml">EMH ED300(S) (SML-Protocol)</option>
-	<option value="emhehzksml">EMH eHZ-K (SML-Protocol)</option>
-	<option value="emhehzksml">EMH eHZ-IW8E2A (SML-Protocol)</option>
-	<option value="iskra173d0">Iskra MT173 (D0-Protocol)</option>
-	<option value="iskra173sml">Iskra MT173 (SML-Protocol)</option>
-	<option value="iskra174d0">Iskra MT174 (D0-Protocol)</option>
-	<option value="iskra174sml">Iskra MT174 (SML-Protocol)</option>
-	<option value="iskra175d0">Iskra MT175 (D0-Protocol)</option>
-	<option value="iskra175sml">Iskra MT175 (SML-Protocol)</option>
-	<option value="iskra382d0">Iskra MT382 (D0-Protocol)</option>
-	<option value="iskra631sml">Iskra MT631 (SML-Protocol)</option>
-	<option value="iskra681sml">Iskra MT681 (SML-Protocol)</option>
-	<option value="iskra691sml">Iskra MT691 (SML-Protocol)</option>
-	<option value="itronace3000type260d0">Itron ACE3000 Type 260 (D0-Protocol)</option>
-	<option value="landisgyre320d0">Landis &amp; Gyre E320 (D0-Protocol)</option>
-	<option value="landisgyre350d0">Landis &amp; Gyre E350 (D0-Protocol)</option>
-	<option value="landisgyret550d0">Landis &amp; Gyre T550 (D0-Protocol)</option>
-	<option value="pafal20ec3grd0">Pafal 20ec3gr (D0-Protocol)</option>
-	<option value="siemenstd3511d0">Siemens TD-3511 (D0-Protocol)</option>
-	<option value="siemensuh50do">Siemens UH50 (D0-Protocol)</option>
-	<option value="sagemcomt211d0f">Sagemcom S211/T211 Flanders(D0-Protocol)</option>
-	<option value="sagemcomt211d0">Sagemcom S211/T211 (D0-Protocol)</option>
+<TMPL_LOOP NAME=METER_TEMPLATES><option value="<TMPL_VAR NAME=ID ESCAPE=HTML>" data-protocol="<TMPL_VAR NAME=ID ESCAPE=HTML>" data-startbaudrate="<TMPL_VAR NAME=STARTBAUDRATE ESCAPE=HTML>" data-baudrate="<TMPL_VAR NAME=BAUDRATE ESCAPE=HTML>" data-timeout="<TMPL_VAR NAME=TIMEOUT ESCAPE=HTML>" data-delay="<TMPL_VAR NAME=DELAY ESCAPE=HTML>" data-handshake="<TMPL_VAR NAME=HANDSHAKE ESCAPE=HTML>" data-databits="<TMPL_VAR NAME=DATABITS ESCAPE=HTML>" data-stopbits="<TMPL_VAR NAME=STOPBITS ESCAPE=HTML>" data-parity="<TMPL_VAR NAME=PARITY ESCAPE=HTML>" data-crc="<TMPL_VAR NAME=CRC ESCAPE=HTML>"><TMPL_VAR NAME=LABEL ESCAPE=HTML> (<TMPL_VAR NAME=PROTOCOL_LABEL ESCAPE=HTML>-Protocol)</option></TMPL_LOOP>
 	</select>
 	<script>
 	// Select option depending on saved config
 	$( "#<TMPL_VAR NAME=SERIAL>_meter").val( "<TMPL_VAR NAME=METER>" );
-	// Disable some options on Load depending on selected value
-	disable_<TMPL_VAR NAME=SERIAL>_meter();
-	// Disable some options if not manual configuration
-	function disable_<TMPL_VAR NAME=SERIAL>_meter() {
-		if ( $( "#<TMPL_VAR NAME=SERIAL>_meter" ).val() == "manual" ) {
-			$( "#label<TMPL_VAR NAME=SERIAL>_protocol" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_protocol" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_protocol" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_protocol" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_baudrate" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_baudrate" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_baudrate" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_baudrate" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_startbaudrate" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_startbaudrate" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_startbaudrate" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_startbaudrate" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_parity" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_parity" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_parity" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_parity" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_handshake" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_handshake" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_handshake" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_handshake" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_databits" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_databits" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_databits" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_databits" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_stopbits" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_stopbits" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_stopbits" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_stopbits" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_timeout" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_timeout" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_timeout" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_timeout" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_delay" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_crc" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_crc" ).removeClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_crc" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_crc" ).selectmenu('refresh', true);
-		} else {
-			$( "#label<TMPL_VAR NAME=SERIAL>_protocol" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_protocol" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_protocol" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_protocol" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_baudrate" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_baudrate" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_baudrate" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_baudrate" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_startbaudrate" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_startbaudrate" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_startbaudrate" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_startbaudrate" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_parity" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_parity" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_parity" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_parity" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_handshake" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_handshake" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_handshake" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_handshake" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_databits" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_databits" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_databits" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_databits" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_stopbits" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_stopbits" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_stopbits" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_stopbits" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_timeout" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_timeout" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_timeout" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_timeout" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_delay" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_delay" ).selectmenu('refresh', true);
-			$( "#label<TMPL_VAR NAME=SERIAL>_crc" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_crc" ).addClass('ui-disabled');
-			$( "#<TMPL_VAR NAME=SERIAL>_crc" ).selectmenu();
-			$( "#<TMPL_VAR NAME=SERIAL>_crc" ).selectmenu('refresh', true);
-		}
+	var <TMPL_VAR NAME=SERIAL>_manual_values = null;
+	var <TMPL_VAR NAME=SERIAL>_previous_meter = $( "#<TMPL_VAR NAME=SERIAL>_meter" ).val();
+	var <TMPL_VAR NAME=SERIAL>_manual_fields = [
+		"protocol", "baudrate", "startbaudrate", "parity", "handshake",
+		"databits", "stopbits", "timeout", "delay", "crc"
+	];
+
+	function read_<TMPL_VAR NAME=SERIAL>_manual_values() {
+		var values = {};
+		$.each(<TMPL_VAR NAME=SERIAL>_manual_fields, function(_, field) {
+			values[field] = $( "#<TMPL_VAR NAME=SERIAL>_" + field ).val();
+		});
+		return values;
 	}
+
+	function show_<TMPL_VAR NAME=SERIAL>_manual_values(values) {
+		$.each(<TMPL_VAR NAME=SERIAL>_manual_fields, function(_, field) {
+			$( "#<TMPL_VAR NAME=SERIAL>_" + field ).val(values[field] == null ? "" : values[field]);
+		});
+	}
+
+	function refresh_<TMPL_VAR NAME=SERIAL>_manual_fields(enabled) {
+		$.each(<TMPL_VAR NAME=SERIAL>_manual_fields, function(_, field) {
+			var control = $( "#<TMPL_VAR NAME=SERIAL>_" + field );
+			$( "#label<TMPL_VAR NAME=SERIAL>_" + field ).toggleClass("ui-disabled", !enabled);
+			control.prop("disabled", !enabled).toggleClass("ui-disabled", !enabled);
+			control.selectmenu();
+			control.selectmenu("refresh", true);
+		});
+	}
+
+	// Show template values read-only while retaining the separate manual values.
+	function disable_<TMPL_VAR NAME=SERIAL>_meter() {
+		var meter = $( "#<TMPL_VAR NAME=SERIAL>_meter" ).val();
+		if (<TMPL_VAR NAME=SERIAL>_manual_values && <TMPL_VAR NAME=SERIAL>_previous_meter == "manual") {
+			<TMPL_VAR NAME=SERIAL>_manual_values = read_<TMPL_VAR NAME=SERIAL>_manual_values();
+		}
+		if (meter == "manual" || meter == "0") {
+			show_<TMPL_VAR NAME=SERIAL>_manual_values(<TMPL_VAR NAME=SERIAL>_manual_values || {});
+		} else {
+			var preset = $( "#<TMPL_VAR NAME=SERIAL>_meter option:selected" );
+			var preset_values = {};
+			$.each(<TMPL_VAR NAME=SERIAL>_manual_fields, function(_, field) {
+				preset_values[field] = preset.attr("data-" + field) || "";
+			});
+			show_<TMPL_VAR NAME=SERIAL>_manual_values(preset_values);
+		}
+		refresh_<TMPL_VAR NAME=SERIAL>_manual_fields(meter == "manual");
+		<TMPL_VAR NAME=SERIAL>_previous_meter = meter;
+	}
+
+	$(function() {
+		<TMPL_VAR NAME=SERIAL>_manual_values = read_<TMPL_VAR NAME=SERIAL>_manual_values();
+		disable_<TMPL_VAR NAME=SERIAL>_meter();
+	});
 	</script>
 	</td>
 	<td width="5%">
@@ -391,30 +369,7 @@
 		</td>
 		<td colspan=3>
 		<select id="<TMPL_VAR NAME=SERIAL>_protocol" name="<TMPL_VAR NAME=SERIAL>_protocol" data-mini="true" data-native-menu="true">
-		<option value="genericd0">Generic D0-Protocol</option>
-		<option value="genericsml">Generic SML-Protocol</option>
-		<option value="emhed300sml">EMH ED300(S) (SML-Protocol)</option>
-		<option value="emhehzksml">EMH eHZ-K (SML-Protocol)</option>
-		<option value="emhehzksml">EMH eHZ-IW8E2A (SML-Protocol)</option>
-		<option value="iskra173d0">Iskra MT173 (D0-Protocol)</option>
-		<option value="iskra173sml">Iskra MT173 (SML-Protocol)</option>
-		<option value="iskra174d0">Iskra MT174 (D0-Protocol)</option>
-		<option value="iskra174sml">Iskra MT174 (SML-Protocol)</option>
-		<option value="iskra175d0">Iskra MT175 (D0-Protocol)</option>
-		<option value="iskra175sml">Iskra MT175 (SML-Protocol)</option>
-		<option value="iskra382d0">Iskra MT382 (D0-Protocol)</option>
-		<option value="iskra631sml">Iskra MT631 (SML-Protocol)</option>
-		<option value="iskra681sml">Iskra MT681 (SML-Protocol)</option>
-		<option value="iskra691sml">Iskra MT691 (SML-Protocol)</option>
-		<option value="itronace3000type260d0">Itron ACE3000 Type 260 (D0-Protocol)</option>
-		<option value="landisgyre320d0">Landis &amp; Gyre E320 (D0-Protocol)</option>
-		<option value="landisgyre350d0">Landis &amp; Gyre E350 (D0-Protocol)</option>
-		<option value="landisgyret550d0">Landis &amp; Gyre T550 (D0-Protocol)</option>
-		<option value="pafal20ec3grd0">Pafal 20ec3gr (D0-Protocol)</option>
-		<option value="siemenstd3511d0">Siemens TD-3511 (D0-Protocol)</option>
-		<option value="siemensuh50do">Siemens UH50 (D0-Protocol)</option>
-		<option value="sagemcomt211d0f">Sagemcom S211/T211 Flanders(D0-Protocol)</option>
-		<option value="sagemcomt211d0">Sagemcom S211/T211 (D0-Protocol)</option>
+<TMPL_LOOP NAME=METER_TEMPLATES><option value="<TMPL_VAR NAME=ID ESCAPE=HTML>"><TMPL_VAR NAME=LABEL ESCAPE=HTML> (<TMPL_VAR NAME=PROTOCOL_LABEL ESCAPE=HTML>-Protocol)</option></TMPL_LOOP>
 		</select>
 		<script>
 		// Select option depending on saved config
@@ -623,10 +578,35 @@
 		errorMessagePosition : $messages,
 	});
 
+	var saved_implementation = "<TMPL_VAR NAME=IMPLEMENTATION>";
+	var initial_implementation_value = "<TMPL_VAR NAME=IMPLEMENTATION_SWITCH_VALUE>";
+	$("#implementation").val(initial_implementation_value);
+	update_legacy_activation_state();
+
 	// Disable some options on Load depending on selected value
 	disable_cron();
 	disable_udp();
 	disable_mqtt();
+
+	function set_implementation_tab_state(id, active) {
+		var state = $("#" + id);
+		if (!state.length) return;
+		var label = state.attr(active ? "data-active-label" : "data-inactive-label") || "";
+		state.toggleClass("is-active", active).toggleClass("is-inactive", !active).attr("title", label).attr("aria-label", label);
+		state.find(".implementation-state-icon").text(active ? "✓" : "–");
+	}
+
+	function set_implementation_tab_states(mode) {
+		set_implementation_tab_state("vzlogger_tab_state", mode == "vzlogger");
+		set_implementation_tab_state("legacy_tab_state", mode == "legacy");
+	}
+
+	function update_legacy_activation_state() {
+		var changed = $("#implementation").val() != initial_implementation_value;
+		$("#implementation_changed").val(changed ? "1" : "0");
+		$("#implementation_unsaved").prop("hidden", !changed);
+		set_implementation_tab_states(saved_implementation);
+	}
 
 	function disable_cron() {
 		if ( $( "#read" ).val() == "0" ) {

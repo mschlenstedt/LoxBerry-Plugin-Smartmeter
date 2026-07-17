@@ -38,6 +38,8 @@ use strict;
 ##########################################################################
 
 my $log;
+my $meter_templates_cache;
+my $saved_meter_protocols_cache;
 
 # Read Form
 my $cgi = CGI->new;
@@ -154,6 +156,7 @@ sub form_vzlogger
 
 	if ($q->{saveformdata}) {
 		my $action = $q->{submitaction} || "apply";
+		my $implementation_before_save = implementation_mode();
 		my $save_output = "";
 		if ($action =~ /\A(?:start|stop|restart)-(?:vzlogger|bridge)\z/) {
 			save_service_log_settings($action);
@@ -175,7 +178,9 @@ sub form_vzlogger
 		if ($action eq "read-obis") {
 			$output .= read_obis_channels($q->{obis_serial}, @heads);
 		} else {
-			$output .= ($control_action eq "apply") ? apply_selected_implementation() : run_control($control_action);
+			my $activating_vzlogger = $control_action eq "apply" &&
+				$implementation_before_save ne "vzlogger" && implementation_mode() eq "vzlogger";
+			$output .= ($control_action eq "apply") ? apply_selected_implementation($activating_vzlogger) : run_control($control_action);
 		}
 		if ($control_action eq "debug-log" && $output =~ m{Created debug log: \Q$lbhomedir\E/log/plugins/\Q$lbpplugindir\E/([^/\s]+)}) {
 			print $cgi->redirect(-url => log_redirect_url("plugins/$lbpplugindir/$1"));
@@ -212,7 +217,11 @@ sub form_vzlogger
 		($L{'VZLOGGER.MQTT_PASSWORD_NONE_STATUS'} || "No password configured");
 
 	$template->param("FORM_VZLOGGER", 1);
-	$template->param("IMPLEMENTATION" => implementation_mode());
+	my $implementation = implementation_mode();
+	$template->param("IMPLEMENTATION" => $implementation);
+	$template->param("IMPLEMENTATION_SWITCH_VALUE" => ($implementation eq "vzlogger" ? "vzlogger" : "none"));
+	$template->param("VZLOGGER_IMPLEMENTATION_ACTIVE" => ($implementation eq "vzlogger"));
+	$template->param("LEGACY_IMPLEMENTATION_ACTIVE" => ($implementation eq "legacy"));
 	$template->param("READ" => $plugin_cfg->param("MAIN.READ") || 0);
 	$template->param("CRON" => $plugin_cfg->param("MAIN.CRON") || 5);
 	$template->param("SENDUDP" => $plugin_cfg->param("MAIN.SENDUDP") || 0);
@@ -251,6 +260,7 @@ sub form_vzlogger
 	$template->param("VZLOGGER_CONFIG_DISABLED" => (-e "$lbpconfigdir/vzlogger.conf" ? "" : "ui-disabled"));
 	$template->param("VZLOGGER_LIVEURL" => "http://$ENV{HTTP_HOST}:$local_port/");
 	$template->param("VZLOGGER_RENDERED_URL" => "./vzlogger_live.cgi");
+	$template->param("METER_TEMPLATES_JSON" => JSON::PP->new->utf8->canonical->encode(load_meter_templates()));
 	add_http_cache_template_params(@rows);
 	$template->param("ROWS" => \@rows);
 	return();
@@ -456,7 +466,7 @@ sub run_service_ajax_action
 	die "Unknown service action." if (!$allowed{$action || ""});
 	my $starting = $action =~ /\A(?:start|restart)-/;
 	my $bridge_action = $action =~ /-bridge\z/;
-	my $requested_implementation = clean_config_value($q->{implementation}, qr/\A(?:legacy|vzlogger)\z/, "");
+	my $requested_implementation = clean_config_value($q->{implementation}, qr/\A(?:none|vzlogger)\z/, "");
 	my $config = generated_config_status();
 	if ($action =~ /-vzlogger\z/) {
 		die "Enable vzLogger before starting the service." if ($starting && $requested_implementation ne "vzlogger");
@@ -501,6 +511,7 @@ sub save_service_log_settings
 		$plugin_cfg->param("VZLOGGER.DEBUG", $q->{vzlogger_debug});
 	}
 	$plugin_cfg->save;
+	remove_legacy_cronjobs() if ($starting);
 }
 
 sub generated_config_status
@@ -547,6 +558,31 @@ sub load_plugin_language
 	foreach my $name (keys %phrases) {
 		$template->param("T::$name" => $phrases{$name});
 	}
+}
+
+sub load_meter_templates
+{
+	return $meter_templates_cache if ($meter_templates_cache);
+	my $catalog_file = "$lbptemplatedir/meter_templates.json";
+	open(my $catalog_fh, "<", $catalog_file) or die "Could not read meter template catalog $catalog_file: $!";
+	local $/;
+	my $json = <$catalog_fh>;
+	close($catalog_fh);
+	my $templates = eval { JSON::PP->new->utf8->decode($json) };
+	die "Invalid meter template catalog $catalog_file: $@" if (!$templates || ref($templates) ne "ARRAY");
+	my %ids;
+	foreach my $entry (@{$templates}) {
+		die "Invalid meter template entry in $catalog_file" if (ref($entry) ne "HASH");
+		my $id = $entry->{id} || "";
+		die "Invalid or duplicate meter template id '$id'" if ($id !~ /\A[A-Za-z0-9_.:-]+\z/ || $ids{$id}++);
+		die "Invalid protocol in meter template '$id'" if (($entry->{protocol} || "") !~ /\A(?:sml|d0)\z/);
+		die "Invalid serial mode in meter template '$id'" if (($entry->{serial_mode} || "") !~ /\A(?:8n1|7e1|7o1|7n1)\z/i);
+		foreach my $field (qw(initial_baudrate read_baudrate read_timeout)) {
+			die "Invalid $field in meter template '$id'" if (!defined($entry->{$field}) || $entry->{$field} !~ /\A\d+\z/);
+		}
+	}
+	$meter_templates_cache = $templates;
+	return $meter_templates_cache;
 }
 
 sub ensure_vzlogger_defaults
@@ -741,7 +777,10 @@ sub save_vzlogger_form
 			$remove_serials{$serial} = 1 if ($known_serials{$serial});
 		}
 	}
-	my $implementation = clean_config_value($q->{implementation}, qr/\A(?:legacy|vzlogger)\z/, implementation_mode());
+	my $implementation = implementation_mode();
+	if (($q->{implementation_changed} || "") eq "1") {
+		$implementation = clean_config_value($q->{implementation}, qr/\A(?:none|vzlogger)\z/, $implementation);
+	}
 	$plugin_cfg->param("MAIN.IMPLEMENTATION", $implementation);
 	$plugin_cfg->param("MAIN.READ", clean_config_value($q->{read}, qr/\A[01]\z/, defined($plugin_cfg->param("MAIN.READ")) ? $plugin_cfg->param("MAIN.READ") : "0"));
 	# Disabled form controls are not submitted. Preserve their saved values while
@@ -813,7 +852,7 @@ sub save_vzlogger_form
 		if ($mode eq "d0" && $meter_enabled) {
 			$plugin_cfg->param("$serial.DUMPFILE", clean_config_value($q->{"$serial\_dumpfile"}, qr/\A[^\r\n]*\z/, config_scalar_value("$serial.DUMPFILE")));
 			$plugin_cfg->param("$serial.ACKSEQ", clean_config_value($q->{"$serial\_ackseq"}, qr/\A(?:auto|[A-Fa-f0-9]*)\z/, config_scalar_value("$serial.ACKSEQ")));
-			$plugin_cfg->param("$serial.BAUDRATEREAD", clean_config_value($q->{"$serial\_baudrateread"}, qr/\A\d*\z/, first_config_value($serial, "BAUDRATEREAD", "STARTBAUDRATE") || ""));
+			$plugin_cfg->param("$serial.BAUDRATEREAD", clean_config_value($q->{"$serial\_baudrateread"}, qr/\A\d*\z/, config_scalar_value("$serial.BAUDRATEREAD") // ""));
 			$plugin_cfg->param("$serial.WAITSYNC", clean_config_value($q->{"$serial\_waitsync"}, qr/\A(?:|off|end)\z/, config_scalar_value("$serial.WAITSYNC")));
 			$plugin_cfg->param("$serial.READTIMEOUT", clean_config_value($q->{"$serial\_readtimeout"}, qr/\A\d*\z/, first_config_value($serial, "READTIMEOUT", "TIMEOUT") || ""));
 			$plugin_cfg->param("$serial.BAUDRATECHANGEDELAY", clean_config_value($q->{"$serial\_baudratechangedelay"}, qr/\A\d*\z/, config_scalar_value("$serial.BAUDRATECHANGEDELAY")));
@@ -1108,6 +1147,7 @@ sub obis_discovery_cancel_requested
 
 sub apply_selected_implementation
 {
+	my ($activating_vzlogger) = @_;
 	if (implementation_mode() eq "legacy") {
 		my $output = run_control("disable-vzlogger");
 		$output .= apply_legacy_cron();
@@ -1115,7 +1155,8 @@ sub apply_selected_implementation
 	}
 
 	remove_legacy_cronjobs();
-	return run_control("apply");
+	return run_control("disable-vzlogger") if (implementation_mode() ne "vzlogger");
+	return run_control($activating_vzlogger ? "activate-vzlogger" : "apply");
 }
 
 sub write_vzlogger_obis_test_config
@@ -1152,7 +1193,7 @@ sub write_vzlogger_obis_test_config
 		set_optional_text($meter_config, "pullseq", config_scalar_value("$serial.PULLSEQ"));
 		set_optional_text($meter_config, "ackseq", config_scalar_value("$serial.ACKSEQ"));
 		set_optional_integer($meter_config, "baudrate", config_scalar_value("$serial.BAUDRATE"), 0);
-		set_optional_integer($meter_config, "baudrate_read", first_config_value($serial, "BAUDRATEREAD", "STARTBAUDRATE"), 0);
+		set_optional_integer($meter_config, "baudrate_read", config_scalar_value("$serial.BAUDRATEREAD"), 0);
 		set_optional_enum($meter_config, "parity", configured_parity_optional($serial), qr/\A(?:8n1|7e1|7o1|7n1)\z/i);
 		set_optional_enum($meter_config, "wait_sync", config_scalar_value("$serial.WAITSYNC"), qr/\A(?:off|end)\z/);
 		set_optional_integer($meter_config, "read_timeout", first_config_value($serial, "READTIMEOUT", "TIMEOUT"), 0);
@@ -1611,11 +1652,10 @@ sub vzlogger_supports_protocol
 sub default_baudrate
 {
 	my ($meter) = @_;
-	return 115200 if (defined($meter) && $meter =~ /sagemcom/i);
-	return 4800 if (defined($meter) && $meter =~ /landisgyr[e]?(320|350)/i);
-	return 2400 if (defined($meter) && $meter =~ /(t550|uh50)/i);
-	return 9600 if (defined($meter) && $meter =~ /(iskra|pafal|siemens)/i);
-	return 300;
+	foreach my $template (@{load_meter_templates()}) {
+		return $template->{initial_baudrate} if (($template->{id} || "") eq ($meter || ""));
+	}
+	return undef;
 }
 
 sub serial_mode
@@ -1664,7 +1704,7 @@ sub safe_filename
 sub implementation_mode
 {
 	my $mode = $plugin_cfg->param("MAIN.IMPLEMENTATION") || "";
-	return $mode if ($mode =~ /\A(?:legacy|vzlogger)\z/);
+	return $mode if ($mode =~ /\A(?:none|legacy|vzlogger)\z/);
 	return infer_implementation_mode();
 }
 
@@ -1717,15 +1757,19 @@ sub build_head_rows
 	my (@heads) = @_;
 	my @rows;
 	my $oms_supported = vzlogger_supports_protocol("oms");
+	my $saved_meter_protocols = read_saved_vzlogger_meter_protocols();
 	foreach my $device (@heads) {
 		my $serial = $device;
 		$serial =~ s%/dev/serial/smartmeter/%%g;
 		my $stored_meter = $plugin_cfg->param("$serial.METER") || "0";
-		my $mode = normalized_meter_mode($stored_meter, $plugin_cfg->param("$serial.PROTOCOL"));
 		my $meter_draft = read_pending_meter_draft($serial);
-		if ($mode eq "0" && ($meter_draft->{protocol} || "") =~ /\A(?:sml|d0|oms)\z/) {
-			$mode = $meter_draft->{protocol};
-		}
+		my $configured_device = $plugin_cfg->param("$serial.DEVICE") || $device;
+		my $mode = resolve_meter_mode_for_row(
+			$saved_meter_protocols->{$configured_device},
+			$meter_draft,
+			$stored_meter,
+			$plugin_cfg->param("$serial.PROTOCOL"),
+		);
 		my %enabled_obis = enabled_obis_channels($serial);
 		my %pending_obis = map { $_ => 1 } read_pending_obis_channels($serial);
 		my @available_obis = available_obis_channels($serial);
@@ -1768,7 +1812,7 @@ sub build_head_rows
 			USELOCALTIME => clean_boolean(config_scalar_value("$serial.USELOCALTIME"), 0),
 			DUMPFILE => first_config_value($serial, "DUMPFILE") // "",
 			ACKSEQ => first_config_value($serial, "ACKSEQ") // "",
-			BAUDRATEREAD => first_config_value($serial, "BAUDRATEREAD", "STARTBAUDRATE") // "",
+			BAUDRATEREAD => config_scalar_value("$serial.BAUDRATEREAD") // "",
 			WAITSYNC => first_config_value($serial, "WAITSYNC") // "",
 			READTIMEOUT => first_config_value($serial, "READTIMEOUT", "TIMEOUT") // "",
 			BAUDRATECHANGEDELAY => first_config_value($serial, "BAUDRATECHANGEDELAY") // "",
@@ -1799,6 +1843,36 @@ sub build_head_rows
 		};
 	}
 	return @rows;
+}
+
+sub resolve_meter_mode_for_row
+{
+	my ($saved_protocol, $meter_draft, $stored_meter, $stored_protocol) = @_;
+	return $saved_protocol if (($saved_protocol || "") =~ /\A(?:sml|d0|oms|user)\z/);
+	return $meter_draft->{protocol} if (ref($meter_draft) eq "HASH" && ($meter_draft->{new_reader} || 0) && ($meter_draft->{protocol} || "") =~ /\A(?:sml|d0|oms)\z/);
+	return normalized_meter_mode($stored_meter, $stored_protocol);
+}
+
+sub read_saved_vzlogger_meter_protocols
+{
+	return $saved_meter_protocols_cache if (defined($saved_meter_protocols_cache));
+	$saved_meter_protocols_cache = {};
+	my $config_file = "$lbpconfigdir/vzlogger.conf";
+	return $saved_meter_protocols_cache if (!-e $config_file || !open(my $fh, "<", $config_file));
+	local $/;
+	my $json = <$fh>;
+	close($fh);
+	my $config = eval { JSON::PP->new->utf8->decode($json || "") };
+	return $saved_meter_protocols_cache if ($@ || ref($config) ne "HASH" || ref($config->{meters}) ne "ARRAY");
+	foreach my $meter (@{$config->{meters}}) {
+		next if (ref($meter) ne "HASH");
+		my $device = $meter->{device};
+		my $protocol = $meter->{protocol};
+		next if (!defined($device) || ref($device) || $device eq "" || !defined($protocol) || ref($protocol) || $protocol eq "");
+		$protocol = lc($protocol);
+		$saved_meter_protocols_cache->{$device} = $protocol =~ /\A(?:sml|d0|oms)\z/ ? $protocol : "user";
+	}
+	return $saved_meter_protocols_cache;
 }
 
 sub enabled_obis_channels

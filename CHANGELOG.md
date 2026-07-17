@@ -4,6 +4,26 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
+## 2.0.0.32 - 2026-07-17
+
+- Show the effective Legacy meter-template values in the disabled manual-settings fields while preserving the separately saved manual configuration for later reselection.
+- Reduce normal, field-label, and help-text sizes in the SmartMeter configuration UI, compact buttons, vertically centered switches, select boxes, and text inputs, tighten panel and table spacing, and remove the redundant Operation heading.
+- Replace the low-contrast implementation-tab status dots with larger, centered white badges using a green check mark for active and a dark-gray minus for inactive.
+- Apply the same compact typography, controls, switches, inputs, headings, and table spacing to the Legacy configuration page, and align its MQTT-topic input with the UDP-port field.
+- Use one neutral meter-template catalog for both Legacy and vzLogger, generate both selectors from it, and map its initial/read baud rates to each implementation's field names without a reversed Legacy fallback.
+- Restore the selected protocol after a page reload from the generated vzLogger configuration for saved meters and from the pending OBIS-discovery draft only for new, unsaved meters.
+- Preserve an existing valid `vzlogger.conf` while Legacy or neither implementation is active and reactivate it unchanged when switching back to vzLogger; migrate Legacy meter settings only when no valid generated vzLogger configuration exists.
+
+## 2.0.0.30 - 2026-07-17
+
+- Add a protocol-filtered **Initialize from template** selector for SML and D0 meters that applies known baud-rate, serial-mode, and D0 timeout values without changing unrelated meter settings, and warns when a template requires unsupported meter-specific sequences.
+
+## 2.0.0.29 - 2026-07-17
+
+- Enlarge the implementation tabs and their status icons, place each icon before its label, and vertically center icon and text together.
+- Allow both Legacy and vzLogger implementations to be inactive while still preventing simultaneous activation, add active/inactive icons to both implementation tabs, and mark unsaved changes beside the vzLogger, bridge, and Legacy activation switches.
+- Add distinct, state-aware tooltips for service Start, Stop, and Restart, I/R-head scanning, OBIS discovery, and the generated-configuration viewer, and repeat the action help in the right-side help column where the layout permits it.
+
 ## 2.0.0.28 - 2026-07-16
 
 - Fix manual vzLogger Start, Stop, and Restart failing to read `smartmeter.cfg` after loading the generated JSON configuration with an unscoped Perl input-record separator.

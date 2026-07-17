@@ -19,6 +19,7 @@
 ################################
 use Device::SerialPort;
 use Getopt::Long;
+use JSON::PP;
 use LoxBerry::System;
 use File::Path qw(make_path);
 #use File::HomeDir;
@@ -116,418 +117,44 @@ if ( !$parse ) {
 }
 
 ################################
-### Determine which protocol to use
+### Load and apply the selected meter template
 ################################
 
-if ( $protocol eq "genericd0" ) {
-
-	### Defaults
-	our $baudrate = 300 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "120" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "genericsml" ) {
-
-	### Defaults
-	our $baudrate = 300 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "120" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "emhed300sml" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "20" if !$timeout;
-	our $delay = "1" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "emhehzksml" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "30" if !$timeout;
-	our $delay = "30" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "iskra173d0" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "iskra173sml" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "iskra174d0" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "iskra174sml" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "iskra175d0" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "60" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "iskra175sml" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "60" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "iskra382d0" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "iskra681sml" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "60" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "iskra691sml" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "5" if !$timeout;
-	our $delay = "1" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "iskra631sml" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "10" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "itronace3000type260d0" ) {
-
-	### Defaults
-	our $baudrate = 300 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "4" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "landisgyre320d0" ) {
-
-	### Defaults
-	our $baudrate = 4800 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "20" if !$timeout;
-	our $delay = "4" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "landisgyre350d0" ) {
-
-	### Defaults
-	our $baudrate = 4800 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "20" if !$timeout;
-	our $delay = "4" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "pafal20ec3grd0" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "5" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "siemenstd3511d0" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "303531";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "landisgyret550d0" || $protocol eq "siemensuh50do" ) {
-
-	### Defaults
-	our $baudrate = 2400 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "1" if !$delay;
-	our $preinitcommand = "0000000000000000000000000000000000000000";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0("HEAT");
-}
-
-elsif ( $protocol eq "sagemcomt211d0" ) {
-
-	### Defaults
-	our $baudrate = 115200 if !$baudrate;
-	our $startbaudrate = 115200 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "sagemcomt211d0f" ) {
-
-	### Defaults
-	our $baudrate = 115200 if !$baudrate;
-	our $startbaudrate = 115200 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0("FLANDERS");
-}
-
-else {
-	$verbose =1;
-	&LOG ("No known protocol specified. Try --help to get an overview of possible options.", "FAIL");
+my $meter_template = load_meter_template($protocol);
+if (!$meter_template) {
+	$verbose = 1;
+	&LOG("No known meter template specified. Try --help to get an overview of possible options.", "FAIL");
 	exit;
+}
+
+my $legacy_defaults = $meter_template->{legacy} || {};
+my $serial_mode = lc($meter_template->{serial_mode} || "");
+if ($serial_mode !~ /\A([78])([neo])([12])\z/) {
+	die "Invalid serial_mode '$serial_mode' in meter template '$protocol'.\n";
+}
+my ($template_databits, $template_parity, $template_stopbits) = ($1, $2, $3);
+my %parity_names = (n => "none", e => "even", o => "odd");
+
+our $baudrate = $meter_template->{read_baudrate} if !$baudrate;
+our $startbaudrate = $meter_template->{initial_baudrate} if !$startbaudrate;
+our $databits = $template_databits if !$databits;
+our $parity = $parity_names{$template_parity} if !$parity;
+our $stopbits = $template_stopbits if !$stopbits;
+our $handshake = $legacy_defaults->{handshake} || "none" if !$handshake;
+our $timeout = $meter_template->{read_timeout} if !$timeout;
+our $delay = $legacy_defaults->{delay} if !$delay;
+our $crc = $legacy_defaults->{crc} if !$crc && $legacy_defaults->{crc};
+our $preinitcommand = $legacy_defaults->{preinitcommand} || "";
+our $precommand = $legacy_defaults->{precommand} || "";
+our $postcommand = $legacy_defaults->{postcommand} || "";
+my $parser_mode = $legacy_defaults->{parser_mode} || "";
+
+if ($meter_template->{protocol} eq "sml") {
+	&PROTO_GENERICSML;
+} elsif ($meter_template->{protocol} eq "d0") {
+	&PROTO_GENERICD0($parser_mode);
+} else {
+	die "Unsupported protocol '$meter_template->{protocol}' in meter template '$protocol'.\n";
 }
 
 ################################
@@ -544,6 +171,22 @@ exit;
 ### Subroutines
 ###
 ################################
+
+sub load_meter_template
+{
+	my ($template_id) = @_;
+	my $catalog_file = "$installfolder/templates/plugins/$psubfolder/meter_templates.json";
+	open(my $catalog_fh, "<", $catalog_file) or die "Could not read meter template catalog $catalog_file: $!\n";
+	local $/;
+	my $json = <$catalog_fh>;
+	close($catalog_fh);
+	my $templates = eval { JSON::PP->new->utf8->decode($json) };
+	die "Invalid meter template catalog $catalog_file: $@\n" if (!$templates || ref($templates) ne "ARRAY");
+	foreach my $template (@{$templates}) {
+		return $template if (($template->{id} || "") eq ($template_id || ""));
+	}
+	return undef;
+}
 
 
 ################################

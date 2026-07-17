@@ -231,7 +231,7 @@ sub standard_meter_config
 		set_optional_text($meter, "pullseq", config_scalar_value("$section.PULLSEQ"));
 		set_optional_text($meter, "ackseq", config_scalar_value("$section.ACKSEQ"));
 		set_optional_integer($meter, "baudrate", config_scalar_value("$section.BAUDRATE"), 0);
-		set_optional_integer($meter, "baudrate_read", first_config_value($section, "BAUDRATEREAD", "STARTBAUDRATE"), 0);
+		set_optional_integer($meter, "baudrate_read", config_scalar_value("$section.BAUDRATEREAD"), 0);
 		set_optional_enum($meter, "parity", configured_parity_optional($section), qr/\A(?:8n1|7e1|7o1|7n1)\z/i);
 		set_optional_enum($meter, "wait_sync", config_scalar_value("$section.WAITSYNC"), qr/\A(?:off|end)\z/);
 		set_optional_integer($meter, "read_timeout", first_config_value($section, "READTIMEOUT", "TIMEOUT"), 0);
@@ -396,16 +396,6 @@ sub protocol_for_meter
 	return "d0" if ($meter =~ /d0\z/i || $meter =~ /do\z/i);
 	return "oms" if ($meter =~ /oms\z/i);
 	return "";
-}
-
-sub default_baudrate
-{
-	my ($meter) = @_;
-	return 115200 if ($meter =~ /sagemcom/i);
-	return 4800 if ($meter =~ /landisgyr[e]?(320|350)/i);
-	return 2400 if ($meter =~ /(t550|uh50)/i);
-	return 9600 if ($meter =~ /(iskra|pafal|siemens)/i);
-	return 300;
 }
 
 sub serial_mode

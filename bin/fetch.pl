@@ -131,8 +131,8 @@ if (-e "$runtime_dir/fetch.log") {
 }
 
 # Check if we should read automatically
-if ( $implementation eq "vzlogger" && !$force ) {
-	&LOG ("Legacy meter polling is disabled because vzLogger mode is active.", "INFO");
+if ( $implementation ne "legacy" && !$force ) {
+	&LOG ("Legacy meter polling is disabled because Legacy mode is not active.", "INFO");
 	exit;
 }
 

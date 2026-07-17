@@ -33,32 +33,11 @@ if ($action eq "generate") {
 }
 
 if ($action eq "apply") {
-	my $rc = run_perl("$bindir/vzlogger_config.pl");
-	exit $rc if ($rc != 0);
-	if (vzlogger_mode_enabled() && generated_meter_count() == 0) {
-		stop_bridge();
-		stop_vzlogger(1);
-		install_vzlogger_service_override("remove");
-		print "No meter is configured. Stopped vzLogger and bridge.\n";
-		exit 0;
+	exit apply_generated_configuration();
 	}
-	$rc = run_perl("$bindir/vzlogger_validate.pl");
-	exit $rc if ($rc != 0);
-	if (!vzlogger_mode_enabled()) {
-		stop_bridge();
-		stop_vzlogger(1);
-		install_vzlogger_service_override("remove");
-		print "vzLogger mode is disabled. Stopped vzLogger and bridge.\n";
-		exit 0;
-	}
-	restart_vzlogger();
-	if (bridge_enabled()) {
-		restart_bridge();
-	} else {
-		stop_bridge();
-		print "MQTT bridge is disabled. Stopped bridge and left vzLogger running.\n";
-	}
-	exit 0;
+
+if ($action eq "activate-vzlogger") {
+	exit activate_or_migrate_vzlogger();
 }
 
 if ($action eq "restart-vzlogger") {
@@ -155,7 +134,7 @@ if ($action eq "debug-log") {
 	exit create_debug_log();
 }
 
-print "Usage: $0 generate|validate|apply|restart-vzlogger|start-vzlogger|stop-vzlogger|restart-bridge|start-bridge|stop-bridge|disable-vzlogger|status|debug-log\n";
+print "Usage: $0 generate|validate|apply|activate-vzlogger|restart-vzlogger|start-vzlogger|stop-vzlogger|restart-bridge|start-bridge|stop-bridge|disable-vzlogger|status|debug-log\n";
 exit 1;
 
 sub run_perl
@@ -173,6 +152,57 @@ sub generate_and_validate
 	my $rc = run_perl("$bindir/vzlogger_config.pl");
 	return $rc if ($rc != 0);
 	return run_perl("$bindir/vzlogger_validate.pl");
+}
+
+sub apply_generated_configuration
+{
+	my $rc = run_perl("$bindir/vzlogger_config.pl");
+	return $rc if ($rc != 0);
+	if (vzlogger_mode_enabled() && generated_meter_count() == 0) {
+		stop_bridge();
+		stop_vzlogger(1);
+		install_vzlogger_service_override("remove");
+		print "No meter is configured. Stopped vzLogger and bridge.\n";
+		return 0;
+	}
+	$rc = run_perl("$bindir/vzlogger_validate.pl");
+	return $rc if ($rc != 0);
+	return activate_current_vzlogger_configuration();
+}
+
+sub activate_or_migrate_vzlogger
+{
+	if (current_vzlogger_configuration_is_valid()) {
+		print "Existing valid vzLogger configuration found. Kept it unchanged instead of migrating Legacy meter settings.\n";
+		return activate_current_vzlogger_configuration();
+	}
+	print "No valid existing vzLogger configuration found. Migrating the current meter settings.\n";
+	return apply_generated_configuration();
+}
+
+sub current_vzlogger_configuration_is_valid
+{
+	return 0 if (!-e $config_file || !-e $mapping_file || generated_meter_count() <= 0);
+	return run_perl("$bindir/vzlogger_validate.pl") == 0 ? 1 : 0;
+}
+
+sub activate_current_vzlogger_configuration
+{
+	if (!vzlogger_mode_enabled()) {
+		stop_bridge();
+		stop_vzlogger(1);
+		install_vzlogger_service_override("remove");
+		print "vzLogger mode is disabled. Stopped vzLogger and bridge.\n";
+		return 0;
+	}
+	restart_vzlogger();
+	if (bridge_enabled()) {
+		restart_bridge();
+	} else {
+		stop_bridge();
+		print "MQTT bridge is disabled. Stopped bridge and left vzLogger running.\n";
+	}
+	return 0;
 }
 
 sub generated_meter_count
@@ -550,7 +580,7 @@ sub implementation_mode
 	my $cfg = Config::Simple->new($plugin_config_file);
 	return "legacy" if (!$cfg);
 	my $mode = $cfg->param("MAIN.IMPLEMENTATION") || "";
-	return $mode if ($mode =~ /\A(?:legacy|vzlogger)\z/);
+	return $mode if ($mode =~ /\A(?:none|legacy|vzlogger)\z/);
 	return read_enabled() ? "legacy" : "vzlogger";
 }
 

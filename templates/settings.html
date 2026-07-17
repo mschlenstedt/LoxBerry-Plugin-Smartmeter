@@ -42,8 +42,10 @@
 	}
 	.service-status {
 		display: inline-block;
-		padding: 4px 8px;
+		padding: 3px 7px;
 		border-radius: 4px;
+		font-size: 13.5px;
+		line-height: 1.3;
 		font-weight: bold;
 	}
 	.service-status-idle { background: #e0e0e0; color: #333; }
@@ -55,36 +57,72 @@
 	.service-action-reason { color: #8a5a00; font-size: 85%; margin-top: .25em; }
 	.service-action-reason:empty { display: none; }
 	.obis-channel-option { display: block; }
+	.obis-channel-label { font-size: 13px; line-height: 1.35; }
 	.obis-channel-new { display: block; color: #8a5a00; font-size: 85%; margin: .15em 0 .35em 2em; }
+	.activation-unsaved { display: block; color: #8a5a00; font-size: 85%; margin-top: .2em; }
+	.activation-unsaved[hidden] { display: none; }
+	.meter-template-note { display: block; color: #8a5a00; font-size: 85%; margin-top: .2em; }
+	.meter-template-note[hidden] { display: none; }
 	.implementation-tabs { width: 100%; }
 	.implementation-tabs ul { display: flex !important; width: 100% !important; }
 	.implementation-tabs li { float: none !important; flex: 1 1 50%; width: 50% !important; }
-	.implementation-tabs .ui-btn { min-height: 2.8em; padding: .6em .8em; font-size: 1.08em; line-height: 1.2; text-align: center; white-space: normal; overflow-wrap: anywhere; border-right-width: 1px !important; }
+	.implementation-tabs .ui-btn { display: flex !important; align-items: center; justify-content: center; gap: .55em; min-height: 3.2em; padding: .65em .9em; box-sizing: border-box; font-size: 1.28em; line-height: 1.2; text-align: center; white-space: normal; overflow-wrap: anywhere; border-right-width: 1px !important; }
+	.implementation-tab-label { line-height: 1.2; }
+	.implementation-state { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 1.75em; height: 1.75em; margin: 0; box-sizing: border-box; border: 2px solid; border-radius: 50%; background: #fff; font-size: 1em; line-height: 1; font-weight: bold; text-shadow: none; }
+	.implementation-state-icon { display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-family: Arial, sans-serif; font-size: 1.15em; line-height: 1; }
+	.implementation-state.is-active { border-color: #247021; color: #247021; }
+	.implementation-state.is-inactive { border-color: #666; color: #555; }
+	#vzlogger_form { font-size: 13.5px; line-height: 1.35; }
+	#vzlogger_form label { font-size: 13px; line-height: 1.35; }
+	#vzlogger_form .ui-mini.ui-btn,
+	#vzlogger_form .ui-mini .ui-btn {
+		font-size: 12px;
+		line-height: 1.3;
+		padding-top: 6px;
+		padding-bottom: 6px;
+	}
+	#vzlogger_form .ui-flipswitch { width: 5.25em; font-size: 14px; }
+	#vzlogger_form .ui-flipswitch.ui-flipswitch-active { width: 1.875em; padding-left: 3.375em; }
+	#vzlogger_form .ui-flipswitch .ui-btn.ui-flipswitch-on { font-size: inherit; }
+	#vzlogger_form .ui-flipswitch .ui-flipswitch-off { box-sizing: border-box; }
+	#vzlogger_form .ui-input-text > input,
+	#vzlogger_form textarea.ui-input-text {
+		font-size: 13px;
+		line-height: 1.35;
+		padding: 5px 8px;
+	}
+	#vzlogger_form .ui-input-text,
+	#vzlogger_form .ui-select { margin-top: 3px; margin-bottom: 3px; }
 	.inline-link { margin-right: 1em; }
 	.vzlogger-live-links { margin-top: 0.4em; }
 	.service-panel {
 		border: 1px solid #bbb;
 		border-radius: 6px;
 		background: rgba(255,255,255,0.55);
-		padding: 12px 14px;
-		margin: 0 0 12px 0;
+		padding: 10px 12px;
+		margin: 0 0 10px 0;
+		font-size: 13.5px;
+		line-height: 1.35;
 	}
 	.service-panel h3 { margin: 0 0 4px 0; }
-	.service-panel-description { margin: 0 0 10px 0; color: #444; }
+	.service-panel-description { margin: 0 0 8px 0; color: #444; }
 	.service-panel table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-	.service-panel td { padding: 4px 6px; vertical-align: top; }
+	.service-panel td { padding: 3px 5px; vertical-align: top; }
 	.service-panel .service-label { width: 18%; }
 	.service-panel .service-controls { width: 52%; }
 	.service-panel .service-spacer { width: 3%; }
-	.service-panel .service-help { width: 27%; font-size: 90%; line-height: 1.35; }
+	.service-panel .service-help { width: 27%; font-size: 12.5px; line-height: 1.4; }
 	.configuration-section {
 		border: 1px solid #aaa;
 		border-radius: 6px;
 		background: rgba(255,255,255,0.4);
-		padding: 12px 14px;
-		margin: 18px 0;
+		padding: 10px 12px;
+		margin: 14px 0;
+		font-size: 13.5px;
+		line-height: 1.35;
 	}
-	.configuration-section > h2 { margin-top: 0; }
+	.configuration-section > h2 { margin: 0 0 8px 0; }
+	.configuration-section > p { margin: 0 0 10px 0; }
 	.configuration-section.configuration-disabled { color: #888; }
 	.configuration-section.configuration-disabled .ui-collapsible-heading .ui-btn { color: #888 !important; opacity: .65; }
 	.settings-table tr.setting-disabled > td { color: #888; }
@@ -96,8 +134,8 @@
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 4px 8px;
-		margin-top: 3px;
+		gap: 3px 7px;
+		margin-top: 2px;
 	}
 	.service-action-line .ui-btn,
 	.service-action-line .ui-select,
@@ -109,17 +147,19 @@
 		white-space: nowrap;
 	}
 	.service-inline-setting label { margin: 0; }
-	.service-inline-setting .ui-select { min-width: 190px; }
+	.service-inline-setting .ui-select { min-width: 170px; }
 	.settings-table {
 		width: 100%;
 		border-collapse: collapse;
 		table-layout: fixed;
+		font-size: 13px;
+		line-height: 1.35;
 	}
-	.settings-table > tbody > tr > td { padding: 5px 6px; vertical-align: top; }
+	.settings-table > tbody > tr > td { padding: 4px 5px; vertical-align: top; }
 	.settings-table > tbody > tr > td:nth-child(1) { width: 18%; }
 	.settings-table > tbody > tr > td:nth-child(2) { width: 52%; }
 	.settings-table > tbody > tr > td:nth-child(3) { width: 3%; }
-	.settings-table > tbody > tr > td:nth-child(4) { width: 27%; font-size: 90%; line-height: 1.35; }
+	.settings-table > tbody > tr > td:nth-child(4) { width: 27%; font-size: 12.5px; line-height: 1.4; }
 	.settings-table > tbody > tr > td:nth-child(4) font { font-size: 100%; }
 	.compact-settings > tbody > tr > td { padding-top: 2px; padding-bottom: 2px; }
 	.compact-settings h4 { margin: 8px 0 3px 0; }
@@ -207,24 +247,24 @@
 <TMPL_IF FORM_VZLOGGER>
 	<div data-role="navbar" class="ui-navbar implementation-tabs" role="navigation" style="margin: 0 0 12px 0;">
 		<ul>
-			<li><a href="./index.cgi?form=vzlogger" class="ui-btn-active"><TMPL_VAR NAME=T::MENU.VZLOGGER></a></li>
-			<li><a href="./index_legacy.cgi?form=legacy"><TMPL_VAR NAME=T::MENU.LEGACY></a></li>
+			<li><a href="./index.cgi?form=vzlogger" class="ui-btn-active"><span id="vzlogger_tab_state" class="implementation-state <TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE>is-active<TMPL_ELSE>is-inactive</TMPL_IF>" data-active-label="<TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE>" data-inactive-label="<TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE>" title="<TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE></TMPL_IF>" aria-label="<TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE></TMPL_IF>"><span class="implementation-state-icon" aria-hidden="true"><TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE>✓<TMPL_ELSE>–</TMPL_IF></span></span><span class="implementation-tab-label"><TMPL_VAR NAME=T::MENU.VZLOGGER></span></a></li>
+			<li><a href="./index_legacy.cgi?form=legacy"><span id="legacy_tab_state" class="implementation-state <TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE>is-active<TMPL_ELSE>is-inactive</TMPL_IF>" data-active-label="<TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE>" data-inactive-label="<TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE>" title="<TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE></TMPL_IF>" aria-label="<TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE></TMPL_IF>"><span class="implementation-state-icon" aria-hidden="true"><TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE>✓<TMPL_ELSE>–</TMPL_IF></span></span><span class="implementation-tab-label"><TMPL_VAR NAME=T::MENU.LEGACY></span></a></li>
 		</ul>
 	</div>
 	<form method="post" data-ajax="false" name="vzlogger_form" id="vzlogger_form" action="./index.cgi">
 	<input type="hidden" name="saveformdata" value="1">
+	<input type="hidden" id="implementation_changed" name="implementation_changed" value="0">
 	<input type="hidden" id="obis_serial" name="obis_serial" value="">
 
 	<pre id="service_action_message" class="service-action-message" role="status" aria-live="polite"><TMPL_VAR VZLOGGER_MESSAGE ESCAPE=HTML></pre>
 
-	<h2><TMPL_VAR NAME=T::VZLOGGER.OPERATION></h2>
 	<div class="service-panel">
 		<h3><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_SERVICE></h3>
 		<p class="service-panel-description"><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_SERVICE_DESCRIPTION></p>
 		<table border="0">
 		<tr>
 			<td class="service-label"><label for="implementation"><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_MODE></label></td>
-			<td class="service-controls"><select id="implementation" name="implementation" data-role="flipswitch" onChange="update_vzlogger_controls();"><option value="legacy"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="vzlogger"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+			<td class="service-controls"><select id="implementation" name="implementation" data-role="flipswitch" onChange="update_vzlogger_controls();"><option value="none"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="vzlogger"><TMPL_VAR NAME=T::GENERIC.ON></option></select><span id="implementation_unsaved" class="activation-unsaved" hidden><TMPL_VAR NAME=T::VZLOGGER.ACTIVATION_UNSAVED></span></td>
 			<td class="service-spacer">&nbsp;</td>
 			<td class="service-help"><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_MODE_HELP></td>
 		</tr>
@@ -233,9 +273,9 @@
 			<td class="service-controls">
 				<span id="vzlogger_service_status" class="service-status <TMPL_VAR VZLOGGER_SERVICE_STATUS_CLASS>"><TMPL_VAR VZLOGGER_SERVICE_STATUS></span>
 				<div class="service-action-line">
-					<button id="vzlogger_restart_button" class="service-control-button" type="button" onclick="run_service_action('restart-vzlogger');" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" disabled><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE></button>
-					<button id="vzlogger_start_button" class="service-control-button" type="button" onclick="run_service_action('start-vzlogger');" data-role="button" data-inline="true" data-mini="true" data-icon="power" disabled <TMPL_IF VZLOGGER_SERVICE_RUNNING>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE></button>
-					<button id="vzlogger_stop_button" class="service-control-button" type="button" onclick="run_service_action('stop-vzlogger');" data-role="button" data-inline="true" data-mini="true" data-icon="delete" disabled <TMPL_IF VZLOGGER_SERVICE_RUNNING><TMPL_ELSE>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE></button>
+					<button id="vzlogger_restart_button" class="service-control-button" type="button" onclick="run_service_action('restart-vzlogger');" title="<TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" disabled><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE></button>
+					<button id="vzlogger_start_button" class="service-control-button" type="button" onclick="run_service_action('start-vzlogger');" title="<TMPL_VAR NAME=T::VZLOGGER.START_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=T::VZLOGGER.START_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="power" disabled <TMPL_IF VZLOGGER_SERVICE_RUNNING>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE></button>
+					<button id="vzlogger_stop_button" class="service-control-button" type="button" onclick="run_service_action('stop-vzlogger');" title="<TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="delete" disabled <TMPL_IF VZLOGGER_SERVICE_RUNNING><TMPL_ELSE>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE></button>
 					<a href="<TMPL_VAR VZLOGGER_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR VZLOGGER_LOG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_LOG></a>
 					<span class="service-inline-setting"><label for="vzlogger_service_debug"><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG></label><select id="vzlogger_service_debug" name="vzlogger_service_debug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></span>
 					<span class="service-inline-setting"><label for="vzlogger_loglevel"><TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL></label><select id="vzlogger_loglevel" name="vzlogger_loglevel" data-inline="true" data-mini="true"><option value="0">0 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_0></option><option value="1">1 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_1></option><option value="3">3 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_3></option><option value="5">5 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_5></option><option value="10">10 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_10></option><option value="15">15 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_15></option></select></span>
@@ -244,7 +284,7 @@
 				<div class="vzlogger-live-links"><a id="vzlogger_live_link" class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_LIVEURL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_LIVE_READINGS></a><a id="vzlogger_rendered_link" class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_RENDERED_URL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_RENDERED_READINGS></a></div>
 			</td>
 			<td class="service-spacer">&nbsp;</td>
-			<td class="service-help"><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_SERVICE_CONTROL_HELP><br><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_DEBUG_HELP><br><TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_HELP></td>
+			<td class="service-help"><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_SERVICE_CONTROL_HELP><br><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE_HELP><br><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE_HELP><br><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE_HELP><br><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_DEBUG_HELP><br><TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_HELP></td>
 		</tr>
 		</table>
 	</div>
@@ -255,7 +295,7 @@
 		<table border="0">
 		<tr>
 			<td class="service-label"><label for="read"><TMPL_VAR NAME=T::VZLOGGER.READ_METERS></label></td>
-			<td class="service-controls"><select onChange="update_bridge_controls();" id="read" name="read" data-role="flipswitch" disabled><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+			<td class="service-controls"><select onChange="update_bridge_controls();" id="read" name="read" data-role="flipswitch" disabled><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select><span id="bridge_activation_unsaved" class="activation-unsaved" hidden><TMPL_VAR NAME=T::VZLOGGER.ACTIVATION_UNSAVED></span></td>
 			<td class="service-spacer">&nbsp;</td>
 			<td class="service-help"><TMPL_VAR NAME=T::VZLOGGER.READ_METERS_HELP></td>
 		</tr>
@@ -264,16 +304,16 @@
 			<td class="service-controls">
 				<span id="bridge_service_status" class="service-status <TMPL_VAR BRIDGE_SERVICE_STATUS_CLASS>"><TMPL_VAR BRIDGE_SERVICE_STATUS></span>
 				<div class="service-action-line">
-					<button id="bridge_restart_button" class="service-control-button" type="button" onclick="run_service_action('restart-bridge');" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" disabled><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE></button>
-					<button id="bridge_start_button" class="service-control-button" type="button" onclick="run_service_action('start-bridge');" data-role="button" data-inline="true" data-mini="true" data-icon="power" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE></button>
-					<button id="bridge_stop_button" class="service-control-button" type="button" onclick="run_service_action('stop-bridge');" data-role="button" data-inline="true" data-mini="true" data-icon="delete" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING><TMPL_ELSE>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE></button>
+					<button id="bridge_restart_button" class="service-control-button" type="button" onclick="run_service_action('restart-bridge');" title="<TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" disabled><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE></button>
+					<button id="bridge_start_button" class="service-control-button" type="button" onclick="run_service_action('start-bridge');" title="<TMPL_VAR NAME=T::VZLOGGER.START_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=T::VZLOGGER.START_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="power" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE></button>
+					<button id="bridge_stop_button" class="service-control-button" type="button" onclick="run_service_action('stop-bridge');" title="<TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="delete" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING><TMPL_ELSE>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE></button>
 					<a href="<TMPL_VAR BRIDGE_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR BRIDGE_LOG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_LOG></a>
 					<span class="service-inline-setting"><label for="vzlogger_debug"><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG></label><select id="vzlogger_debug" name="vzlogger_debug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></span>
 				</div>
 				<div id="bridge_service_action_reason" class="service-action-reason" aria-live="polite"></div>
 			</td>
 			<td class="service-spacer">&nbsp;</td>
-			<td class="service-help"><TMPL_VAR BRIDGE_AVAILABILITY_HELP><br><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG_HELP><br>/opt/loxberry/log/plugins/smartmeter-v2/vzlogger_mqtt_bridge.log</td>
+			<td class="service-help"><TMPL_VAR BRIDGE_AVAILABILITY_HELP><br><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE_HELP><br><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE_HELP><br><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE_HELP><br><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG_HELP><br>/opt/loxberry/log/plugins/smartmeter-v2/vzlogger_mqtt_bridge.log</td>
 		</tr>
 		</table>
 	</div>
@@ -446,7 +486,7 @@
 		<td colspan=4><h3><TMPL_VAR NAME=T::VZLOGGER.IR_HEADS></h3><p><TMPL_VAR NAME=T::VZLOGGER.IR_HEADS_HELP></p></td>
 	</tr>
 	<tr>
-		<td colspan=4><a id="rescan_ir_heads" data-icon="refresh" data-role="button" data-inline="true" data-mini="true" href="./index.cgi?rescan=1" onclick="return start_ir_head_scan(event);"><TMPL_VAR NAME=T::VZLOGGER.RESCAN_IR_HEADS></a></td>
+		<td>&nbsp;</td><td><a id="rescan_ir_heads" title="<TMPL_VAR NAME=T::VZLOGGER.RESCAN_IR_HEADS_HELP>" data-icon="refresh" data-role="button" data-inline="true" data-mini="true" href="./index.cgi?rescan=1" onclick="return start_ir_head_scan(event);"><TMPL_VAR NAME=T::VZLOGGER.RESCAN_IR_HEADS></a></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.RESCAN_IR_HEADS_HELP></td>
 	</tr>
 	<TMPL_LOOP NAME=ROWS>
 	<tr id="meter_row_<TMPL_VAR NAME=SERIAL>" class="meter-row" data-meter-serial="<TMPL_VAR NAME=SERIAL ESCAPE=HTML>"><td colspan="4">
@@ -464,6 +504,7 @@
 			<tr class="meter-common-field meter-enabled-row"><td><label for="<TMPL_VAR NAME=SERIAL>_enabled"><TMPL_VAR NAME=T::VZLOGGER.METER_ENABLED></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_enabled" name="<TMPL_VAR NAME=SERIAL>_enabled" data-role="flipswitch" onchange="update_meter_enabled('<TMPL_VAR NAME=SERIAL>');"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_ENABLED_HELP></td></tr>
 			<tr><td><TMPL_VAR NAME=T::VZLOGGER.METER_DEVICE></td><td><code><TMPL_VAR NAME=DEVICE ESCAPE=HTML></code></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_DEVICE_HELP></td></tr>
 			<tr><td><label for="<TMPL_VAR NAME=SERIAL>_meter"><TMPL_VAR NAME=T::VZLOGGER.METER_PROTOCOL></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_meter" name="<TMPL_VAR NAME=SERIAL>_meter" data-mini="true" data-native-menu="true" onchange="update_meter_protocol(this.id.substring(0, this.id.length - 6));"><option value="0"><TMPL_VAR NAME=T::FORMTABLEROWS.PLEASESELECT></option><option value="sml">SML</option><option value="d0">D0</option><option value="oms">OMS</option><option value="user"><TMPL_VAR NAME=T::VZLOGGER.PROTOCOL_USER></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_PROTOCOL_HELP></td></tr>
+			<tr class="meter-template-row"><td><label for="<TMPL_VAR NAME=SERIAL>_template"><TMPL_VAR NAME=T::VZLOGGER.METER_TEMPLATE></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_template" class="meter-template-select" data-placeholder="<TMPL_VAR NAME=T::VZLOGGER.METER_TEMPLATE_SELECT ESCAPE=HTML>" data-mini="true" data-native-menu="true" onchange="apply_meter_template('<TMPL_VAR NAME=SERIAL>');"><option value=""><TMPL_VAR NAME=T::VZLOGGER.METER_TEMPLATE_SELECT></option></select><span id="<TMPL_VAR NAME=SERIAL>_template_unsaved" class="meter-template-note" hidden><TMPL_VAR NAME=T::VZLOGGER.ACTIVATION_UNSAVED></span><span id="<TMPL_VAR NAME=SERIAL>_template_warning" class="meter-template-note" hidden><TMPL_VAR NAME=T::VZLOGGER.METER_TEMPLATE_LIMITED></span></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_TEMPLATE_HELP></td></tr>
 			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_allowskip"><TMPL_VAR NAME=T::VZLOGGER.METER_ALLOWSKIP></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_allowskip" name="<TMPL_VAR NAME=SERIAL>_allowskip" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_ALLOWSKIP_HELP></td></tr>
 			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_aggtime"><TMPL_VAR NAME=T::VZLOGGER.METER_AGGTIME></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_aggtime" name="<TMPL_VAR NAME=SERIAL>_aggtime" type="number" value="<TMPL_VAR NAME=AGGTIME>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_AGGTIME_HELP></td></tr>
 
@@ -485,7 +526,7 @@
 
 			<tr class="meter-user-settings"><td><label for="<TMPL_VAR NAME=SERIAL>_userjson"><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON></label></td><td><textarea class="meter-json-editor" id="<TMPL_VAR NAME=SERIAL>_userjson" name="<TMPL_VAR NAME=SERIAL>_userjson" maxlength="65536"><TMPL_VAR NAME=USER_JSON ESCAPE=HTML></textarea><div class="meter-doc-links"><a href="https://wiki.volkszaehler.org/software/controller/vzlogger/vzlogger_conf_parameter" target="_blank" rel="noopener"><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON_DOCS></a> · <a href="https://github.com/volkszaehler/vzlogger/tree/master/etc" target="_blank" rel="noopener"><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON_EXAMPLES></a></div></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON_HELP></td></tr>
 
-			<tr class="meter-obis-settings"><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS></td><td><button class="obis-discovery" type="button" onclick="start_obis_discovery('<TMPL_VAR NAME=SERIAL>');" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search" <TMPL_VAR NAME=OBIS_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.READ_OBIS_CHANNELS></button><p id="<TMPL_VAR NAME=SERIAL>_obis_empty" <TMPL_IF NAME=OBIS_CHANNELS_EMPTY><TMPL_ELSE>hidden</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_EMPTY></p><div id="<TMPL_VAR NAME=SERIAL>_obis_channels" class="obis-channel-list"><TMPL_LOOP NAME=OBIS_CHANNELS><label class="obis-channel-option" data-obis-identifier="<TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML>"><input type="checkbox" name="<TMPL_VAR NAME=FIELD_NAME>" value="<TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML>" <TMPL_VAR NAME=CHECKED>><span class="obis-channel-label"><TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML> - <TMPL_VAR NAME=NAME ESCAPE=HTML></span><TMPL_IF NAME=IS_NEW><span class="obis-channel-new"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNEL_NEW></span></TMPL_IF></label></TMPL_LOOP></div></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_HELP></td></tr>
+			<tr class="meter-obis-settings"><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS></td><td><button class="obis-discovery" type="button" onclick="start_obis_discovery('<TMPL_VAR NAME=SERIAL>');" title="<TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search" <TMPL_VAR NAME=OBIS_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.READ_OBIS_CHANNELS></button><p id="<TMPL_VAR NAME=SERIAL>_obis_empty" <TMPL_IF NAME=OBIS_CHANNELS_EMPTY><TMPL_ELSE>hidden</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_EMPTY></p><div id="<TMPL_VAR NAME=SERIAL>_obis_channels" class="obis-channel-list"><TMPL_LOOP NAME=OBIS_CHANNELS><label class="obis-channel-option" data-obis-identifier="<TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML>"><input type="checkbox" name="<TMPL_VAR NAME=FIELD_NAME>" value="<TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML>" <TMPL_VAR NAME=CHECKED>><span class="obis-channel-label"><TMPL_VAR NAME=IDENTIFIER ESCAPE=HTML> - <TMPL_VAR NAME=NAME ESCAPE=HTML></span><TMPL_IF NAME=IS_NEW><span class="obis-channel-new"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNEL_NEW></span></TMPL_IF></label></TMPL_LOOP></div></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_HELP></td></tr>
 			<tr class="meter-obis-settings"><td><label for="<TMPL_VAR NAME=SERIAL>_obis_custom"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CUSTOM></label></td><td><textarea id="<TMPL_VAR NAME=SERIAL>_obis_custom" name="<TMPL_VAR NAME=SERIAL>_obis_custom" rows="4"><TMPL_VAR NAME=OBIS_CUSTOM ESCAPE=HTML></textarea></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.OBIS_CUSTOM_HELP></td></tr>
 			<tr class="meter-remove-row"><td colspan="4"><input class="meter-remove-marker" type="hidden" name="remove_meter" value="<TMPL_VAR NAME=SERIAL>" disabled><button class="meter-remove-button" type="button" onclick="stage_meter_removal('<TMPL_VAR NAME=SERIAL>');" data-role="button" data-inline="true" data-mini="true" data-icon="delete"><TMPL_VAR NAME=T::VZLOGGER.REMOVE_METER></button><span class="meter-remove-help"><TMPL_VAR NAME=T::VZLOGGER.REMOVE_METER_HELP></span></td></tr>
 			</table>
@@ -542,7 +583,7 @@
 	<table border="0" class="settings-table">
 	<tr>
 		<td><TMPL_VAR NAME=T::VZLOGGER.GENERATED_CONFIG></td>
-		<td colspan=3><a href="<TMPL_VAR VZLOGGER_CONFIG_URL>" target="_blank" rel="noopener" title="<TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="search" class="<TMPL_VAR VZLOGGER_CONFIG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG></a> <code><TMPL_VAR VZLOGGER_CONFIG></code></td>
+		<td><a href="<TMPL_VAR VZLOGGER_CONFIG_URL>" target="_blank" rel="noopener" title="<TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="search" class="<TMPL_VAR VZLOGGER_CONFIG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG></a> <code><TMPL_VAR VZLOGGER_CONFIG></code></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP></td>
 	</tr>
 	<tr>
 		<td><TMPL_VAR NAME=T::VZLOGGER.ACTIONS></td>
@@ -647,7 +688,13 @@
 			var button = $("#" + id);
 			button.toggle(!!visible);
 			button.prop("disabled", !enabled).toggleClass("ui-disabled", !enabled);
-			if (!enabled && reason) button.attr("title", reason);
+			set_service_button_title(button, !enabled ? reason : "");
+		}
+
+		function set_service_button_title(button, reason) {
+			var help = button.attr("data-help-title") || "";
+			var title = help + (help && reason ? " " : "") + (reason || "");
+			if (title) button.attr("title", title);
 			else button.removeAttr("title");
 		}
 
@@ -777,6 +824,12 @@
 					action_ok = !!response.ok;
 					action_message = response.message || (response.ok ? "OK" : obis_text("service_action_failed_text"));
 					show_service_message(action_message);
+					if (response.ok && /^(?:start|restart)-/.test(action)) {
+						initial_implementation_value = $("#implementation").val();
+						saved_implementation = initial_implementation_value;
+						if (/-bridge$/.test(action)) initial_read_value = $("#read").val();
+						update_activation_dirty_hints();
+					}
 					render_service_snapshot(response);
 					needs_status_refresh = !response.services;
 				})
@@ -1146,8 +1199,11 @@
 			poll_service_status();
 		});
 
-		$("#read").val("<TMPL_VAR READ>");
-		$("#implementation").val("<TMPL_VAR IMPLEMENTATION>");
+		var saved_implementation = "<TMPL_VAR IMPLEMENTATION>";
+		var initial_implementation_value = "<TMPL_VAR IMPLEMENTATION_SWITCH_VALUE>";
+		var initial_read_value = "<TMPL_VAR READ>";
+		$("#read").val(initial_read_value);
+		$("#implementation").val(initial_implementation_value);
 		var sendudp_control = $("#sendudp");
 		sendudp_control.val("<TMPL_VAR SENDUDP>");
 		sendudp_control.off("change.smartmeterUdp").on("change.smartmeterUdp", disable_udp);
@@ -1166,6 +1222,7 @@
 		$("#vzlogger_mqttqos").val("<TMPL_VAR VZLOGGER_MQTTQOS>");
 		$("#vzlogger_mqtttimestamp").val("<TMPL_VAR VZLOGGER_MQTTTIMESTAMP>");
 		$("#vzlogger_udpinterval").val("<TMPL_VAR VZLOGGER_UDPINTERVAL>");
+		update_activation_dirty_hints();
 		disable_cron();
 		disable_udp();
 
@@ -1203,7 +1260,9 @@
 		function update_service_action_states(ui) {
 			if (!last_service_snapshot || !last_service_snapshot.services) {
 				var waiting_reason = service_reason("waiting");
-				$(".service-control-button").prop("disabled", true).addClass("ui-disabled").attr("title", waiting_reason);
+				$(".service-control-button").prop("disabled", true).addClass("ui-disabled").each(function () {
+					set_service_button_title($(this), waiting_reason);
+				});
 				$("#vzlogger_service_action_reason, #bridge_service_action_reason").text(waiting_reason);
 				return;
 			}
@@ -1263,10 +1322,32 @@
 			update_service_action_states(ui);
 		}
 
-		function update_vzlogger_controls() { update_all_control_states(); }
+		function set_implementation_tab_state(id, active) {
+			var state = $("#" + id);
+			if (!state.length) return;
+			var label = state.attr(active ? "data-active-label" : "data-inactive-label") || "";
+			state.toggleClass("is-active", active).toggleClass("is-inactive", !active).attr("title", label).attr("aria-label", label);
+			state.find(".implementation-state-icon").text(active ? "✓" : "–");
+		}
+
+		function set_implementation_tab_states(mode) {
+			set_implementation_tab_state("vzlogger_tab_state", mode == "vzlogger");
+			set_implementation_tab_state("legacy_tab_state", mode == "legacy");
+		}
+
+		function update_activation_dirty_hints() {
+			var implementation_changed = $("#implementation").val() != initial_implementation_value;
+			var bridge_changed = $("#read").val() != initial_read_value;
+			$("#implementation_changed").val(implementation_changed ? "1" : "0");
+			$("#implementation_unsaved").prop("hidden", !implementation_changed);
+			$("#bridge_activation_unsaved").prop("hidden", !bridge_changed);
+			set_implementation_tab_states(saved_implementation);
+		}
+
+		function update_vzlogger_controls() { update_activation_dirty_hints(); update_all_control_states(); }
 		function update_local_controls() { update_all_control_states(); }
 		function update_mqtt_controls() { update_all_control_states(); }
-		function update_bridge_controls() { update_all_control_states(); }
+		function update_bridge_controls() { update_activation_dirty_hints(); update_all_control_states(); }
 		function disable_udp() {
 			update_all_control_states();
 		}
@@ -1293,6 +1374,8 @@
 			panel.find(".meter-user-settings").toggle(mode == "user");
 			panel.find(".meter-common-field").toggle(["sml", "d0", "oms"].indexOf(mode) >= 0);
 			panel.find(".meter-obis-settings").toggle(["sml", "d0", "oms"].indexOf(mode) >= 0);
+			panel.find(".meter-template-row").toggle(["sml", "d0"].indexOf(mode) >= 0);
+			update_meter_template_options(serial, mode);
 			var omsUnsupported = mode == "oms" && panel.attr("data-oms-supported") != "1";
 			panel.find(".meter-oms-runtime-warning").toggle(omsUnsupported);
 			var selectedOption = selectElement.options[selectElement.selectedIndex];
@@ -1301,6 +1384,43 @@
 			var showWarning = !warningKind || warningKind == mode;
 			panel.find(".meter-warning-icon, .meter-primary-warning").toggle(showWarning);
 			update_meter_enabled(serial);
+		}
+
+		var meter_templates = <TMPL_VAR NAME=METER_TEMPLATES_JSON>;
+
+		function refresh_meter_select(select) {
+			try { $(select).selectmenu("refresh", true); } catch (error) {}
+		}
+
+		function update_meter_template_options(serial, protocol) {
+			var select = document.getElementById(serial + "_template");
+			if (!select) return;
+			var placeholder = select.getAttribute("data-placeholder") || "";
+			select.options.length = 0;
+			select.add(new Option(placeholder, ""));
+			meter_templates.forEach(function (template) {
+				if (template.protocol == protocol) select.add(new Option(template.label, template.id));
+			});
+			select.value = "";
+			document.getElementById(serial + "_template_warning").hidden = true;
+			refresh_meter_select(select);
+		}
+
+		function apply_meter_template(serial) {
+			var protocol = $("#" + serial + "_meter").val();
+			var select = document.getElementById(serial + "_template");
+			if (!select || !select.value) return;
+			var template = meter_templates.find(function (candidate) { return candidate.id == select.value && candidate.protocol == protocol; });
+			if (!template) return;
+			$("#" + serial + "_baudrate").val(String(template.initial_baudrate));
+			$("#" + serial + "_paritymode").val(template.serial_mode);
+			if (protocol == "d0") {
+				$("#" + serial + "_baudrateread").val(String(template.read_baudrate));
+				$("#" + serial + "_readtimeout").val(String(template.read_timeout));
+			}
+			refresh_meter_select(document.getElementById(serial + "_paritymode"));
+			document.getElementById(serial + "_template_unsaved").hidden = false;
+			document.getElementById(serial + "_template_warning").hidden = !template.limited;
 		}
 
 		function update_meter_enabled(serial) {

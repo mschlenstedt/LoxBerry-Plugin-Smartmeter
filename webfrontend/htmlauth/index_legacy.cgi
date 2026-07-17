@@ -30,6 +30,7 @@ use String::Escape qw( unquotemeta );
 use Cwd 'abs_path';
 use HTML::Template;
 use File::Path qw(make_path);
+use JSON::PP;
 #use warnings;
 #use strict;
 #no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
@@ -67,6 +68,7 @@ my  $device;
 my  $serial;
 my  $crontabtmp = "$lbplogdir/crontab.temp";
 my  $runtime_dir;
+my  $meter_templates_cache;
 
 ##########################################################################
 # Read crontab
@@ -261,7 +263,10 @@ sub form
 
 	# If the form was saved, update config file
 	if ( $saveformdata ) {
-		my $implementation = &clean_config_value($cgi->param('implementation'), qr/\A(?:legacy|vzlogger)\z/, &implementation_mode() );
+		my $implementation = &implementation_mode();
+		if ( ($cgi->param('implementation_changed') || "") eq "1" ) {
+			$implementation = &clean_config_value($cgi->param('implementation'), qr/\A(?:none|legacy)\z/, $implementation );
+		}
 		$plugin_cfg->param( "MAIN.IMPLEMENTATION", $implementation );
 		$plugin_cfg->param( "MAIN.READ", $cgi->param('read') );
 		$plugin_cfg->param( "MAIN.CRON", $cgi->param('cron') );
@@ -285,17 +290,6 @@ sub form
 				$plugin_cfg->param("$serial.STOPBITS", &clean_config_value($cgi->param("$serial\_stopbits"), qr/\A\d*\z/, "") );
 				$plugin_cfg->param("$serial.PARITY", &clean_config_value($cgi->param("$serial\_parity"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
 				$plugin_cfg->param("$serial.CRC", &clean_config_value($cgi->param("$serial\_crc"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
-			} else {
-				$plugin_cfg->param("$serial.PROTOCOL", "");
-				$plugin_cfg->param("$serial.STARTBAUDRATE", "");
-				$plugin_cfg->param("$serial.BAUDRATE", "");
-				$plugin_cfg->param("$serial.TIMEOUT", "");
-				$plugin_cfg->param("$serial.DELAY", "");
-				$plugin_cfg->param("$serial.HANDSHAKE", "");
-				$plugin_cfg->param("$serial.DATABITS", "");
-				$plugin_cfg->param("$serial.STOPBITS", "");
-				$plugin_cfg->param("$serial.PARITY", "");
-				$plugin_cfg->param("$serial.CRC", "");
 			}
 		}
 		$plugin_cfg->save;
@@ -305,7 +299,7 @@ sub form
 			&run_vzlogger_control("disable-vzlogger");
 		} else {
 			&remove_cronjobs;
-			&run_vzlogger_control("apply");
+			&run_vzlogger_control("disable-vzlogger");
 		}
 	}
 	
@@ -345,7 +339,32 @@ sub form
 	$maintemplate->param( UDPPORT 		=> $plugin_cfg->param("MAIN.UDPPORT") );
 	$maintemplate->param( SENDMQTT 		=> $plugin_cfg->param("MAIN.SENDMQTT") );
 	$maintemplate->param( MQTTTOPIC 		=> $plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter" );
-	$maintemplate->param( IMPLEMENTATION 	=> &implementation_mode() );
+	my $implementation = &implementation_mode();
+	$maintemplate->param( IMPLEMENTATION 	=> $implementation );
+	$maintemplate->param( IMPLEMENTATION_SWITCH_VALUE => ($implementation eq "legacy" ? "legacy" : "none") );
+	$maintemplate->param( VZLOGGER_IMPLEMENTATION_ACTIVE => ($implementation eq "vzlogger") );
+	$maintemplate->param( LEGACY_IMPLEMENTATION_ACTIVE => ($implementation eq "legacy") );
+	my %parity_names = (n => "none", e => "even", o => "odd");
+	my $meter_template_options = [ map {
+		my $serial_mode = lc($_->{serial_mode} || "");
+		$serial_mode =~ /\A([78])([neo])([12])\z/ or die "Invalid serial mode '$serial_mode' in meter template '$_->{id}'";
+		my ($databits, $parity, $stopbits) = ($1, $2, $3);
+		my $legacy = $_->{legacy} || {};
+		{
+			ID => $_->{id},
+			LABEL => $_->{label},
+			PROTOCOL_LABEL => uc($_->{protocol}),
+			STARTBAUDRATE => $_->{initial_baudrate},
+			BAUDRATE => $_->{read_baudrate},
+			TIMEOUT => $_->{read_timeout},
+			DELAY => $legacy->{delay},
+			HANDSHAKE => $legacy->{handshake} || "none",
+			DATABITS => $databits,
+			PARITY => $parity_names{$parity},
+			STOPBITS => $stopbits,
+			CRC => $legacy->{crc} || "",
+		}
+	} @{load_meter_templates()} ];
 
   	# Read the config for all found heads
 	my $i = 0;
@@ -368,6 +387,7 @@ sub form
 			STOPBITS	=>	$plugin_cfg->param("$serial.STOPBITS"),
 			PARITY		=>	$plugin_cfg->param("$serial.PARITY"),
 			CRC		    =>	$plugin_cfg->param("$serial.CRC"),
+			METER_TEMPLATES => $meter_template_options,
 			);
 			push (@rows, \%{"hash".$i});
 			$i++;
@@ -383,6 +403,26 @@ sub form
 
 	exit;
 
+}
+
+sub load_meter_templates
+{
+	return $meter_templates_cache if ($meter_templates_cache);
+	my $catalog_file = "$installfolder/templates/plugins/$psubfolder/meter_templates.json";
+	open(my $catalog_fh, "<", $catalog_file) or die "Could not read meter template catalog $catalog_file: $!";
+	local $/;
+	my $json = <$catalog_fh>;
+	close($catalog_fh);
+	my $templates = eval { JSON::PP->new->utf8->decode($json) };
+	die "Invalid meter template catalog $catalog_file: $@" if (!$templates || ref($templates) ne "ARRAY");
+	my %ids;
+	foreach my $entry (@{$templates}) {
+		my $id = ref($entry) eq "HASH" ? ($entry->{id} || "") : "";
+		die "Invalid or duplicate meter template id '$id'" if ($id !~ /\A[A-Za-z0-9_.:-]+\z/ || $ids{$id}++);
+		die "Invalid protocol in meter template '$id'" if (($entry->{protocol} || "") !~ /\A(?:sml|d0)\z/);
+	}
+	$meter_templates_cache = $templates;
+	return $meter_templates_cache;
 }
 
 sub remove_cronjobs
@@ -473,7 +513,7 @@ sub run_vzlogger_control
 sub implementation_mode
 {
 	my $mode = $plugin_cfg->param("MAIN.IMPLEMENTATION") || "";
-	return $mode if ($mode =~ /\A(?:legacy|vzlogger)\z/);
+	return $mode if ($mode =~ /\A(?:none|legacy|vzlogger)\z/);
 	return (($plugin_cfg->param("MAIN.READ") || "0") eq "1") ? "legacy" : "vzlogger";
 }
 
