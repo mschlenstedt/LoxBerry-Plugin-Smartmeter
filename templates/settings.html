@@ -266,11 +266,71 @@
 		.obis-search-spinner { animation-duration: 1.6s; }
 	}
 	@media (max-width: 700px) {
-		.service-panel td { display: block; width: auto !important; }
+		#vzlogger_form,
+		.configuration-section,
+		.service-panel,
+		.settings-table,
+		.settings-table > tbody,
+		.settings-table > tbody > tr,
+		.meter-panel,
+		.meter-panel .ui-collapsible-heading,
+		.meter-panel .ui-collapsible-content,
+		.obis-editor,
+		.obis-channel-card,
+		.obis-channel-summary,
+		.obis-channel-grid,
+		.obis-api-fields,
+		.obis-channel-field {
+			box-sizing: border-box;
+			min-width: 0;
+			max-width: 100%;
+		}
+		.configuration-section,
+		.service-panel,
+		.settings-table,
+		.settings-table > tbody,
+		.settings-table > tbody > tr,
+		.meter-panel,
+		.obis-editor,
+		.obis-channel-card,
+		.obis-channel-summary,
+		.obis-channel-grid,
+		.obis-api-fields { width: 100%; }
+		.service-panel table,
+		.service-panel tbody,
+		.service-panel tr,
+		.settings-table,
+		.settings-table > tbody,
+		.settings-table > tbody > tr { display: block; }
+		.service-panel td { display: block; box-sizing: border-box; width: 100% !important; max-width: 100%; }
 		.service-panel .service-spacer { display: none; }
-		.settings-table { table-layout: auto; }
-		.settings-table > tbody > tr > td { display: block; width: auto !important; }
+		.settings-table { table-layout: fixed; }
+		.settings-table > tbody > tr > td { display: block; box-sizing: border-box; width: 100% !important; max-width: 100%; }
 		.settings-table > tbody > tr > td:nth-child(3) { display: none; }
+		.service-inline-setting { width: 100%; min-width: 0; max-width: 100%; flex-wrap: wrap; white-space: normal; }
+		.service-inline-setting .ui-select { flex: 1 1 10em; min-width: 0; max-width: 100%; }
+		#vzlogger_form .ui-collapsible,
+		#vzlogger_form .ui-collapsible-heading,
+		#vzlogger_form .ui-collapsible-heading .ui-btn,
+		#vzlogger_form .ui-collapsible-content,
+		#vzlogger_form .ui-input-text,
+		#vzlogger_form .ui-select,
+		#vzlogger_form .ui-select .ui-btn,
+		#vzlogger_form input,
+		#vzlogger_form select,
+		#vzlogger_form textarea { box-sizing: border-box; min-width: 0; max-width: 100%; }
+		#vzlogger_form .ui-collapsible-heading .ui-btn,
+		#vzlogger_form summary,
+		#vzlogger_form label,
+		#vzlogger_form code,
+		#vzlogger_form .obis-channel-help { overflow-wrap: anywhere; }
+	}
+	@media (max-width: 420px) {
+		.configuration-section { padding: 8px; }
+		.service-panel { padding: 8px; }
+		.meter-panel .ui-collapsible-content { padding: 7px; }
+		.obis-channel-card { padding: 7px; }
+		.obis-channel-details[open] > .obis-channel-grid { padding: 7px; }
 	}
 
 </style>
