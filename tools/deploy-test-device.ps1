@@ -19,6 +19,7 @@ param(
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 . (Join-Path $PSScriptRoot "TestDeviceSettings.ps1")
+. (Join-Path $PSScriptRoot "TestDeviceFileTransfer.ps1")
 $settings = Resolve-TestDeviceSettings -Target $Target -Transport $Transport -PluginFolder $PluginFolder -IdentityFile $IdentityFile
 $Target = $settings.Target
 $Transport = $settings.Transport
@@ -49,14 +50,33 @@ function Copy-ToTarget {
 		[Parameter(Mandatory = $true)][string] $RemotePath
 	)
 
-	if ($Transport -eq "PuTTY") {
-		& pscp.exe -batch -load $Target -- $LocalPath "${Target}:$RemotePath"
-	} else {
-		$identityArguments = if ($IdentityFile) { @("-i", $IdentityFile) } else { @() }
-		& scp.exe @identityArguments -q -- $LocalPath "${Target}:$RemotePath"
-	}
-	if ($LASTEXITCODE -ne 0) {
-		throw "Upload failed with exit code $LASTEXITCODE."
+	$uploadPath = $LocalPath
+	$temporaryUpload = $null
+	try {
+		$extension = [System.IO.Path]::GetExtension($LocalPath).ToLowerInvariant()
+		if ($extension -in ".cgi", ".pl", ".pm", ".sh") {
+			$temporaryUpload = Join-Path ([System.IO.Path]::GetTempPath()) (
+				"smartmeter-v2-upload-$([Guid]::NewGuid().ToString('N'))$extension"
+			)
+			$sourceBytes = [System.IO.File]::ReadAllBytes($LocalPath)
+			$normalizedBytes = ConvertTo-LfLineEndings $sourceBytes
+			[System.IO.File]::WriteAllBytes($temporaryUpload, $normalizedBytes)
+			$uploadPath = $temporaryUpload
+		}
+
+		if ($Transport -eq "PuTTY") {
+			& pscp.exe -batch -load $Target -- $uploadPath "${Target}:$RemotePath"
+		} else {
+			$identityArguments = if ($IdentityFile) { @("-i", $IdentityFile) } else { @() }
+			& scp.exe @identityArguments -q -- $uploadPath "${Target}:$RemotePath"
+		}
+		if ($LASTEXITCODE -ne 0) {
+			throw "Upload failed with exit code $LASTEXITCODE."
+		}
+	} finally {
+		if ($temporaryUpload -and (Test-Path -LiteralPath $temporaryUpload)) {
+			Remove-Item -LiteralPath $temporaryUpload -Force
+		}
 	}
 }
 

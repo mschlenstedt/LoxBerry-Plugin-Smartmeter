@@ -4,7 +4,7 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
-- Load shared validation/runtime modules from LoxBerry's installed plugin `bin` directory when opening the Legacy page, and avoid rewriting `smartmeter.cfg` on read-only page loads.
+- Load shared validation/runtime modules from LoxBerry's installed plugin `bin` directory when opening the Legacy page, avoid rewriting `smartmeter.cfg` on read-only page loads, and normalize executable test-device uploads to LF so Apache can run CGI shebangs deployed from Windows.
 - Hide the Expert Mode reset-from-current-config action during the initial page render whenever Expert Mode is disabled, including after jQuery Mobile enhances the button markup.
 - Preserve `loxberry` ownership for private generated configuration artifacts when install/upgrade hooks run Apply as root, and repair root-owned artifacts created by earlier lifecycle runs.
 - Make vzLogger Save/Apply transactional: serialize configuration and service actions, generate and validate in a protected staging directory, roll back incomplete promotions, and preserve the last valid runtime files on failure.

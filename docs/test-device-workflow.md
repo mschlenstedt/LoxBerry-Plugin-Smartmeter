@@ -70,6 +70,8 @@ Before overwriting a file, the script copies the remote version to a timestamped
 
 After upload, the script runs target-side syntax checks for Perl/CGI, PHP, and shell files. It does not restart services. Restart only the service affected by the change and only when the test requires it.
 
+The deployment script normalizes uploaded Perl, CGI, module, and shell files to LF in a temporary local copy. This is required even with `.gitattributes`, because a Windows working tree may still contain CRLF and `perl -c file.cgi` does not exercise the executable shebang used by Apache.
+
 ## Verification and cleanup
 
 Record the initial state before a destructive test:
@@ -85,5 +87,14 @@ After deployment:
 3. Confirm that untouched configuration checksums have not changed.
 4. Test service restart behavior when runtime loading is part of the change.
 5. Restore the initial Expert Mode, configuration, and service states after tests that deliberately changed them.
+
+For CGI or navigation changes, also test the installed page through an authenticated browser session, preferably the developer's existing Chrome session:
+
+1. Open the normal plugin entry page instead of invoking the CGI only from SSH.
+2. Use the visible navigation or action that reaches the changed CGI so jQuery Mobile/AJAX behavior is included.
+3. Confirm that the destination page renders and does not show `Error 500` or `Internal Server Error`.
+4. If it fails, open LoxBerry's **Log Manager → Apache Log** in the same browser session. If the Log Manager cannot read the file, check `/var/log/apache2/error.log` ownership and mode separately rather than changing them as part of the plugin test.
+
+The browser check complements target-side syntax checks; it is required when executable CGI behavior changed because calling `perl script.cgi` bypasses the shebang.
 
 For installation or upgrade changes, install the built plugin archive through the normal LoxBerry plugin manager and validate the complete install log. Direct file deployment is not a substitute for lifecycle testing.

@@ -42,6 +42,10 @@ $manual{meters}->[0]->{baudrate} = 99999999;
 like(join(",", validate_legacy_general(\%manual, {})), qr/BAUDRATE/, "unsafe manual baud rate is rejected");
 
 open(my $legacy_fh, "<", "$FindBin::Bin/../webfrontend/htmlauth/index_legacy.cgi") or die $!;
+binmode($legacy_fh);
+my $legacy_shebang = <$legacy_fh>;
+is($legacy_shebang, "#!/usr/bin/perl\n", "Legacy CGI shebang uses an executable Unix line ending");
+seek($legacy_fh, 0, 0) or die $!;
 local $/;
 my $legacy_source = <$legacy_fh>;
 close($legacy_fh);
