@@ -97,4 +97,28 @@ For CGI or navigation changes, also test the installed page through an authentic
 
 The browser check complements target-side syntax checks; it is required when executable CGI behavior changed because calling `perl script.cgi` bypasses the shebang.
 
+### Desktop and mobile UI acceptance
+
+For UI, template, CSS, navigation, or user-facing text changes, test the installed vzLogger and Legacy pages at these CSS viewport sizes:
+
+| Profile | Viewport | Required use |
+| --- | --- | --- |
+| Desktop | `1280x800` | Full desktop workflow and changed interactions |
+| Mobile primary | `390x844` | Full mobile workflow and changed interactions |
+| Mobile compact | `360x800` | Layout, navigation, forms, and long labels |
+| Mobile minimum | `320x568` | Graceful layout only; no clipped or unreachable plugin functions |
+
+Use an authenticated browser session and reach both pages through the visible implementation tabs so jQuery Mobile/AJAX navigation is exercised. At Desktop and Mobile primary sizes, check the initial render and every changed interaction, including relevant collapsibles, dialogs, validation, and action buttons. Use the compact and minimum sizes whenever layout, controls, navigation, or text lengths changed.
+
+Acceptance requires:
+
+- identical available functions and information on desktop and mobile;
+- no plugin-caused horizontal page scrolling (`document.documentElement.scrollWidth <= document.documentElement.clientWidth`), excluding closed off-canvas LoxBerry side/help panels;
+- no clipped or overlapping labels, controls, status text, paths, identifiers, or URLs;
+- usable implementation tabs, navigation, forms, collapsibles, dialogs, and action buttons without zooming;
+- safe wrapping or stacking of tables and multi-column form rows; and
+- successful rendering without HTTP 500 or browser-console errors introduced by the plugin.
+
+Test the longer German labels when only one language can be exercised. If translated UI text changed, verify both German and English views.
+
 For installation or upgrade changes, install the built plugin archive through the normal LoxBerry plugin manager and validate the complete install log. Direct file deployment is not a substitute for lifecycle testing.
