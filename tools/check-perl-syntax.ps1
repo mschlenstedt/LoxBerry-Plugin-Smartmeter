@@ -7,6 +7,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $stubRoot = Join-Path $repoRoot ".github\ci\perl-lib"
+$pluginBin = Join-Path $repoRoot "bin"
 
 if (-not (Test-Path (Join-Path $stubRoot "LoxBerry\System.pm"))) {
 	throw "Missing LoxBerry Perl stubs below $stubRoot"
@@ -27,7 +28,7 @@ $failed = $false
 foreach ($item in $Path) {
 	$resolved = Resolve-Path -LiteralPath $item
 	foreach ($file in $resolved) {
-		& perl -I $stubRoot -c $file.Path
+		& perl -I $stubRoot -I $pluginBin -c $file.Path
 		if ($LASTEXITCODE -ne 0) {
 			$failed = $true
 		}

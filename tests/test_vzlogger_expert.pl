@@ -67,4 +67,18 @@ like($index_source, qr/\$enabled eq "1" && !\$was_enabled && !-e expert_config_f
 unlike($index_source, qr/unlink\(expert_config_file\(\)\)/, "standard apply does not remove the expert draft");
 like($index_source, qr/ajaxaction.*expert-reset|\$action eq "expert-reset"/s, "explicit expert reset AJAX action is available");
 
+open(my $template_fh, "<", "$FindBin::Bin/../templates/settings.html") or die $!;
+my $template_source = <$template_fh>;
+close($template_fh);
+like(
+	$template_source,
+	qr/id="reset_expert_config_container"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> hidden<\/TMPL_IF>/,
+	"expert reset action is initially hidden by its stable container",
+);
+like(
+	$template_source,
+	qr/\$\("#reset_expert_config_container"\)\.prop\("hidden", !expert_mode_active\)\.toggle\(expert_mode_active\)/,
+	"expert mode rendering toggles the stable reset-action container",
+);
+
 done_testing();

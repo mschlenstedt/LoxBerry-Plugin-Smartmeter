@@ -4,12 +4,14 @@ use warnings;
 use CGI;
 use Config::Simple;
 use FindBin;
+use File::Temp qw(tempdir);
 use JSON::PP;
 use LoxBerry::System;
 use lib $lbpbindir;
 use lib "$FindBin::Bin/../../bin";
 use SmartMeterVZLoggerChannels qw(read_json write_json_atomic);
 use SmartMeterVZLoggerExpert qw(read_text write_text_atomic validate_expert_text format_expert_validation build_expert_mapping);
+use SmartMeterVZLoggerRuntime qw(acquire_config_lock promote_files_atomic);
 
 my $maximum_size = 1024 * 1024;
 my $content_length = $ENV{CONTENT_LENGTH} || 0;
@@ -51,6 +53,8 @@ sub fail_plain
 
 if (($ENV{REQUEST_METHOD} || "GET") eq "POST") {
 	fail_plain("403 Forbidden", "Expert Mode is not active.") if (!$expert_mode);
+	my ($config_lock, $lock_error) = acquire_config_lock("/var/run/shm/$lbpplugindir");
+	fail_plain("409 Conflict", $lock_error) if (!$config_lock);
 	my $text = $cgi->param("config");
 	$text = "" if (!defined($text));
 	# HTML form encoding serializes textarea line endings as CRLF. Normalize them
@@ -64,14 +68,17 @@ if (($ENV{REQUEST_METHOD} || "GET") eq "POST") {
 		my $existing = read_json($mapping_file) || {};
 		my ($mapping, $mapping_warnings) = build_expert_mapping($result->{config}, $existing);
 		push @{$result->{warnings}}, @$mapping_warnings;
-		my $previous_runtime = read_text($runtime_file);
-		my $previous_mapping = read_json($mapping_file);
-		my $runtime_ok = write_text_atomic($runtime_file, $text);
-		my $mapping_ok = $runtime_ok ? eval { write_json_atomic($mapping_file, $mapping); 1 } : 0;
-		if (!$runtime_ok || !$mapping_ok) {
-			write_text_atomic($runtime_file, $previous_runtime) if (defined($previous_runtime));
-			eval { write_json_atomic($mapping_file, $previous_mapping) } if (ref($previous_mapping) eq "HASH");
+		my $stage = tempdir(".vzlogger-expert-stage-XXXXXX", DIR => $lbpconfigdir, CLEANUP => 1);
+		my $stage_runtime = "$stage/vzlogger.conf";
+		my $stage_mapping = "$stage/vzlogger_channels.json";
+		my $runtime_ok = write_text_atomic($stage_runtime, $text);
+		my $mapping_ok = $runtime_ok ? eval { write_json_atomic($stage_mapping, $mapping); 1 } : 0;
+		my ($promoted, $promotion_error) = $mapping_ok
+			? promote_files_atomic([[$stage_runtime, $runtime_file, 0600], [$stage_mapping, $mapping_file, 0600]])
+			: (0, "Could not stage expert mapping.");
+		if (!$runtime_ok || !$mapping_ok || !$promoted) {
 			push @{$result->{errors}}, "The expert draft was saved, but the runtime configuration could not be updated.";
+			push @{$result->{errors}}, $promotion_error if ($promotion_error);
 			$result->{valid} = 0;
 		}
 	}

@@ -162,6 +162,7 @@ sub write_json_atomic
 	open(my $fh, ">", $tmp) or die "Could not write $tmp: $!\n";
 	print $fh JSON::PP->new->utf8->canonical->pretty->encode($value);
 	close($fh) or die "Could not close $tmp: $!\n";
+	chmod(0600, $tmp) or die "Could not protect $tmp: $!\n";
 	rename($tmp, $file) or die "Could not replace $file: $!\n";
 }
 

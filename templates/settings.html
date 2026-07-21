@@ -711,7 +711,7 @@
 	<table border="0" class="settings-table">
 	<tr>
 		<td><TMPL_VAR NAME=T::VZLOGGER.GENERATED_CONFIG></td>
-		<td><div class="generated-config-path"><code><TMPL_VAR VZLOGGER_CONFIG></code></div><div class="generated-config-actions"><a id="show_generated_config" href="<TMPL_VAR VZLOGGER_CONFIG_URL>" target="_blank"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> rel="noopener"</TMPL_IF> title="<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG_HELP><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP></TMPL_IF>" data-role="button" data-inline="true" data-mini="true" data-icon="<TMPL_IF VZLOGGER_EXPERT_MODE>edit<TMPL_ELSE>search</TMPL_IF>" class="<TMPL_VAR VZLOGGER_CONFIG_DISABLED>"><TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG></TMPL_IF></a><button id="reset_expert_config" type="button" onclick="reset_expert_configuration();" title="<TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="refresh"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> hidden</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG></button></div></td><td>&nbsp;</td><td id="generated_config_help"><TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG_HELP><br><TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG_HELP><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP></TMPL_IF></td>
+		<td><div class="generated-config-path"><code><TMPL_VAR VZLOGGER_CONFIG></code></div><div class="generated-config-actions"><a id="show_generated_config" href="<TMPL_VAR VZLOGGER_CONFIG_URL>" target="_blank"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> rel="noopener"</TMPL_IF> title="<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG_HELP><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP></TMPL_IF>" data-role="button" data-inline="true" data-mini="true" data-icon="<TMPL_IF VZLOGGER_EXPERT_MODE>edit<TMPL_ELSE>search</TMPL_IF>" class="<TMPL_VAR VZLOGGER_CONFIG_DISABLED>"><TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG></TMPL_IF></a><span id="reset_expert_config_container"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> hidden</TMPL_IF>><button id="reset_expert_config" type="button" onclick="reset_expert_configuration();" title="<TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="refresh"><TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG></button></span></div></td><td>&nbsp;</td><td id="generated_config_help"><TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG_HELP><br><TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG_HELP><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP></TMPL_IF></td>
 	</tr>
 	<tr>
 		<td><TMPL_VAR NAME=T::VZLOGGER.ACTIONS></td>
@@ -1882,7 +1882,7 @@
 			if (expert_mode_active) button.removeAttr("rel"); else button.attr("rel", "noopener");
 			$("#generated_config_help").text(help + (expert_mode_active ? " " + obis_text("reset_expert_config_help_text") : ""));
 			$("#expert_mode_notice").prop("hidden", !expert_mode_active);
-			$("#reset_expert_config").prop("hidden", !expert_mode_active).toggle(expert_mode_active);
+			$("#reset_expert_config_container").prop("hidden", !expert_mode_active).toggle(expert_mode_active);
 		}
 
 		function reset_expert_configuration() {

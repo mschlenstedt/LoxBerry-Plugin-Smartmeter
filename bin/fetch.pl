@@ -25,6 +25,7 @@ use Cwd 'abs_path';
 use IO::Socket; # For sending UDP packages
 use Getopt::Long;
 use LoxBerry::System;
+umask(0027);
 use File::Path qw(make_path);
 use Fcntl qw(:flock);
 #use warnings;

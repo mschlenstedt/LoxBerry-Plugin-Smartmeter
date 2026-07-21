@@ -30,10 +30,15 @@ use String::Escape qw( unquotemeta );
 use Cwd 'abs_path';
 use HTML::Template;
 use File::Path qw(make_path);
+use FindBin;
 use JSON::PP;
+use lib "$FindBin::Bin/../../bin";
+use SmartMeterVZLoggerConfig qw(validate_legacy_general);
+use SmartMeterVZLoggerRuntime qw(acquire_config_lock);
 #use warnings;
 #use strict;
 #no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
+umask(0027);
 
 ##########################################################################
 # Variables
@@ -69,6 +74,7 @@ my  $serial;
 my  $crontabtmp = "$lbplogdir/crontab.temp";
 my  $runtime_dir;
 my  $meter_templates_cache;
+my  $validation_error = "";
 my  @legacy_meter_fields = qw(METER PROTOCOL STARTBAUDRATE BAUDRATE TIMEOUT DELAY HANDSHAKE DATABITS STOPBITS PARITY CRC);
 
 ##########################################################################
@@ -122,6 +128,7 @@ $template_title = "$plugin_title V$version";
 if (!-d $runtime_dir) {
 	make_path($runtime_dir);
 }
+chmod(0750, $runtime_dir);
 # Check for temporary log folder
 if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
 	symlink($runtime_dir, "$installfolder/log/plugins/$psubfolder/shm");
@@ -273,15 +280,48 @@ sub form
 	if ( $saveformdata ) {
 		my $implementation = &implementation_mode();
 		if ( ($cgi->param('implementation_changed') || "") eq "1" ) {
-			$implementation = &clean_config_value($cgi->param('implementation'), qr/\A(?:none|legacy)\z/, $implementation );
+			$implementation = scalar($cgi->param('implementation'));
 		}
+		my %meter_ids = map { $_->{id} => 1 } @{load_meter_templates()};
+		my @submitted_meters;
+		foreach my $head (@heads) {
+			my $head_serial = $head;
+			$head_serial =~ s%/dev/serial/smartmeter/%%g;
+			push @submitted_meters, {
+				serial => $head_serial, meter => scalar($cgi->param("$head_serial\_meter")),
+				protocol => scalar($cgi->param("$head_serial\_protocol")),
+				startbaudrate => scalar($cgi->param("$head_serial\_startbaudrate")),
+				baudrate => scalar($cgi->param("$head_serial\_baudrate")),
+				timeout => scalar($cgi->param("$head_serial\_timeout")), delay => scalar($cgi->param("$head_serial\_delay")),
+				databits => scalar($cgi->param("$head_serial\_databits")), stopbits => scalar($cgi->param("$head_serial\_stopbits")),
+				parity => scalar($cgi->param("$head_serial\_parity")),
+			};
+		}
+		my @validation_errors = validate_legacy_general({
+			implementation => $implementation,
+			read => scalar($cgi->param('read')),
+			cron => defined($cgi->param('cron')) ? scalar($cgi->param('cron')) : $plugin_cfg->param("MAIN.CRON"),
+			sendudp => scalar($cgi->param('sendudp')),
+			udpport => defined($cgi->param('udpport')) ? scalar($cgi->param('udpport')) : $plugin_cfg->param("MAIN.UDPPORT"),
+			sendmqtt => scalar($cgi->param('sendmqtt')),
+			mqtttopic => defined($cgi->param('mqtttopic')) ? scalar($cgi->param('mqtttopic')) : ($plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter"),
+			meters => \@submitted_meters,
+		}, \%meter_ids);
+		if (@validation_errors) {
+			$validation_error = ($TPhrases{"VZLOGGER.LEGACY_VALIDATION_ERROR"} || "Invalid values; nothing was saved:") . " " . join(", ", @validation_errors);
+		} else {
+			my ($lock, $lock_error) = acquire_config_lock($runtime_dir);
+			if (!$lock) {
+				$validation_error = $lock_error;
+			} else {
+				local $ENV{SMARTMETER_CONFIG_LOCK_HELD} = "1";
 		$plugin_cfg->param( "MAIN.IMPLEMENTATION", $implementation );
 		$plugin_cfg->param( "MAIN.READ", $cgi->param('read') );
-		$plugin_cfg->param( "MAIN.CRON", $cgi->param('cron') );
+		$plugin_cfg->param( "MAIN.CRON", $cgi->param('cron') ) if (defined($cgi->param('cron')));
 		$plugin_cfg->param( "MAIN.SENDUDP", $cgi->param('sendudp') );
-		$plugin_cfg->param( "MAIN.UDPPORT", $cgi->param('udpport') );
+		$plugin_cfg->param( "MAIN.UDPPORT", $cgi->param('udpport') ) if (defined($cgi->param('udpport')));
 		$plugin_cfg->param( "MAIN.SENDMQTT", $cgi->param('sendmqtt') );
-		$plugin_cfg->param( "MAIN.MQTTTOPIC", $cgi->param('mqtttopic') || "smartmeter" );
+		$plugin_cfg->param( "MAIN.MQTTTOPIC", $cgi->param('mqtttopic') ) if (defined($cgi->param('mqtttopic')));
 		foreach (@heads) {
 			$serial = $_;
 			$serial =~ s%/dev/serial/smartmeter/%%g;
@@ -308,6 +348,8 @@ sub form
 		} else {
 			&remove_cronjobs;
 			&run_vzlogger_control("disable-vzlogger");
+		}
+			}
 		}
 	}
 	
@@ -347,6 +389,7 @@ sub form
 	$maintemplate->param( UDPPORT 		=> $plugin_cfg->param("MAIN.UDPPORT") );
 	$maintemplate->param( SENDMQTT 		=> $plugin_cfg->param("MAIN.SENDMQTT") );
 	$maintemplate->param( MQTTTOPIC 		=> $plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter" );
+	$maintemplate->param( VALIDATION_ERROR => $validation_error );
 	my $implementation = &implementation_mode();
 	$maintemplate->param( IMPLEMENTATION 	=> $implementation );
 	$maintemplate->param( IMPLEMENTATION_SWITCH_VALUE => ($implementation eq "legacy" ? "legacy" : "none") );

@@ -78,3 +78,7 @@ jobs:
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_generator.pl
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_validator.pl
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_expert.pl
+          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_runtime.pl
+          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_custom_channels.pl
+          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_config_validation.pl
+          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_bridge.pl

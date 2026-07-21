@@ -57,6 +57,37 @@ if [ -z "$VZLOGGER_BIN" ] || [ ! -x "$VZLOGGER_BIN" ]; then
 	exit 3
 fi
 
+if ! id _vzlogger >/dev/null 2>&1; then
+	echo "<ERROR> vzLogger service user _vzlogger does not exist"
+	exit 3
+fi
+VZLOGGER_GROUP=$(id -gn _vzlogger)
+chown "loxberry:$VZLOGGER_GROUP" "$CONFIG_FILE"
+chmod 0640 "$CONFIG_FILE"
+CONFIG_DIR=$(dirname "$CONFIG_FILE")
+for PRIVATE_FILE in \
+	"$CONFIG_DIR/vzlogger_channels.json" \
+	"$CONFIG_DIR/vzlogger_channel_definitions.json" \
+	"$CONFIG_DIR"/vzlogger_user_channel_uuids_*.json \
+	"$CONFIG_DIR"/vzlogger_meter_*.jsonc
+do
+	if [ -f "$PRIVATE_FILE" ]; then
+		chown loxberry:loxberry "$PRIVATE_FILE"
+		chmod 0600 "$PRIVATE_FILE"
+	fi
+done
+LOG_DIR="$LBHOMEDIR/log/plugins/$PLUGINFOLDER"
+LOG_FILE="$LOG_DIR/vzlogger.log"
+RUNTIME_DIR="/var/run/shm/$PLUGINFOLDER"
+mkdir -p "$LOG_DIR"
+touch "$LOG_FILE"
+chown "_vzlogger:loxberry" "$LOG_FILE"
+chmod 0640 "$LOG_FILE"
+mkdir -p "$RUNTIME_DIR"
+chown "loxberry:loxberry" "$RUNTIME_DIR"
+chmod 0750 "$RUNTIME_DIR"
+find "$RUNTIME_DIR" -maxdepth 1 -type f -exec chown "loxberry:loxberry" {} \; -exec chmod 0640 {} \;
+
 mkdir -p "$DROPIN_DIR"
 {
 	echo "[Service]"
@@ -68,6 +99,8 @@ mkdir -p "$DROPIN_DIR"
 	echo "ExecStop="
 	echo "ExecReload="
 	echo "User=_vzlogger"
+	echo "SupplementaryGroups=loxberry"
+	echo "UMask=0027"
 	echo "Restart=on-failure"
 	echo "RestartSec=5s"
 } > "$DROPIN_FILE"

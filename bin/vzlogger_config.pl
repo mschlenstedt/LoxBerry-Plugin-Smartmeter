@@ -4,13 +4,14 @@ use strict;
 use warnings;
 
 use Config::Simple;
-use Digest::MD5 qw(md5_hex);
 use File::Path qw(make_path);
 use FindBin;
 use JSON::PP;
 use LoxBerry::System;
 use lib $FindBin::Bin;
-use SmartMeterVZLoggerChannels qw(read_json write_json_atomic load_catalog lookup_obis new_document migrate_legacy_meter validate_document native_channel);
+use SmartMeterVZLoggerChannels qw(read_json write_json_atomic load_catalog lookup_obis new_document migrate_legacy_meter validate_document native_channel normalize_obis);
+use SmartMeterVZLoggerCustomChannels qw(assign_custom_channel_uuids);
+use SmartMeterVZLoggerConfig qw(read_mqtt_settings clean_number sanitize_topic protocol_for_meter normalized_meter_mode serial_mode);
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
@@ -19,6 +20,7 @@ my $config_file = $ENV{SMARTMETER_CONFIG_FILE} || "$plugin_config_dir/smartmeter
 my $target_file = $ENV{SMARTMETER_VZLOGGER_CONFIG_FILE} || "$plugin_config_dir/vzlogger.conf";
 my $mapping_file = $ENV{SMARTMETER_VZLOGGER_MAPPING_FILE} || "$plugin_config_dir/vzlogger_channels.json";
 my $definitions_file = $ENV{SMARTMETER_VZLOGGER_DEFINITIONS_FILE} || "$plugin_config_dir/vzlogger_channel_definitions.json";
+my $uuid_registry_dir = $ENV{SMARTMETER_UUID_REGISTRY_DIR} || $plugin_config_dir;
 my $catalog_file = $ENV{SMARTMETER_OBIS_CATALOG_FILE} || "$home/templates/plugins/$psubfolder/obis_catalog.json";
 my $plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file\n";
 my $obis_catalog = load_catalog($catalog_file);
@@ -34,7 +36,7 @@ $channel_document ||= new_document();
 $channel_document->{meters} ||= {};
 my $channel_document_changed = !-e $definitions_file;
 
-my $mqtt = read_mqtt_settings();
+my $mqtt = read_mqtt_settings($home, $plugin_cfg);
 my $base_topic = sanitize_topic($plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter");
 my $local_enabled = clean_boolean($plugin_cfg->param("VZLOGGER.LOCALENABLED"), 1);
 my $local_port = clean_number($plugin_cfg->param("VZLOGGER.LOCALPORT"), 18080);
@@ -64,6 +66,8 @@ foreach my $config_key (sort keys %flat_config) {
 			warn "Skipped invalid custom meter '$serial': $error\n";
 			next;
 		}
+		my ($uuid_ok, $uuid_error) = assign_custom_channel_uuids($custom_meter, $serial, $psubfolder, $uuid_registry_dir);
+		die "$uuid_error\n" if (!$uuid_ok);
 		$meter_config = $custom_meter;
 		enrich_user_channels($meter_config, $serial, \%channel_mapping, \$channel_index);
 	} else {
@@ -187,57 +191,6 @@ if (($ENV{SMARTMETER_VALIDATION_DRAFT} || "") eq "1") {
 }
 exit 0;
 
-sub read_mqtt_settings
-{
-	my $general_json = "$home/config/system/general.json";
-	my %settings = (
-		host => "127.0.0.1",
-		port => 1883,
-		user => "",
-		pass => "",
-		cafile => "",
-		capath => "",
-		certfile => "",
-		keyfile => "",
-		keypass => "",
-	);
-
-	if (-e $general_json && open(my $fh, "<", $general_json)) {
-		local $/;
-		my $json_text = <$fh>;
-		close($fh);
-		my $general = eval { JSON::PP->new->utf8->decode($json_text) };
-		if (!$@ && ref($general) && ref($general->{Mqtt})) {
-			my $mqtt = $general->{Mqtt};
-			$settings{host} = first_value($mqtt, qw(Host Hostname Broker Brokerhost Server IpAddress Ipaddress)) || $settings{host};
-			$settings{port} = clean_number(first_value($mqtt, qw(Port Brokerport Mqttport)), $settings{port});
-			$settings{user} = first_value($mqtt, qw(Brokeruser Brokerusername User Username Login)) || "";
-			$settings{pass} = first_value($mqtt, qw(Brokerpass Brokerpassword Pass Password)) || "";
-		}
-	}
-
-	$settings{host} = clean_text($plugin_cfg->param("VZLOGGER.MQTTHOST"), $settings{host});
-	$settings{port} = clean_number($plugin_cfg->param("VZLOGGER.MQTTPORT"), $settings{port});
-	$settings{cafile} = clean_text($plugin_cfg->param("VZLOGGER.MQTTCAFILE"), "");
-	$settings{capath} = clean_text($plugin_cfg->param("VZLOGGER.MQTTCAPATH"), "");
-	$settings{certfile} = clean_text($plugin_cfg->param("VZLOGGER.MQTTCERTFILE"), "");
-	$settings{keyfile} = clean_text($plugin_cfg->param("VZLOGGER.MQTTKEYFILE"), "");
-	$settings{keypass} = clean_text($plugin_cfg->param("VZLOGGER.MQTTKEYPASS"), "");
-	$settings{user} = clean_text($plugin_cfg->param("VZLOGGER.MQTTUSER"), $settings{user});
-	$settings{pass} = clean_text($plugin_cfg->param("VZLOGGER.MQTTPASS"), $settings{pass});
-
-	return \%settings;
-}
-
-sub first_value
-{
-	my ($hash, @keys) = @_;
-	foreach my $key (@keys) {
-		return $hash->{$key} if (defined($hash->{$key}) && $hash->{$key} ne "");
-	}
-	return undef;
-}
-
 sub write_json
 {
 	my ($file, $data) = @_;
@@ -247,21 +200,6 @@ sub write_json
 	open(my $fh, ">", $file) or die "Could not write $file: $!\n";
 	print $fh JSON::PP->new->utf8->pretty->canonical->encode($data);
 	close($fh);
-}
-
-sub normalized_meter_mode
-{
-	my ($meter, $manual_protocol) = @_;
-	$meter ||= "0";
-	return $meter if ($meter =~ /\A(?:0|sml|d0|oms|user)\z/);
-	if ($meter eq "manual") {
-		my $mapped = protocol_for_meter($manual_protocol);
-		return $mapped || "user";
-	}
-	return "sml" if ($meter =~ /sml\z/i);
-	return "d0" if ($meter =~ /(?:d0|do)\z/i);
-	return "oms" if ($meter =~ /oms\z/i);
-	return "user";
 }
 
 sub standard_meter_config
@@ -386,7 +324,8 @@ sub enrich_user_channels
 	foreach my $channel (@{$meter->{channels}}) {
 		my $identifier = defined($channel->{identifier}) && !ref($channel->{identifier}) ? "$channel->{identifier}" : "";
 		my $index = ${$index_ref};
-		$channel->{uuid} = stable_uuid("$psubfolder:$serial:$meter_channel_index:$identifier") if (!defined($channel->{uuid}) || ref($channel->{uuid}) || $channel->{uuid} eq "");
+		die "Custom channel $meter_channel_index for reader $serial has no assigned UUID.\n"
+			if (!defined($channel->{uuid}) || ref($channel->{uuid}) || $channel->{uuid} eq "");
 		$channel->{api} = "null" if (!exists($channel->{api}));
 		my $uuid = defined($channel->{uuid}) && !ref($channel->{uuid}) ? "$channel->{uuid}" : "";
 		if ($uuid ne "") {
@@ -437,74 +376,6 @@ sub configured_parity_optional
 	);
 	return lc($legacy) if ($legacy && first_config_value($section, "DATABITS", "PARITY", "STOPBITS"));
 	return "";
-}
-
-sub clean_text_allow_empty
-{
-	my ($value) = @_;
-	return "" if (!defined($value));
-	$value =~ s/[\r\n]//g;
-	return $value;
-}
-
-sub protocol_for_meter
-{
-	my ($meter) = @_;
-	return "" if (!defined($meter));
-	return "sml" if ($meter =~ /sml\z/i);
-	return "d0" if ($meter =~ /d0\z/i || $meter =~ /do\z/i);
-	return "oms" if ($meter =~ /oms\z/i);
-	return "";
-}
-
-sub serial_mode
-{
-	my ($databits, $parity, $stopbits) = @_;
-	$databits ||= 7;
-	$parity ||= "even";
-	$stopbits ||= 1;
-
-	my $parity_char = "N";
-	$parity_char = "E" if (lc($parity) eq "even");
-	$parity_char = "O" if (lc($parity) eq "odd");
-
-	return "$databits$parity_char$stopbits";
-}
-
-sub cron_to_seconds
-{
-	my ($cron) = @_;
-	return 5 if (!defined($cron) || $cron eq "" || $cron eq "M");
-	return int($cron) * 60 if ($cron =~ /\A\d+\z/ && int($cron) > 0);
-	return 300;
-}
-
-sub clean_number
-{
-	my ($value, $default) = @_;
-	return int($value) if (defined($value) && $value =~ /\A\d+\z/);
-	return $default;
-}
-
-sub sanitize_topic
-{
-	my ($topic) = @_;
-	$topic ||= "smartmeter";
-	$topic =~ s/^\s+|\s+$//g;
-	$topic =~ s/^\/+|\/+$//g;
-	$topic =~ s/[#+]//g;
-	return $topic || "smartmeter";
-}
-
-sub stable_uuid
-{
-	my ($seed) = @_;
-	my $hex = md5_hex($seed);
-	return substr($hex, 0, 8) . "-" .
-		substr($hex, 8, 4) . "-" .
-		substr($hex, 12, 4) . "-" .
-		substr($hex, 16, 4) . "-" .
-		substr($hex, 20, 12);
 }
 
 sub default_channels
@@ -634,29 +505,6 @@ sub clean_log_level
 	return $default;
 }
 
-sub configured_channels
-{
-	my ($section) = @_;
-	my $has_configured_channels = defined($plugin_cfg->param("$section.OBISCHANNELS"));
-	my %enabled = map { $_ => 1 } config_list_values("$section.OBISCHANNELS");
-
-	my @channels;
-	foreach my $channel (available_channels($section)) {
-		push @channels, $channel if (!$has_configured_channels || $enabled{$channel->{identifier}});
-	}
-
-	my %seen = map { $_->{identifier} => 1 } @channels;
-	foreach my $identifier (custom_channels($section)) {
-		next if ($seen{$identifier});
-		push @channels, {
-			identifier => $identifier,
-			name => obis_cache_name($identifier),
-		};
-		$seen{$identifier} = 1;
-	}
-	return @channels;
-}
-
 sub available_channels
 {
 	my ($section) = @_;
@@ -702,10 +550,7 @@ sub custom_channels
 sub normalize_obis_identifier
 {
 	my ($value) = @_;
-	return "" if (!defined($value));
-	$value =~ s/^\s+|\s+$//g;
-	return $value if ($value =~ /\A(?:\d+-\d+:)?[A-Za-z0-9]+\.\d+\.\d+(?:\*(?:[0-9]|[1-9][0-9]|255))?\z/);
-	return "";
+	return normalize_obis($value);
 }
 
 sub obis_cache_name

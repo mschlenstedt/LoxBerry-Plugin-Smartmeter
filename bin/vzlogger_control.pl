@@ -2,14 +2,19 @@
 
 use strict;
 use warnings;
+umask(0027);
 
 use Config::Simple;
+use File::Copy qw(copy);
 use File::Path qw(make_path);
+use File::Temp qw(tempdir);
 use JSON::PP;
 use LoxBerry::System;
 use FindBin;
 use lib $FindBin::Bin;
 use SmartMeterVZLoggerExpert qw(read_text write_text_atomic update_expert_log_settings format_expert_validation);
+use SmartMeterVZLoggerRuntime qw(acquire_config_lock promote_files_atomic);
+use SmartMeterVZLoggerConfig qw(clean_number sanitize_topic);
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
@@ -30,6 +35,20 @@ my $action = shift @ARGV || "status";
 
 make_path($runtime_dir) if (!-d $runtime_dir);
 make_path($plugin_log_dir) if (!-d $plugin_log_dir);
+chmod(0750, $runtime_dir);
+my %mutating_action = map { $_ => 1 } qw(
+	generate apply apply-expert activate-vzlogger restart-vzlogger start-vzlogger stop-vzlogger
+	restart-bridge start-bridge stop-bridge disable-vzlogger
+);
+my $config_lock;
+if ($mutating_action{$action}) {
+	my ($lock, $error) = acquire_config_lock($runtime_dir);
+	if (!$lock) {
+		print "$error\n";
+		exit 2;
+	}
+	$config_lock = $lock;
+}
 log_control("action=$action user=" . ($ENV{USER} || $ENV{LOGNAME} || "unknown"));
 
 if ($action eq "generate") {
@@ -51,8 +70,7 @@ if ($action eq "restart-vzlogger") {
 		print "vzLogger mode is disabled. Did not restart vzLogger.\n";
 		exit 0;
 	}
-	restart_vzlogger();
-	exit 0;
+	exit restart_vzlogger();
 }
 
 if ($action eq "start-vzlogger") {
@@ -62,15 +80,13 @@ if ($action eq "start-vzlogger") {
 		print "vzLogger mode is disabled. Did not start vzLogger.\n";
 		exit 0;
 	}
-	start_vzlogger();
-	exit 0;
+	exit start_vzlogger();
 }
 
 if ($action eq "stop-vzlogger") {
 	my $rc = update_vzlogger_log_config();
 	print "Warning: vzLogger log settings could not be written to the current configuration.\n" if ($rc != 0);
-	stop_vzlogger();
-	exit 0;
+	exit stop_vzlogger();
 }
 
 if ($action eq "restart-bridge") {
@@ -84,8 +100,7 @@ if ($action eq "restart-bridge") {
 		print "MQTT is disabled in the generated vzLogger configuration. Use Save and apply first.\n";
 		exit 1;
 	}
-	restart_bridge();
-	exit 0;
+	exit restart_bridge();
 }
 
 if ($action eq "validate") {
@@ -109,21 +124,21 @@ if ($action eq "start-bridge") {
 		print "MQTT is disabled in the generated vzLogger configuration. Use Save and apply first.\n";
 		exit 1;
 	}
-	start_bridge();
-	exit 0;
+	exit start_bridge();
 }
 
 if ($action eq "stop-bridge") {
-	stop_bridge();
-	exit 0;
+	exit stop_bridge();
 }
 
 if ($action eq "disable-vzlogger") {
-	stop_bridge();
-	stop_vzlogger(1);
-	install_vzlogger_service_override("remove");
+	my $rc = stop_bridge();
+	my $vzlogger_rc = stop_vzlogger(1);
+	$rc = $vzlogger_rc if ($rc == 0 && $vzlogger_rc != 0);
+	my $override_rc = install_vzlogger_service_override("remove");
+	$rc = $override_rc if ($rc == 0 && $override_rc != 0);
 	print "Stopped vzLogger and bridge.\n";
-	exit 0;
+	exit $rc;
 }
 
 if ($action eq "status") {
@@ -159,25 +174,74 @@ sub run_perl
 
 sub generate_and_validate
 {
-	my $rc = run_perl("$bindir/vzlogger_config.pl");
-	return $rc if ($rc != 0);
-	return run_perl("$bindir/vzlogger_validate.pl");
+	return generate_validate_and_promote();
 }
 
 sub apply_generated_configuration
 {
-	my $rc = run_perl("$bindir/vzlogger_config.pl");
+	my $rc = generate_validate_and_promote();
 	return $rc if ($rc != 0);
 	if (vzlogger_mode_enabled() && generated_meter_count() == 0) {
-		stop_bridge();
-		stop_vzlogger(1);
-		install_vzlogger_service_override("remove");
+		my $stop_rc = stop_bridge();
+		my $vzlogger_rc = stop_vzlogger(1);
+		$stop_rc = $vzlogger_rc if ($stop_rc == 0 && $vzlogger_rc != 0);
+		my $override_rc = install_vzlogger_service_override("remove");
+		$stop_rc = $override_rc if ($stop_rc == 0 && $override_rc != 0);
 		print "No meter is configured. Stopped vzLogger and bridge.\n";
-		return 0;
+		return $stop_rc;
 	}
-	$rc = run_perl("$bindir/vzlogger_validate.pl");
-	return $rc if ($rc != 0);
 	return activate_current_vzlogger_configuration();
+}
+
+sub generate_validate_and_promote
+{
+	my $config_dir = "$home/config/plugins/$psubfolder";
+	my $stage = tempdir(".vzlogger-stage-XXXXXX", DIR => $config_dir, CLEANUP => 1);
+	my $stage_config = "$stage/vzlogger.conf";
+	my $stage_mapping = "$stage/vzlogger_channels.json";
+	my $stage_definitions = "$stage/vzlogger_channel_definitions.json";
+	copy("$config_dir/vzlogger_channel_definitions.json", $stage_definitions)
+		if (-e "$config_dir/vzlogger_channel_definitions.json");
+	foreach my $registry (glob("$config_dir/vzlogger_user_channel_uuids_*.json")) {
+		my ($name) = $registry =~ m{([^/\\]+)\z};
+		copy($registry, "$stage/$name") or return message_exit("Could not stage $registry: $!", 1);
+	}
+	my $rc;
+	{
+		local $ENV{SMARTMETER_VZLOGGER_CONFIG_FILE} = $stage_config;
+		local $ENV{SMARTMETER_VZLOGGER_MAPPING_FILE} = $stage_mapping;
+		local $ENV{SMARTMETER_VZLOGGER_DEFINITIONS_FILE} = $stage_definitions;
+		local $ENV{SMARTMETER_UUID_REGISTRY_DIR} = $stage;
+		$rc = run_perl("$bindir/vzlogger_config.pl");
+		return $rc if ($rc != 0);
+		$rc = run_perl("$bindir/vzlogger_validate.pl");
+		return $rc if ($rc != 0);
+	}
+	my (@private_owner, @vzlogger_owner);
+	my $config_mode = 0600;
+	if ($> == 0) {
+		my @loxberry = getpwnam("loxberry");
+		my @vzlogger = getpwnam("_vzlogger");
+		return message_exit("Could not resolve loxberry or _vzlogger ownership for generated configuration.", 1)
+			if (!@loxberry || !@vzlogger);
+		@private_owner = ($loxberry[2], $loxberry[3]);
+		@vzlogger_owner = ($loxberry[2], $vzlogger[3]);
+		$config_mode = 0640;
+	}
+	my @pairs = (
+		[$stage_config, $config_file, $config_mode, @vzlogger_owner],
+		[$stage_mapping, $mapping_file, 0600, @private_owner],
+	);
+	push @pairs, [$stage_definitions, "$config_dir/vzlogger_channel_definitions.json", 0600, @private_owner]
+		if (-e $stage_definitions);
+	foreach my $registry (glob("$stage/vzlogger_user_channel_uuids_*.json")) {
+		my ($name) = $registry =~ m{([^/\\]+)\z};
+		push @pairs, [$registry, "$config_dir/$name", 0600, @private_owner];
+	}
+	my ($ok, $error) = promote_files_atomic(\@pairs);
+	return message_exit($error, 1) if (!$ok);
+	print "Validated and promoted generated vzLogger configuration.\n";
+	return 0;
 }
 
 sub activate_or_migrate_vzlogger
@@ -199,20 +263,23 @@ sub current_vzlogger_configuration_is_valid
 sub activate_current_vzlogger_configuration
 {
 	if (!vzlogger_mode_enabled()) {
-		stop_bridge();
-		stop_vzlogger(1);
-		install_vzlogger_service_override("remove");
+		my $rc = stop_bridge();
+		my $vzlogger_rc = stop_vzlogger(1);
+		$rc = $vzlogger_rc if ($rc == 0 && $vzlogger_rc != 0);
+		my $override_rc = install_vzlogger_service_override("remove");
+		$rc = $override_rc if ($rc == 0 && $override_rc != 0);
 		print "vzLogger mode is disabled. Stopped vzLogger and bridge.\n";
-		return 0;
+		return $rc;
 	}
-	restart_vzlogger();
+	my $rc = restart_vzlogger();
+	return $rc if ($rc != 0);
 	if (bridge_enabled()) {
-		restart_bridge();
+		$rc = restart_bridge();
 	} else {
-		stop_bridge();
+		$rc = stop_bridge();
 		print "MQTT bridge is disabled. Stopped bridge and left vzLogger running.\n";
 	}
-	return 0;
+	return $rc;
 }
 
 sub generated_meter_count
@@ -335,15 +402,16 @@ sub write_vzlogger_config_atomic
 sub start_bridge
 {
 	my $install_rc = install_bridge_service("install");
-	return if ($install_rc != 0);
+	return $install_rc if ($install_rc != 0);
 
 	if (service_installed($bridge_service)) {
 		my $rc = run_privileged("start $bridge_service", systemctl_command(), "start", $bridge_service);
 		print "Started $bridge_service service.\n" if ($rc == 0);
-		return;
+		$rc = 1 if ($rc == 0 && !wait_for_service_state($bridge_service, 1));
+		return $rc;
 	}
 
-	return if (bridge_running());
+	return 0 if (bridge_running());
 
 	my $pid = fork();
 	die "Could not fork bridge process: $!\n" if (!defined($pid));
@@ -355,21 +423,24 @@ sub start_bridge
 		exit 1;
 	}
 	print "Started bridge process $pid.\n";
+	return 0;
 }
 
 sub restart_bridge
 {
 	my $install_rc = install_bridge_service("install");
-	return if ($install_rc != 0);
+	return $install_rc if ($install_rc != 0);
 
 	if (service_installed($bridge_service)) {
 		my $rc = run_privileged("restart $bridge_service", systemctl_command(), "restart", $bridge_service);
 		print "Restarted $bridge_service service.\n" if ($rc == 0);
-		return;
+		$rc = 1 if ($rc == 0 && !wait_for_service_state($bridge_service, 1));
+		return $rc;
 	}
 
-	stop_bridge();
-	start_bridge();
+	my $rc = stop_bridge();
+	return $rc if ($rc != 0);
+	return start_bridge();
 }
 
 sub stop_bridge
@@ -378,10 +449,11 @@ sub stop_bridge
 		my $rc = run_privileged("stop $bridge_service", systemctl_command(), "stop", $bridge_service);
 		run_privileged("reset failed state for $bridge_service", systemctl_command(), "reset-failed", $bridge_service) if ($rc == 0);
 		print "Stopped $bridge_service service.\n" if ($rc == 0);
-		return;
+		$rc = 1 if ($rc == 0 && !wait_for_service_state($bridge_service, 0));
+		return $rc;
 	}
 
-	run_perl("$bindir/vzlogger_mqtt_bridge.pl", "--stop");
+	return run_perl("$bindir/vzlogger_mqtt_bridge.pl", "--stop");
 }
 
 sub restart_vzlogger
@@ -389,25 +461,28 @@ sub restart_vzlogger
 	stop_orphaned_obis_discovery_processes();
 	if (!command_exists("systemctl")) {
 		print "systemctl not available. Generated config only.\n";
-		return;
+		return 1;
 	}
 
 	if (!-d $runtime_dir) {
 		make_path($runtime_dir);
 	}
-	chmod(0777, $runtime_dir);
+	chmod(0750, $runtime_dir);
 	prepare_vzlogger_log_file();
 
 	my $override_rc = install_vzlogger_service_override("install");
 	if ($override_rc != 0) {
 		print "Could not configure vzlogger to use $config_file.\n";
 		print "Skipped vzlogger restart to avoid running with a different configuration.\n";
-		return;
+		return $override_rc;
 	}
 
-	enable_vzlogger_autostart();
+	my $enable_rc = enable_vzlogger_autostart();
+	return $enable_rc if ($enable_rc != 0);
 	my $restart_rc = run_privileged("restart vzlogger", systemctl_command(), "restart", "vzlogger");
 	print "Restarted vzlogger service.\n" if ($restart_rc == 0);
+	$restart_rc = 1 if ($restart_rc == 0 && !wait_for_service_state("vzlogger", 1));
+	return $restart_rc;
 }
 
 sub prepare_vzlogger_log_file
@@ -425,15 +500,14 @@ sub prepare_vzlogger_log_file
 
 	if ($> == 0) {
 		my $vzlogger_uid = getpwnam("_vzlogger");
-		my $adm_gid = getgrnam("adm");
-		chown($vzlogger_uid, $adm_gid, $vzlogger_log_file) if (defined($vzlogger_uid) && defined($adm_gid));
-		chmod(0664, $vzlogger_log_file);
+		my $loxberry_gid = getgrnam("loxberry");
+		chown($vzlogger_uid, $loxberry_gid, $vzlogger_log_file) if (defined($vzlogger_uid) && defined($loxberry_gid));
+		chmod(0640, $vzlogger_log_file);
 		return;
 	}
 
-	# Web actions run as loxberry and may not have sudo rights for chown/chmod.
-	# Keep the file writable for the _vzlogger service user when root setup is not available.
-	chmod(0666, $vzlogger_log_file);
+	# Ownership is established by the privileged service-override helper.
+	chmod(0640, $vzlogger_log_file);
 }
 
 sub start_vzlogger
@@ -441,39 +515,45 @@ sub start_vzlogger
 	stop_orphaned_obis_discovery_processes();
 	if (!command_exists("systemctl")) {
 		print "systemctl not available.\n";
-		return;
+		return 1;
 	}
 	if (!service_installed("vzlogger")) {
 		print "vzlogger service is not installed.\n";
-		return;
+		return 1;
 	}
 	prepare_vzlogger_log_file();
 	my $override_rc = install_vzlogger_service_override("install");
 	if ($override_rc != 0) {
 		print "Could not configure vzlogger to use $config_file.\n";
 		print "Skipped vzlogger start to avoid running with a different configuration.\n";
-		return;
+		return $override_rc;
 	}
-	enable_vzlogger_autostart();
+	my $enable_rc = enable_vzlogger_autostart();
+	return $enable_rc if ($enable_rc != 0);
 	my $start_rc = run_privileged("start vzlogger", systemctl_command(), "start", "vzlogger");
 	print "Started vzlogger service.\n" if ($start_rc == 0);
+	$start_rc = 1 if ($start_rc == 0 && !wait_for_service_state("vzlogger", 1));
+	return $start_rc;
 }
 
 sub stop_vzlogger
 {
 	my ($disable) = @_;
 	stop_orphaned_obis_discovery_processes();
-	return if (!command_exists("systemctl"));
+	return 1 if (!command_exists("systemctl"));
 	if (!service_installed("vzlogger")) {
 		print "vzlogger service is not installed.\n";
-		return;
+		return 0;
 	}
 	my $rc = run_privileged("stop vzlogger", systemctl_command(), "stop", "vzlogger");
 	run_privileged("reset failed state for vzlogger", systemctl_command(), "reset-failed", "vzlogger") if ($rc == 0);
+	$rc = 1 if ($rc == 0 && !wait_for_service_state("vzlogger", 0));
 	if ($disable && $rc == 0) {
 		my $disable_rc = run_privileged("disable vzlogger autostart", systemctl_command(), "disable", "vzlogger");
 		print "Disabled vzlogger autostart.\n" if ($disable_rc == 0);
+		return $disable_rc;
 	}
+	return $rc;
 }
 
 sub stop_orphaned_obis_discovery_processes
@@ -583,13 +663,14 @@ sub obis_watchdog_running
 
 sub enable_vzlogger_autostart
 {
-	return if (!command_exists("systemctl"));
+	return 1 if (!command_exists("systemctl"));
 	if (!service_installed("vzlogger")) {
 		print "vzlogger service is not installed.\n";
-		return;
+		return 1;
 	}
 	my $enable_rc = run_privileged("enable vzlogger autostart", systemctl_command(), "enable", "vzlogger");
 	print "Enabled vzlogger autostart.\n" if ($enable_rc == 0);
+	return $enable_rc;
 }
 
 sub read_enabled
@@ -715,6 +796,18 @@ sub service_state
 	my $state = `systemctl is-active $service 2>/dev/null`;
 	chomp($state);
 	return $state || "inactive";
+}
+
+sub wait_for_service_state
+{
+	my ($service, $running) = @_;
+	for (1 .. 20) {
+		my $active = service_state($service) eq "active" ? 1 : 0;
+		return 1 if ($active == ($running ? 1 : 0));
+		select(undef, undef, undef, 0.1);
+	}
+	print "Service $service did not reach the requested " . ($running ? "running" : "stopped") . " state.\n";
+	return 0;
 }
 
 sub service_summary
@@ -973,59 +1066,15 @@ sub print_mqtt_capture
 
 sub read_mqtt_settings
 {
-	my $general_json = "$home/config/system/general.json";
-	my %settings = (
-		host => "127.0.0.1",
-		port => 1883,
-		user => "",
-		pass => "",
-		cafile => "",
-		capath => "",
-		certfile => "",
-		keyfile => "",
-		qos => 0,
-		keepalive => 30,
-	);
-
-	if (-e $general_json && open(my $fh, "<", $general_json)) {
-		local $/;
-		my $json_text = <$fh>;
-		close($fh);
-		eval { require JSON::PP; };
-		if (!$@) {
-			my $general = eval { JSON::PP->new->utf8->decode($json_text) };
-			if (!$@ && ref($general) && ref($general->{Mqtt})) {
-				my $mqtt = $general->{Mqtt};
-				$settings{host} = first_value($mqtt, qw(Host Hostname Broker Brokerhost Server IpAddress Ipaddress)) || $settings{host};
-				$settings{port} = clean_number(first_value($mqtt, qw(Port Brokerport Mqttport)), $settings{port});
-				$settings{user} = first_value($mqtt, qw(Brokeruser Brokerusername User Username Login)) || "";
-				$settings{pass} = first_value($mqtt, qw(Brokerpass Brokerpassword Pass Password)) || "";
-			}
-		}
-	}
 	my $cfg = Config::Simple->new($plugin_config_file);
+	my %settings = %{SmartMeterVZLoggerConfig::read_mqtt_settings($home, $cfg)};
+	$settings{qos} = 0;
+	$settings{keepalive} = 30;
 	if ($cfg) {
-		$settings{host} = plugin_mqtt_text($cfg, "MQTTHOST", $settings{host});
-		$settings{port} = clean_number($cfg->param("VZLOGGER.MQTTPORT"), $settings{port});
-		$settings{cafile} = plugin_mqtt_text($cfg, "MQTTCAFILE", "");
-		$settings{capath} = plugin_mqtt_text($cfg, "MQTTCAPATH", "");
-		$settings{certfile} = plugin_mqtt_text($cfg, "MQTTCERTFILE", "");
-		$settings{keyfile} = plugin_mqtt_text($cfg, "MQTTKEYFILE", "");
-		$settings{user} = plugin_mqtt_text($cfg, "MQTTUSER", $settings{user});
-		$settings{pass} = plugin_mqtt_text($cfg, "MQTTPASS", $settings{pass});
 		$settings{qos} = clean_qos($cfg->param("VZLOGGER.MQTTQOS"), 0);
 		$settings{keepalive} = clean_number($cfg->param("VZLOGGER.MQTTKEEPALIVE"), 30);
 	}
 	return \%settings;
-}
-
-sub plugin_mqtt_text
-{
-	my ($cfg, $name, $default) = @_;
-	my $value = $cfg->param("VZLOGGER.$name");
-	return $default if (!defined($value) || $value eq "");
-	$value =~ s/[\r\n]//g;
-	return $value;
 }
 
 sub clean_qos
@@ -1033,32 +1082,6 @@ sub clean_qos
 	my ($value, $default) = @_;
 	return int($value) if (defined($value) && $value =~ /\A[01]\z/);
 	return $default;
-}
-
-sub first_value
-{
-	my ($hash, @keys) = @_;
-	foreach my $key (@keys) {
-		return $hash->{$key} if (defined($hash->{$key}) && $hash->{$key} ne "");
-	}
-	return undef;
-}
-
-sub clean_number
-{
-	my ($value, $default) = @_;
-	return int($value) if (defined($value) && $value =~ /\A\d+\z/);
-	return $default;
-}
-
-sub sanitize_topic
-{
-	my ($topic) = @_;
-	$topic ||= "smartmeter";
-	$topic =~ s/^\s+|\s+$//g;
-	$topic =~ s/^\/+|\/+$//g;
-	$topic =~ s/[#+]//g;
-	return $topic || "smartmeter";
 }
 
 sub timestamp

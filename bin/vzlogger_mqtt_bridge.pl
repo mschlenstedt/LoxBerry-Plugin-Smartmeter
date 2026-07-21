@@ -2,6 +2,7 @@
 
 use strict;
 use warnings;
+umask(0027);
 
 use Config::Simple;
 use File::Path qw(make_path);
@@ -11,6 +12,8 @@ use JSON::PP;
 use LoxBerry::System;
 use lib $FindBin::Bin;
 use SmartMeterVZLoggerChannels qw(output_order_mapping ordered_output_names);
+use SmartMeterVZLoggerBridge qw(parse_reading channel_mapping identifier_mapping clean_scalar_payload);
+use SmartMeterVZLoggerConfig qw(clean_number sanitize_topic);
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
@@ -120,7 +123,7 @@ while (my $line = <$mqtt_fh>) {
 		next;
 	}
 
-	my $reading = parse_reading($topic, $payload, $mapping, \%uuid_by_channel);
+	my $reading = parse_reading($topic, $payload, $mapping, \%uuid_by_channel, \&debug_line);
 	if (!$reading) {
 		debug_line("MQTT ignored topic=$topic payload=$payload");
 		next;
@@ -143,62 +146,6 @@ while (my $line = <$mqtt_fh>) {
 log_line("mosquitto_sub ended.");
 unlink($pid_file);
 exit 0;
-
-sub parse_reading
-{
-	my ($topic, $payload, $mapping, $uuid_by_channel) = @_;
-	my $json = eval { JSON::PP->new->utf8->decode($payload) };
-
-	my $uuid = "";
-	my ($value, $timestamp);
-	if (!$@ && ref($json)) {
-		$uuid = $json->{uuid} || $json->{channel} || "";
-		$value = defined($json->{value}) ? $json->{value} : $json->{data};
-		$timestamp = $json->{timestamp} if (defined($json->{timestamp}));
-	}
-
-	if ($uuid && !exists($mapping->{$uuid}) && $uuid_by_channel->{$uuid}) {
-		$uuid = $uuid_by_channel->{$uuid};
-	}
-
-	if (!$uuid) {
-		if ($topic =~ m{/([^/]+)/raw\z} && $uuid_by_channel->{$1}) {
-			$uuid = $uuid_by_channel->{$1};
-		}
-	}
-
-	if (!$uuid) {
-		foreach my $candidate (keys %$mapping) {
-			if ($topic =~ /\Q$candidate\E/) {
-				$uuid = $candidate;
-				last;
-			}
-		}
-	}
-
-	if (!$uuid) {
-		debug_line("MQTT parse failed: no uuid found in topic or payload.");
-		return undef;
-	}
-	if (!exists($mapping->{$uuid})) {
-		debug_line("MQTT parse failed: uuid $uuid is not present in channel mapping.");
-		return undef;
-	}
-	$value = $payload if (!defined($value) && $payload =~ /\A-?\d+(?:\.\d+)?\z/);
-	if (!defined($value)) {
-		debug_line("MQTT parse failed: no value found for uuid $uuid.");
-		return undef;
-	}
-
-	return {
-		serial => $mapping->{$uuid}->{serial},
-		name => $mapping->{$uuid}->{name},
-		identifier => $mapping->{$uuid}->{identifier} || "",
-		uuid => $uuid,
-		value => $value,
-		timestamp => $timestamp,
-	};
-}
 
 sub write_cache
 {
@@ -225,51 +172,6 @@ sub flush_cache
 		write_cache($serial, $values_by_serial->{$serial}, $output_order_by_serial->{$serial});
 	}
 	%$dirty_serials = ();
-}
-
-sub channel_mapping
-{
-	my ($mapping) = @_;
-	my %channels;
-	foreach my $uuid (keys %$mapping) {
-		my $entry = $mapping->{$uuid};
-		next if (!ref($entry));
-		my $channel = $entry->{channel} || "";
-		if (!$channel && defined($entry->{channel_index}) && $entry->{channel_index} =~ /\A\d+\z/) {
-			$channel = "chn$entry->{channel_index}";
-		}
-		$channels{$channel} = lc($uuid) if ($channel =~ /\Achn\d+\z/);
-	}
-	return %channels;
-}
-
-sub identifier_mapping
-{
-	my ($mapping) = @_;
-	my %identifiers;
-	my %ambiguous;
-	foreach my $uuid (keys %$mapping) {
-		my $entry = $mapping->{$uuid};
-		next if (!ref($entry) || !$entry->{identifier} || $entry->{identifier_ambiguous});
-		if (exists($identifiers{$entry->{identifier}})) {
-			$ambiguous{$entry->{identifier}} = 1;
-		} else {
-			$identifiers{$entry->{identifier}} = lc($uuid);
-		}
-	}
-	delete $identifiers{$_} foreach keys %ambiguous;
-	return %identifiers;
-}
-
-sub clean_scalar_payload
-{
-	my ($payload) = @_;
-	my $json = eval { JSON::PP->new->utf8->decode($payload) };
-	if (!$@ && defined($json) && !ref($json)) {
-		$payload = $json;
-	}
-	$payload =~ s/\A\s+|\s+\z//g;
-	return $payload;
 }
 
 sub update_timestamp
@@ -423,19 +325,9 @@ sub miniserver_targets
 
 sub read_mqtt_settings
 {
-	my $general_json = "$home/config/system/general.json";
-	my %settings = (
-		host => "127.0.0.1",
-		port => 1883,
-		user => "",
-		pass => "",
-		cafile => "",
-		capath => "",
-		certfile => "",
-		keyfile => "",
-		qos => clean_qos($plugin_cfg->param("VZLOGGER.MQTTQOS"), 0),
-		keepalive => clean_number($plugin_cfg->param("VZLOGGER.MQTTKEEPALIVE"), 30),
-	);
+	my %settings = %{SmartMeterVZLoggerConfig::read_mqtt_settings($home, $plugin_cfg)};
+	$settings{qos} = clean_qos($plugin_cfg->param("VZLOGGER.MQTTQOS"), 0);
+	$settings{keepalive} = clean_number($plugin_cfg->param("VZLOGGER.MQTTKEEPALIVE"), 30);
 	if (ref($expert_mqtt) eq "HASH") {
 		foreach my $key (qw(host user pass cafile capath certfile keyfile)) {
 			$settings{$key} = "$expert_mqtt->{$key}" if (defined($expert_mqtt->{$key}) && !ref($expert_mqtt->{$key}));
@@ -446,32 +338,7 @@ sub read_mqtt_settings
 		return \%settings;
 	}
 
-	my $general = read_json($general_json);
-	if (ref($general) && ref($general->{Mqtt})) {
-		my $mqtt = $general->{Mqtt};
-		$settings{host} = first_value($mqtt, qw(Host Hostname Broker Brokerhost Server IpAddress Ipaddress)) || $settings{host};
-		$settings{port} = clean_number(first_value($mqtt, qw(Port Brokerport Mqttport)), $settings{port});
-		$settings{user} = first_value($mqtt, qw(Brokeruser Brokerusername User Username Login)) || "";
-		$settings{pass} = first_value($mqtt, qw(Brokerpass Brokerpassword Pass Password)) || "";
-	}
-	$settings{host} = plugin_mqtt_text("MQTTHOST", $settings{host});
-	$settings{port} = clean_number($plugin_cfg->param("VZLOGGER.MQTTPORT"), $settings{port});
-	$settings{cafile} = plugin_mqtt_text("MQTTCAFILE", "");
-	$settings{capath} = plugin_mqtt_text("MQTTCAPATH", "");
-	$settings{certfile} = plugin_mqtt_text("MQTTCERTFILE", "");
-	$settings{keyfile} = plugin_mqtt_text("MQTTKEYFILE", "");
-	$settings{user} = plugin_mqtt_text("MQTTUSER", $settings{user});
-	$settings{pass} = plugin_mqtt_text("MQTTPASS", $settings{pass});
 	return \%settings;
-}
-
-sub plugin_mqtt_text
-{
-	my ($name, $default) = @_;
-	my $value = $plugin_cfg->param("VZLOGGER.$name");
-	return $default if (!defined($value) || $value eq "");
-	$value =~ s/[\r\n]//g;
-	return $value;
 }
 
 sub clean_qos
@@ -481,14 +348,6 @@ sub clean_qos
 	return $default;
 }
 
-sub first_value
-{
-	my ($hash, @keys) = @_;
-	foreach my $key (@keys) {
-		return $hash->{$key} if (defined($hash->{$key}) && $hash->{$key} ne "");
-	}
-	return undef;
-}
 
 sub read_json
 {
@@ -551,29 +410,4 @@ sub debug_line
 	my ($message) = @_;
 	return if (!$debug_enabled);
 	log_line("DEBUG $message");
-}
-
-sub cron_to_seconds
-{
-	my ($cron) = @_;
-	return 5 if (!defined($cron) || $cron eq "" || $cron eq "M");
-	return int($cron) * 60 if ($cron =~ /\A\d+\z/ && int($cron) > 0);
-	return 300;
-}
-
-sub clean_number
-{
-	my ($value, $default) = @_;
-	return int($value) if (defined($value) && $value =~ /\A\d+\z/);
-	return $default;
-}
-
-sub sanitize_topic
-{
-	my ($topic) = @_;
-	$topic ||= "smartmeter";
-	$topic =~ s/^\s+|\s+$//g;
-	$topic =~ s/^\/+|\/+$//g;
-	$topic =~ s/[#+]//g;
-	return $topic || "smartmeter";
 }

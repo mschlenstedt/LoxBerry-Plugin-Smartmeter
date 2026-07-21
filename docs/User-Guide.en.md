@@ -23,6 +23,10 @@ Select **vzLogger** as the **Implementation** mode at the top of the page. When 
 
 An existing valid `vzlogger.conf` is preserved while switching between implementations. Enabling or disabling Legacy, including the state in which both implementations are inactive, does not overwrite this file. When vzLogger is enabled again, the plugin validates and reuses the existing configuration unchanged. The current Legacy/form values are migrated into a new `vzlogger.conf` only when no valid generated vzLogger configuration exists. A normal **Save and apply** while vzLogger is already active still deliberately regenerates the file from the displayed vzLogger settings.
 
+Configuration and service changes are serialized. If another action is already running, the new request is rejected without changing files or services. Save/Apply generates and validates a protected staged set before replacing the active `vzlogger.conf` and channel mapping; a failed validation or promotion leaves the last valid runtime files unchanged while retaining the submitted settings for correction.
+
+Custom JSONC source remains unchanged. Missing channel UUIDs are recorded in an internal versioned `vzlogger_user_channel_uuids_<reader>.json` sidecar. Existing generated UUIDs are retained on first migration, and unchanged channels keep their UUID when reordered. Use an explicit UUID when identity must also survive changes to the channel object.
+
 The Legacy meter configuration is preserved independently as well. Meter selection, manual protocol, baud rates, timeout, delay, handshake, data bits, stop bits, parity, and CRC are stored internally in dedicated `LEGACY_*` keys. On the first page load after updating, the plugin copies existing Legacy values into that area once. Saving a vzLogger configuration no longer changes those Legacy values. When switching back to Legacy, both its UI and polling runtime use the unchanged isolated Legacy settings.
 
 ### Package Installation

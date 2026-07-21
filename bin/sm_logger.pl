@@ -21,6 +21,7 @@ use Device::SerialPort;
 use Getopt::Long;
 use JSON::PP;
 use LoxBerry::System;
+umask(0027);
 use File::Path qw(make_path);
 #use File::HomeDir;
 #use Cwd 'abs_path';

@@ -388,6 +388,7 @@ VALIDATE_CONFIG_HELP="Generates and validates a temporary draft from the current
 CREATE_DEBUG_LOG="Create debug log"
 CREATE_DEBUG_LOG_HELP="Creates a diagnostic log independently of the settings form. The new tab monitors creation and then opens the LoxBerry log viewer: /opt/loxberry/log/plugins/smartmeter-v2/vzlogger_debug_*.log"
 SAVE_APPLY="Save and apply"
+LEGACY_VALIDATION_ERROR="Invalid Legacy settings; nothing was saved:"
 SAVE_APPLY_HELP="Saves the settings, generates and validates the vzLogger configuration, and starts or stops the matching services for the active implementation."
 ACTIONS="Actions"
 CONFIG_ACTION_VALIDATE="Validating configuration"

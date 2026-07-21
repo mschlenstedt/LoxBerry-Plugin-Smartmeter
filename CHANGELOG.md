@@ -4,6 +4,13 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
+- Hide the Expert Mode reset-from-current-config action during the initial page render whenever Expert Mode is disabled, including after jQuery Mobile enhances the button markup.
+- Preserve `loxberry` ownership for private generated configuration artifacts when install/upgrade hooks run Apply as root, and repair root-owned artifacts created by earlier lifecycle runs.
+- Make vzLogger Save/Apply transactional: serialize configuration and service actions, generate and validate in a protected staging directory, roll back incomplete promotions, and preserve the last valid runtime files on failure.
+- Propagate installer and systemd failures through the control CLI, so lifecycle hooks and callers can no longer report a successful apply after a failed service operation.
+- Replace world-writable runtime, log, and serial-device permissions with the existing `loxberry` and `_vzlogger` identities; no additional system group is created.
+- Persist generated custom-JSON channel UUIDs in versioned per-reader sidecars, preserving existing UUIDs during migration and keeping unchanged channels stable when reordered; reject invalid Legacy general settings without partial writes.
+- Add reusable regression tests for locking/rollback, custom UUID registries, Legacy allow-lists, and MQTT bridge topic parsing, and run them in CI.
 - Standardize developer packages through a local build script that mirrors the GitHub release archive rules, always labels local ZIPs with purpose/commit/dirty state, verifies archive contents and plugin version, and reserves suffixless release assets exclusively for the GitHub release workflow.
 - Add a persistent, reload-free Expert Mode for editing the complete `vzlogger.conf`: switch modes immediately via AJAX while keeping expanded UI sections open, retain the expert draft across mode changes and standard applies, require an explicit save/apply before a dormant draft becomes active again, offer a confirmed reset from the current runtime file, keep standard vzLogger settings read-only while active, retain invalid drafts without replacing the last valid runtime file, validate unknown upstream extensions as warnings, preserve UUID-based SmartMeter bridge outputs, and continue allowing service logging and bridge controls to update their dedicated settings.
 - Replace separate discovered-channel selection and additional-OBIS input with one flat vzLogger channel editor whose rows have persistent UUIDs, may intentionally repeat an OBIS identifier, retain inactive/API-specific values, and generate only fields native to the selected API.

@@ -16,6 +16,8 @@ PREUPGRADE_ACTIVE_FILE="$ARGV5/config/plugins/$ARGV3/vzlogger.preupgrade-service
 SMARTMETER_LOG_DIR="$ARGV5/log/plugins/$ARGV3"
 SMARTMETER_LOG_FILE="$SMARTMETER_LOG_DIR/smartmeter.log"
 SMARTMETER_UDEV_RULE="/etc/udev/rules.d/99-smartmeter.rules"
+RUNTIME_DIR="/var/run/shm/$ARGV3"
+PLUGIN_CONFIG_DIR="$ARGV5/config/plugins/$ARGV3"
 
 if [ "$(id -u)" != "0" ]; then
 	echo "<ERROR> postroot.sh must run as root."
@@ -34,7 +36,7 @@ install_ir_head_udev_rule()
 	echo "<INFO> Installing SmartMeter I/R head udev rule."
 	echo "$(date) - Creating UDEV rule for I/R heads: $SMARTMETER_UDEV_RULE" >>"$SMARTMETER_LOG_FILE"
 	printf '%s\n' "# LoxBerry SML-eMon Plugin device rule file - DO NOT EDIT BY HAND!" >"$SMARTMETER_UDEV_RULE"
-	printf '%s\n' "KERNEL==\"ttyUSB[0-9]*\",GROUP=\"loxberry\",MODE=\"0666\",SYMLINK+=\"serial/smartmeter/\$env{ID_SERIAL_SHORT}\"" >>"$SMARTMETER_UDEV_RULE"
+	printf '%s\n' "KERNEL==\"ttyUSB[0-9]*\",GROUP=\"loxberry\",MODE=\"0660\",SYMLINK+=\"serial/smartmeter/\$env{ID_SERIAL_SHORT}\"" >>"$SMARTMETER_UDEV_RULE"
 
 	if command -v udevadm >/dev/null 2>&1; then
 		echo "$(date) - Reload udev rules and trigger devices." >>"$SMARTMETER_LOG_FILE"
@@ -73,6 +75,21 @@ has_configured_vzlogger_meter()
 }
 
 install_ir_head_udev_rule
+mkdir -p "$RUNTIME_DIR"
+chown loxberry:loxberry "$RUNTIME_DIR"
+chmod 0750 "$RUNTIME_DIR"
+find "$RUNTIME_DIR" -maxdepth 1 -type f -exec chown loxberry:loxberry {} \; -exec chmod 0640 {} \;
+for PRIVATE_FILE in \
+	"$PLUGIN_CONFIG_DIR/vzlogger_channels.json" \
+	"$PLUGIN_CONFIG_DIR/vzlogger_channel_definitions.json" \
+	"$PLUGIN_CONFIG_DIR"/vzlogger_user_channel_uuids_*.json \
+	"$PLUGIN_CONFIG_DIR"/vzlogger_meter_*.jsonc
+do
+	if [ -f "$PRIVATE_FILE" ]; then
+		chown loxberry:loxberry "$PRIVATE_FILE"
+		chmod 0600 "$PRIVATE_FILE"
+	fi
+done
 
 if [ "$implementation" = "vzlogger" ] && has_configured_vzlogger_meter; then
 	was_active_before_upgrade=0

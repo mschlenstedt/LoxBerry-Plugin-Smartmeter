@@ -38,7 +38,7 @@ sub write_text_atomic
 		unlink($tmp);
 		return 0;
 	}
-	my $mode = -e $file ? ((stat($file))[2] & 07777) : 0640;
+	my $mode = -e $file ? ((stat($file))[2] & 07777) : 0600;
 	chmod($mode, $tmp);
 	if (!rename($tmp, $file)) {
 		unlink($tmp);

@@ -35,10 +35,13 @@ use LoxBerry::Log;
 use POSIX qw(:sys_wait_h setsid);
 use warnings;
 use strict;
+umask(0027);
 use lib $lbpbindir;
 use lib "$FindBin::Bin/../../bin";
 use SmartMeterVZLoggerChannels qw(parse_obis compose_obis normalize_obis default_output_key stable_uuid read_json write_json_atomic load_catalog lookup_obis new_document migrate_legacy_meter validate_document);
 use SmartMeterVZLoggerExpert qw(read_text write_text_atomic validate_expert_text format_expert_validation build_expert_mapping update_expert_log_settings expert_configs_equal);
+use SmartMeterVZLoggerRuntime qw(acquire_config_lock promote_files_atomic);
+use SmartMeterVZLoggerConfig qw(protocol_for_meter normalized_meter_mode serial_mode);
 
 ##########################################################################
 # Variables
@@ -76,8 +79,16 @@ my %L;
 
 if( $q->{ajax} ) {
 	my $response = { ok => JSON::PP::false, state => "failed" };
+	my $request_lock;
 	eval {
 		my $action = $q->{ajaxaction} || "";
+		my %mutating = map { $_ => 1 } qw(obis-start obis-cancel service-action form-action ir-scan expert-mode expert-reset);
+		if ($mutating{$action}) {
+			my ($lock, $error) = acquire_config_lock("/var/run/shm/$lbpplugindir");
+			die "$error\n" if (!$lock);
+			$request_lock = $lock;
+			$ENV{SMARTMETER_CONFIG_LOCK_HELD} = "1";
+		}
 		if ($action eq "obis-start") {
 			my $config_file = "$lbpconfigdir/smartmeter.cfg";
 			$plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file";
@@ -171,17 +182,25 @@ sub form_vzlogger
 	my $config_file = "$lbpconfigdir/smartmeter.cfg";
 	$plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file";
 
-	ensure_vzlogger_defaults();
+	my @heads = detect_heads();
+	{
+		# Initial defaulting and one-time channel migration may write configuration.
+		my ($initialization_lock, $lock_error) = acquire_config_lock("/var/run/shm/$lbpplugindir");
+		die "$lock_error\n" if (!$initialization_lock);
+		ensure_vzlogger_defaults();
+		ensure_head_defaults(@heads);
+		ensure_legacy_meter_state(@heads);
+		load_or_migrate_channel_document(@heads);
+	}
 	if ($initial_request && implementation_mode() eq "legacy") {
 		print $cgi->redirect(-url => "./index_legacy.cgi?form=legacy");
 		exit;
 	}
-	my @heads = detect_heads();
-	ensure_head_defaults(@heads);
-	ensure_legacy_meter_state(@heads);
-	load_or_migrate_channel_document(@heads);
 
 	if ($q->{saveformdata}) {
+		my ($form_lock, $lock_error) = acquire_config_lock("/var/run/shm/$lbpplugindir");
+		die "$lock_error\n" if (!$form_lock);
+		local $ENV{SMARTMETER_CONFIG_LOCK_HELD} = "1";
 		my $action = $q->{submitaction} || "apply";
 		if (expert_mode_enabled()) {
 			my $status = expert_draft_status();
@@ -864,41 +883,35 @@ sub load_meter_templates
 
 sub ensure_vzlogger_defaults
 {
-	$plugin_cfg->param("MAIN.READ", "0") if (!defined $plugin_cfg->param("MAIN.READ"));
-	$plugin_cfg->param("MAIN.IMPLEMENTATION", infer_implementation_mode()) if (!$plugin_cfg->param("MAIN.IMPLEMENTATION"));
-	$plugin_cfg->param("MAIN.CRON", "5") if (!$plugin_cfg->param("MAIN.CRON"));
-	$plugin_cfg->param("MAIN.SENDUDP", "0") if (!defined $plugin_cfg->param("MAIN.SENDUDP"));
-	$plugin_cfg->param("MAIN.UDPPORT", "7000") if (!$plugin_cfg->param("MAIN.UDPPORT"));
-	$plugin_cfg->param("MAIN.MQTTTOPIC", "smartmeter") if (!$plugin_cfg->param("MAIN.MQTTTOPIC"));
-	$plugin_cfg->param("VZLOGGER.EXPERTMODE", "0") if (!defined $plugin_cfg->param("VZLOGGER.EXPERTMODE"));
-	$plugin_cfg->param("VZLOGGER.RETRY", "30") if (!defined $plugin_cfg->param("VZLOGGER.RETRY"));
-	$plugin_cfg->param("VZLOGGER.LOCALENABLED", "1") if (!defined $plugin_cfg->param("VZLOGGER.LOCALENABLED"));
-	$plugin_cfg->param("VZLOGGER.LOCALPORT", "18080") if (!$plugin_cfg->param("VZLOGGER.LOCALPORT"));
-	$plugin_cfg->param("VZLOGGER.LOCALINDEX", "1") if (!defined $plugin_cfg->param("VZLOGGER.LOCALINDEX"));
-	$plugin_cfg->param("VZLOGGER.LOCALTIMEOUT", "30") if (!defined $plugin_cfg->param("VZLOGGER.LOCALTIMEOUT"));
-	$plugin_cfg->param("VZLOGGER.LOCALBUFFER", "-1") if (!defined $plugin_cfg->param("VZLOGGER.LOCALBUFFER"));
-	$plugin_cfg->param("VZLOGGER.UDPINTERVAL", "5") if (!defined $plugin_cfg->param("VZLOGGER.UDPINTERVAL"));
-	$plugin_cfg->param("VZLOGGER.DEBUG", "0") if (!defined $plugin_cfg->param("VZLOGGER.DEBUG"));
-	$plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG", "0") if (!defined $plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG"));
-	$plugin_cfg->param("VZLOGGER.LOGLEVEL", "0") if (!defined $plugin_cfg->param("VZLOGGER.LOGLEVEL"));
-	$plugin_cfg->param("VZLOGGER.MQTTENABLED", "1") if (!defined $plugin_cfg->param("VZLOGGER.MQTTENABLED"));
-	$plugin_cfg->param("VZLOGGER.MQTTHOST", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTHOST"));
-	$plugin_cfg->param("VZLOGGER.MQTTPORT", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTPORT"));
-	$plugin_cfg->param("VZLOGGER.MQTTCAFILE", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTCAFILE"));
-	$plugin_cfg->param("VZLOGGER.MQTTCAPATH", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTCAPATH"));
-	$plugin_cfg->param("VZLOGGER.MQTTCERTFILE", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTCERTFILE"));
-	$plugin_cfg->param("VZLOGGER.MQTTKEYFILE", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTKEYFILE"));
-	$plugin_cfg->param("VZLOGGER.MQTTKEYPASS", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTKEYPASS"));
-	$plugin_cfg->param("VZLOGGER.MQTTKEEPALIVE", "30") if (!defined $plugin_cfg->param("VZLOGGER.MQTTKEEPALIVE"));
-	$plugin_cfg->param("VZLOGGER.MQTTID", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTID"));
-	$plugin_cfg->param("VZLOGGER.MQTTUSER", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTUSER"));
-	$plugin_cfg->param("VZLOGGER.MQTTPASS", "") if (!defined $plugin_cfg->param("VZLOGGER.MQTTPASS"));
-	$plugin_cfg->param("VZLOGGER.MQTTRETAIN", "1") if (!defined $plugin_cfg->param("VZLOGGER.MQTTRETAIN"));
-	$plugin_cfg->param("VZLOGGER.MQTTRAWANDAGG", "0") if (!defined $plugin_cfg->param("VZLOGGER.MQTTRAWANDAGG"));
-	$plugin_cfg->param("VZLOGGER.MQTTQOS", "0") if (!defined $plugin_cfg->param("VZLOGGER.MQTTQOS"));
-	$plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP", "1") if (!defined $plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP"));
-	$plugin_cfg->param("VZLOGGER.REMOVEDHEADS", "") if (!defined $plugin_cfg->param("VZLOGGER.REMOVEDHEADS"));
-	$plugin_cfg->save;
+	my $changed = 0;
+	my $set_default = sub {
+		my ($key, $value, $empty_is_missing) = @_;
+		my $current = $plugin_cfg->param($key);
+		return if (defined($current) && (!$empty_is_missing || $current ne ""));
+		$plugin_cfg->param($key, $value);
+		$changed = 1;
+	};
+	$set_default->("MAIN.READ", "0", 0);
+	$set_default->("MAIN.IMPLEMENTATION", infer_implementation_mode(), 1);
+	$set_default->("MAIN.CRON", "5", 1);
+	$set_default->("MAIN.SENDUDP", "0", 0);
+	$set_default->("MAIN.UDPPORT", "7000", 1);
+	$set_default->("MAIN.MQTTTOPIC", "smartmeter", 1);
+	foreach my $entry (
+		["VZLOGGER.EXPERTMODE", "0"], ["VZLOGGER.RETRY", "30"], ["VZLOGGER.LOCALENABLED", "1"],
+		["VZLOGGER.LOCALINDEX", "1"], ["VZLOGGER.LOCALTIMEOUT", "30"], ["VZLOGGER.LOCALBUFFER", "-1"],
+		["VZLOGGER.UDPINTERVAL", "5"], ["VZLOGGER.DEBUG", "0"], ["VZLOGGER.VZLOGGERDEBUG", "0"],
+		["VZLOGGER.LOGLEVEL", "0"], ["VZLOGGER.MQTTENABLED", "1"], ["VZLOGGER.MQTTHOST", ""],
+		["VZLOGGER.MQTTPORT", ""], ["VZLOGGER.MQTTCAFILE", ""], ["VZLOGGER.MQTTCAPATH", ""],
+		["VZLOGGER.MQTTCERTFILE", ""], ["VZLOGGER.MQTTKEYFILE", ""], ["VZLOGGER.MQTTKEYPASS", ""],
+		["VZLOGGER.MQTTKEEPALIVE", "30"], ["VZLOGGER.MQTTID", ""], ["VZLOGGER.MQTTUSER", ""],
+		["VZLOGGER.MQTTPASS", ""], ["VZLOGGER.MQTTRETAIN", "1"], ["VZLOGGER.MQTTRAWANDAGG", "0"],
+		["VZLOGGER.MQTTQOS", "0"], ["VZLOGGER.MQTTTIMESTAMP", "1"], ["VZLOGGER.REMOVEDHEADS", ""],
+	) {
+		$set_default->($entry->[0], $entry->[1], 0);
+	}
+	$set_default->("VZLOGGER.LOCALPORT", "18080", 1);
+	$plugin_cfg->save if ($changed);
 }
 
 sub expert_mode_enabled
@@ -1003,15 +1016,17 @@ sub promote_expert_configuration
 	push @{$status->{result}->{warnings}}, @$mapping_warnings;
 	$status->{message} = format_expert_validation($status->{result});
 	my $runtime_file = "$lbpconfigdir/vzlogger.conf";
-	my $previous_runtime = read_text($runtime_file);
-	my $previous_mapping = read_json($mapping_file);
-	my $runtime_ok = write_text_atomic($runtime_file, $text);
-	my $mapping_ok = $runtime_ok ? eval { write_json_atomic($mapping_file, $mapping); 1 } : 0;
-	if (!$runtime_ok || !$mapping_ok) {
-		write_text_atomic($runtime_file, $previous_runtime) if (defined($previous_runtime));
-		eval { write_json_atomic($mapping_file, $previous_mapping) } if (ref($previous_mapping) eq "HASH");
+	my $stage = tempdir(".vzlogger-expert-stage-XXXXXX", DIR => $lbpconfigdir, CLEANUP => 1);
+	my $stage_runtime = "$stage/vzlogger.conf";
+	my $stage_mapping = "$stage/vzlogger_channels.json";
+	my $runtime_ok = write_text_atomic($stage_runtime, $text);
+	my $mapping_ok = $runtime_ok ? eval { write_json_atomic($stage_mapping, $mapping); 1 } : 0;
+	my ($promoted, $promotion_error) = $mapping_ok
+		? promote_files_atomic([[$stage_runtime, $runtime_file, 0600], [$stage_mapping, $mapping_file, 0600]])
+		: (0, "Could not stage expert mapping.");
+	if (!$runtime_ok || !$mapping_ok || !$promoted) {
 		$status->{valid} = 0;
-		$status->{message} .= "<FAIL> Could not promote the expert configuration atomically.\n";
+		$status->{message} .= "<FAIL> Could not promote the expert configuration atomically: $promotion_error\n";
 	}
 	return $status;
 }
@@ -1143,6 +1158,7 @@ sub scan_ir_heads_ajax
 sub ensure_head_defaults
 {
 	my (@heads) = @_;
+	my $changed = 0;
 	foreach my $device (@heads) {
 		my $serial = $device;
 		$serial =~ s%/dev/serial/smartmeter/%%g;
@@ -1179,8 +1195,9 @@ sub ensure_head_defaults
 		$plugin_cfg->param("$serial.MBUSDEBUG", "0");
 		$plugin_cfg->param("$serial.OBISCHANNELS", "");
 		$plugin_cfg->param("$serial.OBISCUSTOM", "");
+		$changed = 1;
 	}
-	$plugin_cfg->save;
+	$plugin_cfg->save if ($changed);
 }
 
 sub ensure_legacy_meter_state
@@ -1508,6 +1525,7 @@ sub remove_meter_artifacts
 	my $safe_serial = safe_filename($serial);
 	my @files = (
 		user_meter_source_file($serial),
+		"$lbpconfigdir/vzlogger_user_channel_uuids_$safe_serial.json",
 		obis_discovery_cache_file($serial),
 		pending_obis_channels_file($serial),
 		pending_meter_draft_file($serial),
@@ -2099,30 +2117,6 @@ sub channels_from_vzlogger_log
 	return sort_obis_channels(@channels);
 }
 
-sub protocol_for_meter
-{
-	my ($meter) = @_;
-	return "sml" if (defined($meter) && $meter =~ /sml\z/i);
-	return "d0" if (defined($meter) && ($meter =~ /d0\z/i || $meter =~ /do\z/i));
-	return "oms" if (defined($meter) && $meter =~ /oms\z/i);
-	return "";
-}
-
-sub normalized_meter_mode
-{
-	my ($meter, $manual_protocol) = @_;
-	$meter ||= "0";
-	return $meter if ($meter =~ /\A(?:0|sml|d0|oms|user)\z/);
-	if ($meter eq "manual") {
-		my $mapped = protocol_for_meter($manual_protocol);
-		return $mapped || "user";
-	}
-	return "sml" if ($meter =~ /sml\z/i);
-	return "d0" if ($meter =~ /(?:d0|do)\z/i);
-	return "oms" if ($meter =~ /oms\z/i);
-	return "user";
-}
-
 sub first_config_value
 {
 	my ($section, @keys) = @_;
@@ -2203,6 +2197,7 @@ sub save_user_meter_source
 	open(my $fh, ">", $tmp) or return 0;
 	print $fh $source;
 	close($fh);
+	chmod(0600, $tmp);
 	rename($tmp, $file) or do { unlink($tmp); return 0; };
 	return 1;
 }
@@ -2278,20 +2273,6 @@ sub default_baudrate
 		return $template->{initial_baudrate} if (($template->{id} || "") eq ($meter || ""));
 	}
 	return undef;
-}
-
-sub serial_mode
-{
-	my ($databits, $parity, $stopbits) = @_;
-	$databits ||= 7;
-	$parity ||= "even";
-	$stopbits ||= 1;
-
-	my $parity_char = "N";
-	$parity_char = "E" if (lc($parity) eq "even");
-	$parity_char = "O" if (lc($parity) eq "odd");
-
-	return "$databits$parity_char$stopbits";
 }
 
 sub clean_number
@@ -2570,18 +2551,6 @@ sub default_obis_channels
 		{ identifier => "1-0:96.50.1", name => "Manufacturer_ID_OBIS_96.50.1" },
 		{ identifier => "1-0:96.1.0", name => "Server_ID_OBIS_96.1.0" },
 	);
-}
-
-sub clean_multiline_obis
-{
-	my ($value) = @_;
-	return "" if (!defined($value));
-	my @clean;
-	foreach my $line (split(/\\n|\r?\n|,|;/, $value)) {
-		my $identifier = normalize_obis_identifier($line);
-		push @clean, $identifier if ($identifier);
-	}
-	return join("\n", @clean);
 }
 
 sub custom_channels

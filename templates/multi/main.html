@@ -111,6 +111,7 @@
 <form method="post" data-ajax="false" name="main_form" id="main_form" action="./index_legacy.cgi">
 <input type="hidden" name="saveformdata" value="1">
 <input type="hidden" id="implementation_changed" name="implementation_changed" value="0">
+<TMPL_IF VALIDATION_ERROR><div class="ui-body ui-body-a ui-corner-all" style="border-color:#b00020;color:#b00020;margin:1em 0;"><TMPL_VAR VALIDATION_ERROR ESCAPE=HTML></div></TMPL_IF>
 
 <table border=0 width="100%" cellpadding="10">
 <tr>

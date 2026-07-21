@@ -27,6 +27,7 @@ $IdentityFile = $settings.IdentityFile
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $remoteStage = "/tmp/$PluginFolder-deploy-$timestamp-$PID"
 $remoteBackup = "/tmp/$PluginFolder-deploy-backups/$timestamp-$PID"
+$remotePerlLib = "/opt/loxberry/bin/plugins/$PluginFolder"
 
 function Invoke-Ssh {
 	param([Parameter(Mandatory = $true)][string] $Command)
@@ -139,9 +140,9 @@ try {
 		Invoke-Ssh $installCommand
 
 		switch ($extension) {
-			".cgi" { Invoke-Ssh "perl -c '$($deployment.Remote)'" }
-			".pl"  { Invoke-Ssh "perl -c '$($deployment.Remote)'" }
-			".pm"  { Invoke-Ssh "perl -c '$($deployment.Remote)'" }
+			".cgi" { Invoke-Ssh "perl -I '$remotePerlLib' -c '$($deployment.Remote)'" }
+			".pl"  { Invoke-Ssh "perl -I '$remotePerlLib' -c '$($deployment.Remote)'" }
+			".pm"  { Invoke-Ssh "perl -I '$remotePerlLib' -c '$($deployment.Remote)'" }
 			".php" { Invoke-Ssh "php -l '$($deployment.Remote)'" }
 			".sh"  { Invoke-Ssh "sh -n '$($deployment.Remote)'" }
 		}
