@@ -32,4 +32,6 @@ This repository contains the LoxBerry SmartMeter v2 plugin. Keep changes small, 
 
 ## Release Work
 
+- Build local test packages only with `tools/build-local.ps1`. Local ZIP names must contain `-local-`, the short Git commit, an optional purpose, and `-dirty` for an uncommitted worktree; see `docs/local-builds.md`.
+- Never create or publish a suffixless `Smartmeter-V<version>.zip` locally. Official releases and their ZIP assets are created exclusively by the GitHub `Release asset` workflow.
 - When asked to create a release, follow `docs/release-process.md`.

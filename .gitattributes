@@ -26,6 +26,7 @@
 .github/ export-ignore
 AGENTS.md export-ignore
 docs/release-process.md export-ignore
+docs/local-builds.md export-ignore
 docs/vzlogger-implementation-plan.md export-ignore
 Tests/ export-ignore
 tests/ export-ignore

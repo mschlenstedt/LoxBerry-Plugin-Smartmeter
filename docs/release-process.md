@@ -13,6 +13,8 @@ A release means:
 - a GitHub Release is created with the release notes;
 - the GitHub Release contains the generated plugin ZIP asset.
 
+Official releases are created exclusively through GitHub. Do not build, rename, or upload a suffixless `Smartmeter-V<version>.zip` from a developer workstation. Local packages follow `docs/local-builds.md` and always contain `-local-` in their filename.
+
 ## Version Locations
 
 Update the same version in:
