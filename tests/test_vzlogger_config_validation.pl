@@ -41,4 +41,19 @@ is_deeply([validate_legacy_general(\%manual, {})], [], "bounded manual Legacy se
 $manual{meters}->[0]->{baudrate} = 99999999;
 like(join(",", validate_legacy_general(\%manual, {})), qr/BAUDRATE/, "unsafe manual baud rate is rejected");
 
+open(my $legacy_fh, "<", "$FindBin::Bin/../webfrontend/htmlauth/index_legacy.cgi") or die $!;
+local $/;
+my $legacy_source = <$legacy_fh>;
+close($legacy_fh);
+like(
+	$legacy_source,
+	qr/use LoxBerry::System;.*use lib \$lbpbindir;.*use SmartMeterVZLoggerConfig/s,
+	"installed Legacy CGI loads shared modules from the LoxBerry plugin bin directory",
+);
+like(
+	$legacy_source,
+	qr/\$plugin_cfg->save if \(\$defaults_changed\)/,
+	"Legacy page saves initialization defaults only when migration changed them",
+);
+
 done_testing();

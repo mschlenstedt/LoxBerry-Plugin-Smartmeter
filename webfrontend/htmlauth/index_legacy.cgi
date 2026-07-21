@@ -32,6 +32,8 @@ use HTML::Template;
 use File::Path qw(make_path);
 use FindBin;
 use JSON::PP;
+use LoxBerry::System;
+use lib $lbpbindir;
 use lib "$FindBin::Bin/../../bin";
 use SmartMeterVZLoggerConfig qw(validate_legacy_general);
 use SmartMeterVZLoggerRuntime qw(acquire_config_lock);
@@ -144,6 +146,7 @@ while (my ($configname, $configvalue) = each %plugin_config_hash_for_heads) {
 my @heads = sort keys %head_paths;
 
 # Save a config set if it not already exists
+my $defaults_changed = 0;
 foreach (@heads) {
 	$serial = $_;
 	$serial =~ s%/dev/serial/smartmeter/%%g;
@@ -162,6 +165,7 @@ foreach (@heads) {
 		$plugin_cfg->param("$serial.STOPBITS", "");
 		$plugin_cfg->param("$serial.PARITY", "");
         $plugin_cfg->param("$serial.CRC", "");
+		$defaults_changed = 1;
 	}
 	if ( !defined($plugin_cfg->param("$serial.LEGACY_METER")) ) {
 		foreach my $field (@legacy_meter_fields) {
@@ -169,9 +173,10 @@ foreach (@heads) {
 			$value = $field eq "METER" ? "0" : "" if (!defined($value));
 			$plugin_cfg->param("$serial.LEGACY_$field", $value);
 		}
+		$defaults_changed = 1;
 	}
 }
-$plugin_cfg->save;
+$plugin_cfg->save if ($defaults_changed);
 
 # Set parameters coming in - get over post
 if ( $cgi->url_param('lang') ) {
