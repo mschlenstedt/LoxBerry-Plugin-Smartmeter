@@ -7,12 +7,16 @@ use Config::Simple;
 use File::Path qw(make_path);
 use JSON::PP;
 use LoxBerry::System;
+use FindBin;
+use lib $FindBin::Bin;
+use SmartMeterVZLoggerExpert qw(read_text write_text_atomic update_expert_log_settings format_expert_validation);
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
 my $bindir = "$home/bin/plugins/$psubfolder";
 my $plugin_config_file = "$home/config/plugins/$psubfolder/smartmeter.cfg";
 my $config_file = "$home/config/plugins/$psubfolder/vzlogger.conf";
+my $expert_file = "$home/config/plugins/$psubfolder/vzlogger_expert.conf";
 my $mapping_file = "$home/config/plugins/$psubfolder/vzlogger_channels.json";
 my $runtime_dir = "/var/run/shm/$psubfolder";
 my $obis_watchdog_pid_file = "$runtime_dir/vzlogger_obis_watchdog.pid";
@@ -88,6 +92,12 @@ if ($action eq "validate") {
 	exit run_perl("$bindir/vzlogger_validate.pl");
 }
 
+if ($action eq "apply-expert") {
+	my $rc = run_perl("$bindir/vzlogger_validate.pl");
+	exit $rc if ($rc != 0);
+	exit activate_current_vzlogger_configuration();
+}
+
 if ($action eq "start-bridge") {
 	if (!bridge_enabled()) {
 		print "MQTT bridge is disabled. Did not start the MQTT bridge.\n";
@@ -134,7 +144,7 @@ if ($action eq "debug-log") {
 	exit create_debug_log();
 }
 
-print "Usage: $0 generate|validate|apply|activate-vzlogger|restart-vzlogger|start-vzlogger|stop-vzlogger|restart-bridge|start-bridge|stop-bridge|disable-vzlogger|status|debug-log\n";
+print "Usage: $0 generate|validate|apply|apply-expert|activate-vzlogger|restart-vzlogger|start-vzlogger|stop-vzlogger|restart-bridge|start-bridge|stop-bridge|disable-vzlogger|status|debug-log\n";
 exit 1;
 
 sub run_perl
@@ -251,6 +261,27 @@ sub update_vzlogger_log_config
 	my $log_level = (defined($configured_level) && $configured_level =~ /\A(?:0|1|3|5|10|15)\z/) ? $configured_level : 0;
 	my $verbosity = $debug_enabled ? $log_level : 0;
 	my $log_file = $debug_enabled ? $vzlogger_log_file : "/dev/null";
+	if (($cfg->param("VZLOGGER.EXPERTMODE") || "0") eq "1") {
+		my $expert = read_text($expert_file);
+		if (!defined($expert)) {
+			print "Expert vzLogger configuration is missing.\n";
+			return 1;
+		}
+		my ($updated_expert, $result) = update_expert_log_settings($expert, $verbosity, $log_file);
+		if (!defined($updated_expert)) {
+			print format_expert_validation($result);
+			print "Could not update log settings while the expert configuration is invalid.\n";
+			return 1;
+		}
+		if (!write_text_atomic($expert_file, $updated_expert) || !write_text_atomic($config_file, $updated_expert)) {
+			print "Could not update the expert vzLogger configuration.\n";
+			return 1;
+		}
+		my $validate_rc = run_perl("$bindir/vzlogger_validate.pl");
+		return $validate_rc if ($validate_rc != 0);
+		print "Validated the expert vzLogger configuration and updated only its root log settings.\n";
+		return 0;
+	}
 	my $log_json = JSON::PP->new->utf8->allow_nonref->encode($log_file);
 
 	my $updated = $original;
@@ -594,6 +625,7 @@ sub bridge_enabled
 	return 0 if (!vzlogger_mode_enabled() || !read_enabled());
 	my $cfg = Config::Simple->new($plugin_config_file);
 	return 0 if (!$cfg);
+	return generated_mqtt_enabled() if (($cfg->param("VZLOGGER.EXPERTMODE") || "0") eq "1");
 	my $mqtt_enabled = $cfg->param("VZLOGGER.MQTTENABLED");
 	return !defined($mqtt_enabled) || $mqtt_enabled eq "1";
 }

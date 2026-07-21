@@ -16,6 +16,7 @@ my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
 my $config_file = "$home/config/plugins/$psubfolder/smartmeter.cfg";
 my $mapping_file = "$home/config/plugins/$psubfolder/vzlogger_channels.json";
+my $vzlogger_config_file = "$home/config/plugins/$psubfolder/vzlogger.conf";
 my $runtime_dir = "/var/run/shm/$psubfolder";
 my $plugin_log_dir = "$home/log/plugins/$psubfolder";
 my $log_file = "$plugin_log_dir/vzlogger_mqtt_bridge.log";
@@ -54,7 +55,9 @@ $SIG{INT} = sub {
 
 my $plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file: " . Config::Simple->error() . "\n";
 my $mapping = read_json($mapping_file) || {};
-my $base_topic = sanitize_topic($plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter");
+my $expert_config = (($plugin_cfg->param("VZLOGGER.EXPERTMODE") || "0") eq "1") ? read_json($vzlogger_config_file) : undef;
+my $expert_mqtt = ref($expert_config) eq "HASH" && ref($expert_config->{mqtt}) eq "HASH" ? $expert_config->{mqtt} : undef;
+my $base_topic = sanitize_topic(ref($expert_mqtt) eq "HASH" ? ($expert_mqtt->{topic} || "smartmeter") : ($plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter"));
 my $subscribe_topic = "$base_topic/vzlogger/#";
 my $update_interval = clean_number($plugin_cfg->param("VZLOGGER.UDPINTERVAL"), 5);
 my $send_udp = $plugin_cfg->param("MAIN.SENDUDP") ? 1 : 0;
@@ -433,6 +436,15 @@ sub read_mqtt_settings
 		qos => clean_qos($plugin_cfg->param("VZLOGGER.MQTTQOS"), 0),
 		keepalive => clean_number($plugin_cfg->param("VZLOGGER.MQTTKEEPALIVE"), 30),
 	);
+	if (ref($expert_mqtt) eq "HASH") {
+		foreach my $key (qw(host user pass cafile capath certfile keyfile)) {
+			$settings{$key} = "$expert_mqtt->{$key}" if (defined($expert_mqtt->{$key}) && !ref($expert_mqtt->{$key}));
+		}
+		$settings{port} = clean_number($expert_mqtt->{port}, $settings{port});
+		$settings{qos} = clean_qos($expert_mqtt->{qos}, $settings{qos});
+		$settings{keepalive} = clean_number($expert_mqtt->{keepalive}, $settings{keepalive});
+		return \%settings;
+	}
 
 	my $general = read_json($general_json);
 	if (ref($general) && ref($general->{Mqtt})) {

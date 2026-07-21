@@ -54,6 +54,7 @@
 	.service-status-error { background: #f5c6cb; color: #721c24; }
 	.service-action-feedback { display: none; margin: 0 0 10px 0; padding: 8px 10px; background: #d7f0d2; border: 1px solid #8fbd87; color: #245b1d; }
 	.service-action-feedback.is-visible { display: block; }
+	.service-action-feedback.is-error { background: #f8d7da; border-color: #b00020; color: #721c24; }
 	.service-control-log { margin: -3px 0 14px 0; text-align: right; }
 	.service-action-reason { color: #8a5a00; font-size: 85%; margin-top: .25em; }
 	.service-action-reason:empty { display: none; }
@@ -154,6 +155,14 @@
 		line-height: 1.35;
 	}
 	.configuration-section > h2 { margin: 0 0 8px 0; }
+	.configuration-heading { display: flex; align-items: center; justify-content: space-between; gap: 1em; margin-bottom: 8px; }
+	.configuration-heading h2 { margin: 0; }
+	.expert-mode-control { display: inline-flex; align-items: center; gap: .5em; white-space: nowrap; }
+	.expert-mode-notice { margin: 0 0 10px 0; padding: 8px 10px; border: 1px solid #d6a23c; border-radius: 4px; background: #fff4d6; color: #6f4700; }
+	.generated-config-path { margin: 0 0 .45em 0; overflow-wrap: anywhere; }
+	.generated-config-path code { display: block; }
+	.generated-config-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .4em; }
+	.generated-config-actions .ui-btn { margin: 0; }
 	.configuration-section > p { margin: 0 0 10px 0; }
 	.configuration-section.configuration-disabled { color: #888; }
 	.configuration-section.configuration-disabled .ui-collapsible-heading .ui-btn { color: #888 !important; opacity: .65; }
@@ -359,6 +368,16 @@
 	<form method="post" data-ajax="false" name="vzlogger_form" id="vzlogger_form" action="./index.cgi">
 	<input type="hidden" name="saveformdata" value="1">
 	<input type="hidden" id="implementation_changed" name="implementation_changed" value="0">
+	<span id="expert_mode_enable_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.EXPERT_MODE_ENABLE_FAILED></span>
+	<span id="expert_mode_overwrite_confirm_text" hidden><TMPL_VAR NAME=T::VZLOGGER.EXPERT_MODE_OVERWRITE_CONFIRM></span>
+	<span id="expert_mode_active_help_text" hidden><TMPL_VAR NAME=T::VZLOGGER.EXPERT_MODE_ACTIVE_HELP></span>
+	<span id="edit_expert_config_text" hidden><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG></span>
+	<span id="edit_expert_config_help_text" hidden><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG_HELP></span>
+	<span id="show_generated_config_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG></span>
+	<span id="show_generated_config_help_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP></span>
+	<span id="reset_expert_config_confirm_text" hidden><TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG_CONFIRM></span>
+	<span id="reset_expert_config_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG_FAILED></span>
+	<span id="reset_expert_config_help_text" hidden><TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG_HELP></span>
 	<input type="hidden" id="obis_serial" name="obis_serial" value="">
 	<textarea id="channel_definitions_json" name="channel_definitions_json" class="channel-json-state" hidden aria-hidden="true" tabindex="-1"><TMPL_VAR NAME=CHANNEL_DEFINITIONS_JSON ESCAPE=HTML></textarea>
 	<textarea id="channel_indices_json" class="channel-json-state" hidden aria-hidden="true" tabindex="-1"><TMPL_VAR NAME=CHANNEL_INDICES_JSON ESCAPE=HTML></textarea>
@@ -427,8 +446,9 @@
 	</div>
 	<div class="service-control-log"><span><TMPL_VAR NAME=T::VZLOGGER.SERVICE_CONTROL_LOG_LABEL></span> <a href="<TMPL_VAR CONTROL_LOG_URL>" target="log" class="<TMPL_VAR CONTROL_LOG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_CONTROL_LOG></a></div>
 
-	<div id="vzlogger_configuration_section" class="configuration-section">
-	<h2><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_CONFIGURATION></h2>
+	<div id="vzlogger_configuration_section" class="configuration-section <TMPL_IF VZLOGGER_EXPERT_MODE>configuration-disabled</TMPL_IF>">
+	<div class="configuration-heading"><h2><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_CONFIGURATION></h2><span class="expert-mode-control"><label for="expert_mode"><TMPL_VAR NAME=T::VZLOGGER.EXPERT_MODE></label><select id="expert_mode" data-role="flipswitch" onchange="set_expert_mode(this.value);"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></span></div>
+	<p id="expert_mode_notice" class="expert-mode-notice"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> hidden</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.EXPERT_MODE_ACTIVE_HELP></p>
 	<p><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_CONFIGURATION_HELP></p>
 	<table border="0" class="settings-table">
 	<tr>
@@ -691,7 +711,7 @@
 	<table border="0" class="settings-table">
 	<tr>
 		<td><TMPL_VAR NAME=T::VZLOGGER.GENERATED_CONFIG></td>
-		<td><a id="show_generated_config" href="<TMPL_VAR VZLOGGER_CONFIG_URL>" target="_blank" rel="noopener" title="<TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="search" class="<TMPL_VAR VZLOGGER_CONFIG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG></a> <code><TMPL_VAR VZLOGGER_CONFIG></code></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP></td>
+		<td><div class="generated-config-path"><code><TMPL_VAR VZLOGGER_CONFIG></code></div><div class="generated-config-actions"><a id="show_generated_config" href="<TMPL_VAR VZLOGGER_CONFIG_URL>" target="_blank"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> rel="noopener"</TMPL_IF> title="<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG_HELP><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP></TMPL_IF>" data-role="button" data-inline="true" data-mini="true" data-icon="<TMPL_IF VZLOGGER_EXPERT_MODE>edit<TMPL_ELSE>search</TMPL_IF>" class="<TMPL_VAR VZLOGGER_CONFIG_DISABLED>"><TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG></TMPL_IF></a><button id="reset_expert_config" type="button" onclick="reset_expert_configuration();" title="<TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="refresh"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> hidden</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG></button></div></td><td>&nbsp;</td><td id="generated_config_help"><TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG_HELP><br><TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG_HELP><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP></TMPL_IF></td>
 	</tr>
 	<tr>
 		<td><TMPL_VAR NAME=T::VZLOGGER.ACTIONS></td>
@@ -1149,6 +1169,7 @@
 
 		function run_configuration_action(action) {
 			if (configuration_action_running || service_action_running) return;
+			if (action == "apply" && !expert_mode_active && expert_source_present && !window.confirm(obis_text("expert_mode_overwrite_confirm_text"))) return;
 			if (action == "debug-log") {
 				if (!open_debug_progress_tab()) window.alert(obis_text("configuration_action_debug_popup_blocked_text"));
 				return;
@@ -1666,8 +1687,12 @@
 		var saved_implementation = "<TMPL_VAR IMPLEMENTATION>";
 		var initial_implementation_value = "<TMPL_VAR IMPLEMENTATION_SWITCH_VALUE>";
 		var initial_read_value = "<TMPL_VAR READ>";
+		var expert_mode_active = "<TMPL_VAR VZLOGGER_EXPERT_MODE_VALUE>" == "1";
+		var expert_source_present = "<TMPL_VAR VZLOGGER_EXPERT_SOURCE_PRESENT>" == "1";
+		var expert_mqtt_enabled = "<TMPL_VAR EXPERT_MQTT_ENABLED>" == "1";
 		$("#read").val(initial_read_value);
 		$("#implementation").val(initial_implementation_value);
+		$("#expert_mode").val(expert_mode_active ? "1" : "0");
 		var sendudp_control = $("#sendudp");
 		sendudp_control.val("<TMPL_VAR SENDUDP>");
 		sendudp_control.off("change.smartmeterUdp").on("change.smartmeterUdp", disable_udp);
@@ -1686,6 +1711,7 @@
 		$("#vzlogger_mqttqos").val("<TMPL_VAR VZLOGGER_MQTTQOS>");
 		$("#vzlogger_mqtttimestamp").val("<TMPL_VAR VZLOGGER_MQTTTIMESTAMP>");
 		$("#vzlogger_udpinterval").val("<TMPL_VAR VZLOGGER_UDPINTERVAL>");
+		try { $("#expert_mode").flipswitch("refresh"); } catch (error) {}
 		update_activation_dirty_hints();
 		disable_cron();
 		disable_udp();
@@ -1739,11 +1765,26 @@
 			var config = last_service_snapshot.config || {};
 			var applied = last_service_snapshot.applied || {};
 			var busy_reason = service_reason("busy");
-			var vz_reason = !ui.vzlogger ? service_reason("activation") : !config.valid ? service_reason("config") : "";
-			var bridge_reason = !ui.bridge ? service_reason("activation") : !config.valid ? service_reason("config") :
+			var expert_invalid = !!config.expert_mode && !config.expert_valid;
+			var expert_unapplied = !!config.expert_mode && !config.expert_applied;
+			var vz_reason = !ui.vzlogger ? service_reason("activation") : (expert_invalid || expert_unapplied || !config.valid) ? service_reason("config") : "";
+			var bridge_reason = !ui.bridge ? service_reason("activation") : (expert_invalid || expert_unapplied || !config.valid) ? service_reason("config") :
 				(!applied.mqtt_enabled || !config.mqtt_enabled ? service_reason("mqtt") : "");
-			var vz_enabled = ui.vzlogger && !!config.valid && !service_action_running;
-			var bridge_enabled = ui.bridge && !!config.valid && !!applied.mqtt_enabled && !!config.mqtt_enabled && !service_action_running;
+			var vz_enabled = ui.vzlogger && !!config.valid && !expert_invalid && !expert_unapplied && !service_action_running;
+			var bridge_enabled = ui.bridge && !!config.valid && !expert_invalid && !expert_unapplied && !!applied.mqtt_enabled && !!config.mqtt_enabled && !service_action_running;
+			set_control_disabled("#save_apply_button", expert_invalid || configuration_action_running || service_action_running);
+			if (expert_invalid && config.expert_message) {
+				var feedback = document.getElementById("service_action_feedback");
+				feedback.textContent = config.expert_message;
+				feedback.classList.add("is-error", "is-visible");
+			} else if (config.expert_mode && config.expert_valid) {
+				var feedback = document.getElementById("service_action_feedback");
+				if (feedback.classList.contains("is-error")) {
+					feedback.textContent = config.expert_message || "";
+					feedback.classList.remove("is-error");
+					feedback.classList.toggle("is-visible", !!feedback.textContent);
+				}
+			}
 			$("#vzlogger_service_action_reason").text(vz_enabled ? "" : (service_action_running ? busy_reason : vz_reason));
 			$("#bridge_service_action_reason").text(bridge_enabled ? "" : (service_action_running ? busy_reason : bridge_reason));
 			set_service_button_state("vzlogger_start_button", !services.vzlogger.running, vz_enabled, service_action_running ? busy_reason : vz_reason);
@@ -1759,14 +1800,14 @@
 			var ui = {
 				vzlogger: $("#implementation").val() == "vzlogger",
 				local: $("#vzlogger_localenabled").val() == "1",
-				mqtt: $("#vzlogger_mqttenabled").val() == "1",
+				mqtt: expert_mode_active ? expert_mqtt_enabled : $("#vzlogger_mqttenabled").val() == "1",
 				bridge_switch: $("#read").val() == "1",
 				udp: $("#sendudp").val() == "1"
 			};
 			ui.bridge_available = ui.vzlogger && ui.mqtt;
 			ui.bridge = ui.bridge_available && ui.bridge_switch;
 
-			$("#vzlogger_configuration_section").toggleClass("configuration-disabled", !ui.vzlogger);
+			$("#vzlogger_configuration_section").toggleClass("configuration-disabled", !ui.vzlogger || expert_mode_active);
 			set_control_disabled("#vzlogger_service_debug, #vzlogger_loglevel, #vzlogger_retry, #vzlogger_localenabled, #vzlogger_mqttenabled", !ui.vzlogger);
 			set_control_disabled("#vzlogger_localport, #vzlogger_localindex, #vzlogger_localtimeout, #vzlogger_localbuffer", !(ui.vzlogger && ui.local));
 			set_control_disabled("#vzlogger_mqtthost, #vzlogger_mqttport, #vzlogger_mqttcafile, #vzlogger_mqttcapath, #vzlogger_mqttcertfile, #vzlogger_mqttkeyfile, #vzlogger_mqttkeypass, #vzlogger_mqttkeypass_reset, #vzlogger_mqttkeepalive, #mqtttopic, #vzlogger_mqttid, #vzlogger_mqttuser, #vzlogger_mqttpass, #vzlogger_mqttpass_reset, #vzlogger_mqttretain, #vzlogger_mqttrawandagg, #vzlogger_mqttqos, #vzlogger_mqtttimestamp", !(ui.vzlogger && ui.mqtt));
@@ -1787,9 +1828,105 @@
 			set_anchor_disabled("#http_cache_link", !ui.bridge || !cache_available);
 			set_control_disabled("#udpport", !ui.bridge || !ui.udp);
 			$("#labeludpport").toggleClass("ui-disabled", !ui.bridge || !ui.udp);
+			if (expert_mode_active) {
+				$("#vzlogger_configuration_section").find("input, select, textarea, button").not("#expert_mode").each(function () {
+					set_control_disabled($(this), true);
+				});
+				set_anchor_disabled("#rescan_ir_heads", true);
+			}
 
 			update_service_action_states(ui);
 		}
+
+		function set_expert_mode(value) {
+			var control = $("#expert_mode");
+			control.prop("disabled", true).addClass("ui-disabled");
+			var data = new FormData();
+			data.append("ajax", "1");
+			data.append("ajaxaction", "expert-mode");
+			data.append("enabled", value == "1" ? "1" : "0");
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
+				.then(function (response) { return response.json(); })
+				.then(function (response) {
+					if (!response.ok) throw new Error(response.message || obis_text("expert_mode_enable_failed_text"));
+					expert_mode_active = !!response.expert_mode;
+					expert_source_present = expert_source_present || expert_mode_active;
+					expert_mqtt_enabled = !!response.mqtt_enabled;
+					control.val(expert_mode_active ? "1" : "0").prop("disabled", false).removeClass("ui-disabled");
+					try { control.flipswitch("refresh"); } catch (ignore) {}
+					render_expert_mode_state();
+					if (last_service_snapshot && last_service_snapshot.config) {
+						last_service_snapshot.config.expert_mode = expert_mode_active;
+						last_service_snapshot.config.expert_valid = !!response.expert_valid;
+						last_service_snapshot.config.expert_applied = !!response.expert_applied;
+						last_service_snapshot.config.expert_present = expert_source_present;
+						last_service_snapshot.config.expert_message = response.validation_message || "";
+					}
+					update_all_control_states();
+					poll_service_status();
+				})
+				.catch(function (error) {
+					control.val(expert_mode_active ? "1" : "0").prop("disabled", false).removeClass("ui-disabled");
+					try { control.flipswitch("refresh"); } catch (ignore) {}
+					window.alert(error.message || obis_text("expert_mode_enable_failed_text"));
+				});
+		}
+
+		function render_expert_mode_state() {
+			var button = $("#show_generated_config");
+			var label = obis_text(expert_mode_active ? "edit_expert_config_text" : "show_generated_config_text");
+			var help = obis_text(expert_mode_active ? "edit_expert_config_help_text" : "show_generated_config_help_text");
+			var text = button.find(".ui-btn-text");
+			if (text.length) text.text(label); else button.text(label);
+			button.attr("title", help).attr("data-icon", expert_mode_active ? "edit" : "search");
+			if (expert_mode_active) button.removeAttr("rel"); else button.attr("rel", "noopener");
+			$("#generated_config_help").text(help + (expert_mode_active ? " " + obis_text("reset_expert_config_help_text") : ""));
+			$("#expert_mode_notice").prop("hidden", !expert_mode_active);
+			$("#reset_expert_config").prop("hidden", !expert_mode_active).toggle(expert_mode_active);
+		}
+
+		function reset_expert_configuration() {
+			if (!expert_mode_active || !window.confirm(obis_text("reset_expert_config_confirm_text"))) return;
+			var button = $("#reset_expert_config");
+			button.prop("disabled", true).addClass("ui-disabled");
+			var data = new FormData();
+			data.append("ajax", "1");
+			data.append("ajaxaction", "expert-reset");
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
+				.then(function (response) { return response.json(); })
+				.then(function (response) {
+					if (!response.ok) throw new Error(response.message || obis_text("reset_expert_config_failed_text"));
+					expert_source_present = true;
+					expert_mqtt_enabled = !!response.mqtt_enabled;
+					if (last_service_snapshot && last_service_snapshot.config) {
+						last_service_snapshot.config.expert_valid = !!response.expert_valid;
+						last_service_snapshot.config.expert_applied = !!response.expert_applied;
+						last_service_snapshot.config.expert_present = true;
+						last_service_snapshot.config.expert_message = response.validation_message || "";
+					}
+					var feedback = document.getElementById("service_action_feedback");
+					feedback.textContent = response.message || response.validation_message || "";
+					feedback.classList.remove("is-error");
+					feedback.classList.toggle("is-visible", !!feedback.textContent);
+					update_all_control_states();
+					poll_service_status();
+				})
+				.catch(function (error) {
+					window.alert(error.message || obis_text("reset_expert_config_failed_text"));
+				})
+				.then(function () {
+					button.prop("disabled", false).removeClass("ui-disabled");
+				});
+		}
+
+		window.addEventListener("message", function (event) {
+			if (event.origin != window.location.origin || !event.data || event.data.type != "smartmeter-vzlogger-expert") return;
+			var feedback = document.getElementById("service_action_feedback");
+			feedback.textContent = event.data.message || "";
+			feedback.classList.toggle("is-error", !event.data.valid);
+			feedback.classList.add("is-visible");
+			schedule_service_poll();
+		});
 
 		function set_implementation_tab_state(id, active) {
 			var state = $("#" + id);

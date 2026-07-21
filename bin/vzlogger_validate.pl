@@ -10,6 +10,7 @@ use JSON::PP;
 use LoxBerry::System;
 use lib $FindBin::Bin;
 use SmartMeterVZLoggerChannels qw(compose_obis parse_obis validate_document valid_output_key output_key_format);
+use SmartMeterVZLoggerExpert qw(read_text validate_expert_text format_expert_validation);
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
@@ -18,6 +19,16 @@ my $plugin_config_file = $ENV{SMARTMETER_CONFIG_FILE} || "$plugin_config_dir/sma
 my $config_file = $ENV{SMARTMETER_VZLOGGER_CONFIG_FILE} || "$plugin_config_dir/vzlogger.conf";
 my $mapping_file = $ENV{SMARTMETER_VZLOGGER_MAPPING_FILE} || "$plugin_config_dir/vzlogger_channels.json";
 my $definitions_file = $ENV{SMARTMETER_VZLOGGER_DEFINITIONS_FILE} || "$plugin_config_dir/vzlogger_channel_definitions.json";
+
+my $plugin_cfg = Config::Simple->new($plugin_config_file);
+my $expert_mode = (($ENV{SMARTMETER_EXPERT_MODE} || "") eq "1") ||
+	($plugin_cfg && ($plugin_cfg->param("VZLOGGER.EXPERTMODE") || "0") eq "1");
+if ($expert_mode) {
+	my $text = read_text($config_file);
+	my $result = validate_expert_text($text);
+	print format_expert_validation($result);
+	exit($result->{valid} ? 0 : 1);
+}
 
 my (@errors, @warnings);
 my $config = read_json_file($config_file, "vzLogger config");

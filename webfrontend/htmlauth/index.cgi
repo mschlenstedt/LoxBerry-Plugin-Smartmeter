@@ -38,6 +38,7 @@ use strict;
 use lib $lbpbindir;
 use lib "$FindBin::Bin/../../bin";
 use SmartMeterVZLoggerChannels qw(parse_obis compose_obis normalize_obis default_output_key stable_uuid read_json write_json_atomic load_catalog lookup_obis new_document migrate_legacy_meter validate_document);
+use SmartMeterVZLoggerExpert qw(read_text write_text_atomic validate_expert_text format_expert_validation build_expert_mapping update_expert_log_settings expert_configs_equal);
 
 ##########################################################################
 # Variables
@@ -110,6 +111,14 @@ if( $q->{ajax} ) {
 			die "I/R head discovery requires POST." if (($ENV{REQUEST_METHOD} || "") ne "POST");
 			load_service_ajax_config();
 			$response = scan_ir_heads_ajax();
+		} elsif ($action eq "expert-mode") {
+			die "Expert mode changes require POST." if (($ENV{REQUEST_METHOD} || "") ne "POST");
+			load_service_ajax_config();
+			$response = set_expert_mode_ajax($q->{enabled});
+		} elsif ($action eq "expert-reset") {
+			die "Expert configuration reset requires POST." if (($ENV{REQUEST_METHOD} || "") ne "POST");
+			load_service_ajax_config();
+			$response = reset_expert_configuration_ajax();
 		} else {
 			$response->{message} = "Unknown AJAX action.";
 		}
@@ -174,7 +183,18 @@ sub form_vzlogger
 
 	if ($q->{saveformdata}) {
 		my $action = $q->{submitaction} || "apply";
-		if ($action eq "validate") {
+		if (expert_mode_enabled()) {
+			my $status = expert_draft_status();
+			if ($action eq "validate") {
+				$template->param("VZLOGGER_MESSAGE", $status->{message});
+			} else {
+				my $output = save_expert_allowed_form();
+				$status = promote_expert_configuration();
+				$output .= $status->{message};
+				$output .= run_control("apply-expert") if ($status->{valid});
+				$template->param("VZLOGGER_MESSAGE", $output);
+			}
+		} elsif ($action eq "validate") {
 			my $validation = run_draft_validation_ajax();
 			$template->param("VZLOGGER_MESSAGE", $validation->{message});
 		} elsif ($action eq "debug-log") {
@@ -279,10 +299,17 @@ sub form_vzlogger
 	$template->param("VZLOGGER_MQTTRAWANDAGG" => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTRAWANDAGG"), 0));
 	$template->param("VZLOGGER_MQTTQOS" => clean_qos($plugin_cfg->param("VZLOGGER.MQTTQOS"), 0));
 	$template->param("VZLOGGER_MQTTTIMESTAMP" => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP"), 1));
+	my $expert_mode = expert_mode_enabled();
+	$template->param("VZLOGGER_EXPERT_MODE" => $expert_mode);
+	$template->param("VZLOGGER_EXPERT_MODE_VALUE" => $expert_mode ? 1 : 0);
+	$template->param("VZLOGGER_EXPERT_SOURCE_PRESENT" => -e expert_config_file() ? 1 : 0);
 	add_service_template_params();
 	$template->param("VZLOGGER_CONFIG" => "$lbpconfigdir/vzlogger.conf");
 	$template->param("VZLOGGER_CONFIG_URL" => "./vzlogger_config.cgi");
-	$template->param("VZLOGGER_CONFIG_DISABLED" => (-e "$lbpconfigdir/vzlogger.conf" ? "" : "ui-disabled"));
+	my $visible_config_exists = $expert_mode ? -e expert_config_file() : -e "$lbpconfigdir/vzlogger.conf";
+	$template->param("VZLOGGER_CONFIG_DISABLED" => ($visible_config_exists ? "" : "ui-disabled"));
+	my $runtime_config = read_json("$lbpconfigdir/vzlogger.conf") || {};
+	$template->param("EXPERT_MQTT_ENABLED" => (ref($runtime_config->{mqtt}) eq "HASH" && $runtime_config->{mqtt}->{enabled}) ? 1 : 0);
 	$template->param("VZLOGGER_LIVEURL" => "http://$ENV{HTTP_HOST}:$local_port/");
 	$template->param("VZLOGGER_RENDERED_URL" => "./vzlogger_live.cgi");
 	$template->param("METER_TEMPLATES_JSON" => JSON::PP->new->utf8->canonical->encode(load_meter_templates()));
@@ -297,7 +324,7 @@ sub form_vzlogger
 sub add_service_template_params
 {
 	my $vzlogger_expected_active = implementation_mode() eq "vzlogger";
-	my $mqtt_enabled = clean_boolean($plugin_cfg->param("VZLOGGER.MQTTENABLED"), 1);
+	my $mqtt_enabled = effective_vzlogger_mqtt_enabled();
 	my $bridge_expected_active = $vzlogger_expected_active && $mqtt_enabled && (($plugin_cfg->param("MAIN.READ") || "0") eq "1");
 	my $vzlogger_state = service_state("vzlogger");
 	my $bridge_state = service_state("smartmeter-v2-vzlogger-bridge");
@@ -441,11 +468,20 @@ sub load_service_ajax_config
 sub service_status_response
 {
 	my $vzlogger_expected = implementation_mode() eq "vzlogger";
-	my $mqtt_enabled = clean_boolean($plugin_cfg->param("VZLOGGER.MQTTENABLED"), 1);
+	my $mqtt_enabled = effective_vzlogger_mqtt_enabled();
 	my $bridge_enabled = (($plugin_cfg->param("MAIN.READ") || "0") eq "1");
 	my $bridge_expected = $vzlogger_expected && $mqtt_enabled && $bridge_enabled;
 	my $config = generated_config_status();
-	my $bridge_startable = $config->{valid} && $mqtt_enabled && $config->{mqtt_enabled};
+	my $expert = expert_draft_status();
+	my $expert_applied = expert_configuration_applied();
+	$config->{expert_mode} = expert_mode_enabled() ? JSON::PP::true : JSON::PP::false;
+	$config->{expert_present} = $expert->{present} ? JSON::PP::true : JSON::PP::false;
+	$config->{expert_valid} = $expert->{valid} ? JSON::PP::true : JSON::PP::false;
+	$config->{expert_message} = $expert->{message};
+	$config->{expert_applied} = $expert_applied ? JSON::PP::true : JSON::PP::false;
+	my $vzlogger_startable = $config->{valid};
+	$vzlogger_startable = 0 if (expert_mode_enabled() && (!$expert->{valid} || !$expert_applied));
+	my $bridge_startable = $vzlogger_startable && $mqtt_enabled && $config->{mqtt_enabled};
 	return {
 		ok => JSON::PP::true,
 		applied => {
@@ -457,9 +493,14 @@ sub service_status_response
 			present => $config->{present} ? JSON::PP::true : JSON::PP::false,
 			valid => $config->{valid} ? JSON::PP::true : JSON::PP::false,
 			mqtt_enabled => $config->{mqtt_enabled} ? JSON::PP::true : JSON::PP::false,
+			expert_mode => $config->{expert_mode},
+			expert_present => $config->{expert_present},
+			expert_valid => $config->{expert_valid},
+			expert_message => $config->{expert_message},
+			expert_applied => $config->{expert_applied},
 		},
 		services => {
-			vzlogger => service_status_data("vzlogger", $vzlogger_expected, $config->{valid}),
+			vzlogger => service_status_data("vzlogger", $vzlogger_expected, $vzlogger_startable),
 			bridge => service_status_data("smartmeter-v2-vzlogger-bridge", $bridge_expected, $bridge_startable),
 		},
 	};
@@ -498,6 +539,11 @@ sub run_service_ajax_action
 	my $bridge_action = $action =~ /-bridge\z/;
 	my $requested_implementation = clean_config_value($q->{implementation}, qr/\A(?:none|vzlogger)\z/, "");
 	my $config = generated_config_status();
+	my $expert = expert_draft_status();
+	die "The saved expert configuration is invalid. Correct it before starting or restarting a service."
+		if ($starting && expert_mode_enabled() && !$expert->{valid});
+	die "The saved expert configuration has not been applied. Use Save and apply first."
+		if ($starting && expert_mode_enabled() && !expert_configuration_applied());
 	if ($action =~ /-vzlogger\z/) {
 		die "Enable vzLogger before starting the service." if ($starting && $requested_implementation ne "vzlogger");
 	} else {
@@ -505,7 +551,7 @@ sub run_service_ajax_action
 		die "Enable vzLogger and the SmartMeter bridge before starting the service." if ($starting && ($requested_implementation ne "vzlogger" || $requested_read ne "1"));
 	}
 	die "The generated vzLogger configuration is missing or invalid. Use Save and apply first." if ($starting && !$config->{valid});
-	die "Enable and apply MQTT before starting the SmartMeter bridge." if ($starting && $bridge_action && !clean_boolean($plugin_cfg->param("VZLOGGER.MQTTENABLED"), 1));
+	die "Enable and apply MQTT before starting the SmartMeter bridge." if ($starting && $bridge_action && !effective_vzlogger_mqtt_enabled());
 	die "MQTT is disabled in the generated vzLogger configuration. Use Save and apply first." if ($starting && $bridge_action && !$config->{mqtt_enabled});
 
 	save_service_log_settings($action);
@@ -538,10 +584,38 @@ sub run_form_ajax_action
 	die "The required timeout command is not available; the configuration action was not started." if (!command_exists("timeout"));
 	local $configuration_action_deadline = time + 60;
 	local $configuration_action_timed_out = 0;
-	return run_draft_validation_ajax() if ($action eq "validate");
-
 	load_service_ajax_config();
 	ensure_vzlogger_defaults();
+	if (expert_mode_enabled()) {
+		my $status = expert_draft_status();
+		if ($action eq "validate") {
+			return {
+				ok => $status->{valid} ? JSON::PP::true : JSON::PP::false,
+				action => "validate",
+				message => $status->{message},
+			};
+		}
+		my $output = save_expert_allowed_form();
+		$status = promote_expert_configuration();
+		$output .= $status->{message};
+		my $exit = 1;
+		if ($status->{valid}) {
+			my ($apply_output, $apply_exit) = run_control_result("apply-expert");
+			$output .= $apply_output;
+			$exit = $apply_exit;
+		}
+		load_service_ajax_config();
+		my $response = service_status_response();
+		$response->{ok} = ($status->{valid} && $exit == 0) ? JSON::PP::true : JSON::PP::false;
+		$response->{action} = "apply";
+		$response->{message} = $output;
+		$response->{config_url} = "./vzlogger_config.cgi";
+		$response->{channel_indices} = runtime_channel_indices();
+		write_apply_log($output, \$output);
+		return $response;
+	}
+	return run_draft_validation_ajax() if ($action eq "validate");
+
 	my @heads = detect_heads();
 	ensure_head_defaults(@heads);
 	ensure_legacy_meter_state(@heads);
@@ -553,7 +627,6 @@ sub run_form_ajax_action
 	my ($apply_output, $apply_exit) = apply_selected_implementation_result($activating_vzlogger);
 	$output .= $apply_output;
 	$exit = $apply_exit;
-
 	# Reload persisted values before producing the service snapshot.
 	load_service_ajax_config();
 	my $response = service_status_response();
@@ -731,7 +804,8 @@ sub generated_config_status
 	my $config = eval { JSON::PP->new->utf8->decode($json) };
 	return $status if ($@ || ref($config) ne "HASH");
 	$status->{mqtt_enabled} = (ref($config->{mqtt}) eq "HASH" && $config->{mqtt}->{enabled}) ? 1 : 0;
-	return $status if (!-e $mapping_file || !-e $validator || ref($config->{meters}) ne "ARRAY" || !@{$config->{meters}});
+	return $status if (!-e $validator || ref($config->{meters}) ne "ARRAY" || !@{$config->{meters}});
+	return $status if (!expert_mode_enabled() && !-e $mapping_file);
 	my $output = `$^X "$validator" 2>&1`;
 	$status->{valid} = (($? >> 8) == 0) ? 1 : 0;
 	return $status;
@@ -796,6 +870,7 @@ sub ensure_vzlogger_defaults
 	$plugin_cfg->param("MAIN.SENDUDP", "0") if (!defined $plugin_cfg->param("MAIN.SENDUDP"));
 	$plugin_cfg->param("MAIN.UDPPORT", "7000") if (!$plugin_cfg->param("MAIN.UDPPORT"));
 	$plugin_cfg->param("MAIN.MQTTTOPIC", "smartmeter") if (!$plugin_cfg->param("MAIN.MQTTTOPIC"));
+	$plugin_cfg->param("VZLOGGER.EXPERTMODE", "0") if (!defined $plugin_cfg->param("VZLOGGER.EXPERTMODE"));
 	$plugin_cfg->param("VZLOGGER.RETRY", "30") if (!defined $plugin_cfg->param("VZLOGGER.RETRY"));
 	$plugin_cfg->param("VZLOGGER.LOCALENABLED", "1") if (!defined $plugin_cfg->param("VZLOGGER.LOCALENABLED"));
 	$plugin_cfg->param("VZLOGGER.LOCALPORT", "18080") if (!$plugin_cfg->param("VZLOGGER.LOCALPORT"));
@@ -824,6 +899,150 @@ sub ensure_vzlogger_defaults
 	$plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP", "1") if (!defined $plugin_cfg->param("VZLOGGER.MQTTTIMESTAMP"));
 	$plugin_cfg->param("VZLOGGER.REMOVEDHEADS", "") if (!defined $plugin_cfg->param("VZLOGGER.REMOVEDHEADS"));
 	$plugin_cfg->save;
+}
+
+sub expert_mode_enabled
+{
+	return $plugin_cfg && ($plugin_cfg->param("VZLOGGER.EXPERTMODE") || "0") eq "1" ? 1 : 0;
+}
+
+sub effective_vzlogger_mqtt_enabled
+{
+	if (expert_mode_enabled()) {
+		my $config = read_json("$lbpconfigdir/vzlogger.conf");
+		return (ref($config) eq "HASH" && ref($config->{mqtt}) eq "HASH" && $config->{mqtt}->{enabled}) ? 1 : 0;
+	}
+	return clean_boolean($plugin_cfg->param("VZLOGGER.MQTTENABLED"), 1);
+}
+
+sub expert_config_file
+{
+	return "$lbpconfigdir/vzlogger_expert.conf";
+}
+
+sub expert_draft_status
+{
+	my $text = read_text(expert_config_file());
+	my $result = validate_expert_text($text);
+	return {
+		present => defined($text) ? 1 : 0,
+		valid => $result->{valid} ? 1 : 0,
+		message => format_expert_validation($result),
+		result => $result,
+	};
+}
+
+sub set_expert_mode_ajax
+{
+	my ($enabled) = @_;
+	die "Invalid expert mode value." if (!defined($enabled) || $enabled !~ /\A[01]\z/);
+	my $was_enabled = expert_mode_enabled();
+	if ($enabled eq "1" && !$was_enabled && !-e expert_config_file()) {
+		my $runtime_file = "$lbpconfigdir/vzlogger.conf";
+		my $runtime = read_text($runtime_file);
+		die "Generate a vzLogger configuration before enabling Expert Mode." if (!defined($runtime));
+		die "The current vzLogger configuration is too large for the Expert Mode editor." if (length($runtime) > 1024 * 1024);
+		die "Could not initialize the expert configuration." if (!write_text_atomic(expert_config_file(), $runtime));
+	}
+	$plugin_cfg->param("VZLOGGER.EXPERTMODE", $enabled);
+	$plugin_cfg->save;
+	my $status = expert_draft_status();
+	my $expert_config = $status->{result}->{config};
+	my $mqtt_enabled = ref($expert_config) eq "HASH" &&
+		ref($expert_config->{mqtt}) eq "HASH" && $expert_config->{mqtt}->{enabled};
+	return {
+		ok => JSON::PP::true,
+		expert_mode => $enabled eq "1" ? JSON::PP::true : JSON::PP::false,
+		expert_valid => $status->{valid} ? JSON::PP::true : JSON::PP::false,
+		expert_applied => expert_configuration_applied() ? JSON::PP::true : JSON::PP::false,
+		mqtt_enabled => $mqtt_enabled ? JSON::PP::true : JSON::PP::false,
+		validation_message => $status->{message},
+		message => $enabled eq "1" ? "Expert Mode enabled." : "Expert Mode disabled. The runtime configuration and saved expert draft were retained.",
+	};
+}
+
+sub reset_expert_configuration_ajax
+{
+	die "Expert Mode is not active." if (!expert_mode_enabled());
+	my $runtime_file = "$lbpconfigdir/vzlogger.conf";
+	my $runtime = read_text($runtime_file);
+	die "The current vzLogger configuration does not exist." if (!defined($runtime));
+	die "The current vzLogger configuration is too large for the Expert Mode editor." if (length($runtime) > 1024 * 1024);
+	die "Could not reset the expert configuration." if (!write_text_atomic(expert_config_file(), $runtime));
+	my $status = expert_draft_status();
+	my $expert_config = $status->{result}->{config};
+	my $mqtt_enabled = ref($expert_config) eq "HASH" &&
+		ref($expert_config->{mqtt}) eq "HASH" && $expert_config->{mqtt}->{enabled};
+	return {
+		ok => JSON::PP::true,
+		expert_mode => JSON::PP::true,
+		expert_valid => $status->{valid} ? JSON::PP::true : JSON::PP::false,
+		expert_applied => expert_configuration_applied() ? JSON::PP::true : JSON::PP::false,
+		mqtt_enabled => $mqtt_enabled ? JSON::PP::true : JSON::PP::false,
+		validation_message => $status->{message},
+		message => "Expert configuration initialized from the current vzlogger.conf.",
+	};
+}
+
+sub expert_configuration_applied
+{
+	return expert_configs_equal(
+		read_text(expert_config_file()),
+		read_text("$lbpconfigdir/vzlogger.conf"),
+	);
+}
+
+sub promote_expert_configuration
+{
+	my $status = expert_draft_status();
+	return $status if (!$status->{valid});
+	my $text = read_text(expert_config_file());
+	my $mapping_file = "$lbpconfigdir/vzlogger_channels.json";
+	my $existing = read_json($mapping_file) || {};
+	my ($mapping, $mapping_warnings) = build_expert_mapping($status->{result}->{config}, $existing);
+	push @{$status->{result}->{warnings}}, @$mapping_warnings;
+	$status->{message} = format_expert_validation($status->{result});
+	my $runtime_file = "$lbpconfigdir/vzlogger.conf";
+	my $previous_runtime = read_text($runtime_file);
+	my $previous_mapping = read_json($mapping_file);
+	my $runtime_ok = write_text_atomic($runtime_file, $text);
+	my $mapping_ok = $runtime_ok ? eval { write_json_atomic($mapping_file, $mapping); 1 } : 0;
+	if (!$runtime_ok || !$mapping_ok) {
+		write_text_atomic($runtime_file, $previous_runtime) if (defined($previous_runtime));
+		eval { write_json_atomic($mapping_file, $previous_mapping) } if (ref($previous_mapping) eq "HASH");
+		$status->{valid} = 0;
+		$status->{message} .= "<FAIL> Could not promote the expert configuration atomically.\n";
+	}
+	return $status;
+}
+
+sub save_expert_allowed_form
+{
+	my $implementation = implementation_mode();
+	if (($q->{implementation_changed} || "") eq "1") {
+		$implementation = clean_config_value($q->{implementation}, qr/\A(?:none|vzlogger)\z/, $implementation);
+	}
+	$plugin_cfg->param("MAIN.IMPLEMENTATION", $implementation);
+	$plugin_cfg->param("MAIN.READ", clean_config_value($q->{read}, qr/\A[01]\z/, $plugin_cfg->param("MAIN.READ") || "0"));
+	$plugin_cfg->param("MAIN.SENDUDP", clean_config_value($q->{sendudp}, qr/\A[01]\z/, $plugin_cfg->param("MAIN.SENDUDP") || "0"));
+	$plugin_cfg->param("MAIN.UDPPORT", clean_config_value($q->{udpport}, qr/\A\d+\z/, $plugin_cfg->param("MAIN.UDPPORT") || "7000"));
+	$plugin_cfg->param("VZLOGGER.UDPINTERVAL", clean_udp_interval($q->{vzlogger_udpinterval}, $plugin_cfg->param("VZLOGGER.UDPINTERVAL") || "5"));
+	$plugin_cfg->param("VZLOGGER.DEBUG", clean_config_value($q->{vzlogger_debug}, qr/\A[01]\z/, $plugin_cfg->param("VZLOGGER.DEBUG") || "0"));
+	$plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG", clean_config_value($q->{vzlogger_service_debug}, qr/\A[01]\z/, $plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0"));
+	$plugin_cfg->param("VZLOGGER.LOGLEVEL", clean_log_level($q->{vzlogger_loglevel}, $plugin_cfg->param("VZLOGGER.LOGLEVEL") || "0"));
+	$plugin_cfg->save;
+
+	my $text = read_text(expert_config_file());
+	my $debug = ($plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0") eq "1";
+	my $level = clean_log_level($plugin_cfg->param("VZLOGGER.LOGLEVEL"), "0");
+	my ($updated, $result) = update_expert_log_settings(
+		$text,
+		$debug ? $level : 0,
+		$debug ? "$lbhomedir/log/plugins/$lbpplugindir/vzlogger.log" : "/dev/null",
+	);
+	return format_expert_validation($result) . "Could not update expert log settings.\n" if (!defined($updated));
+	return "Could not save expert log settings.\n" if (!write_text_atomic(expert_config_file(), $updated));
+	return "Updated Expert Mode service and bridge settings.\n";
 }
 
 sub detect_heads
@@ -2801,6 +3020,9 @@ sub ajax_header
 			-type => 'application/json',
 			-charset => 'utf-8',
 			-status => '200 OK',
-	);	
+			-expires => 'now',
+			-Cache_Control => 'no-store, no-cache, must-revalidate',
+			-X_Content_Type_Options => 'nosniff',
+	);
 	return();
 }	

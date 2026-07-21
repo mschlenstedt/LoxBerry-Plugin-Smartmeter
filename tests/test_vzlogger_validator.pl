@@ -67,6 +67,7 @@ sub run_validator
 	write_json("$dir/vzlogger_channel_definitions.json", $args{definitions});
 	open(my $cfg, ">", "$dir/smartmeter.cfg") or die $!;
 	print $cfg "[MAIN]\nIMPLEMENTATION=" . ($args{implementation} || "vzlogger") . "\nREAD=" . ($args{read} || 0) . "\n";
+	print $cfg "[VZLOGGER]\nEXPERTMODE=1\n" if ($args{expert});
 	close($cfg);
 
 	local $ENV{SMARTMETER_CONFIG_DIR} = $dir;
@@ -92,6 +93,13 @@ my ($config, $mapping, $definitions) = base_case();
 my ($exit, $output) = run_validator(config=>$config, mapping=>$mapping, definitions=>$definitions);
 is($exit, 0, "valid generated configuration passes");
 like($output, qr/<OK>/, "success marker is emitted");
+
+($config, $mapping, $definitions) = base_case();
+$config->{upstream_extension} = { retained => JSON::PP::true };
+$mapping = { invalid => "ignored in expert mode" };
+($exit, $output) = run_validator(config=>$config, mapping=>$mapping, definitions=>$definitions, expert=>1);
+is($exit, 0, "expert validator accepts upstream extension fields");
+like($output, qr/<WARNING>.*upstream_extension/, "expert validator reports extension warning");
 
 ($config, $mapping, $definitions) = base_case();
 $definitions->{meters}->{reader}->[0]->{plugin_output}->{key} = "Readable value #1|Main*(test).8-0";
