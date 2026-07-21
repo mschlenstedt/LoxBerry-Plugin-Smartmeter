@@ -9,7 +9,7 @@ use JSON::PP;
 our @EXPORT_OK = qw(
 	parse_obis compose_obis normalize_obis default_output_key valid_output_key output_key_format stable_uuid
 	read_json write_json_atomic load_catalog lookup_obis
-	new_document migrate_legacy_meter validate_document native_channel
+	new_document migrate_legacy_meter validate_document localize_validation_errors native_channel
 	output_order_mapping ordered_output_names
 );
 
@@ -385,6 +385,57 @@ sub validate_document
 		}
 	}
 	return @errors;
+}
+
+sub _channel_phrase
+{
+	my ($phrases, $key, %values) = @_;
+	my $text = ref($phrases) eq "HASH" && defined($phrases->{$key}) ? $phrases->{$key} : "";
+	foreach my $name (keys %values) {
+		my $value = defined($values{$name}) ? $values{$name} : "";
+		$text =~ s/\{\Q$name\E\}/$value/g;
+	}
+	return $text;
+}
+
+sub _localize_validation_error
+{
+	my ($message, $phrases) = @_;
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_DOCUMENT') if ($message eq "Channel definitions must be a JSON object.");
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_VERSION') if ($message eq "Unsupported channel-definition version.");
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_METERS') if ($message eq "The meters member must be an object.");
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_ENTRY', path => $1) if ($message =~ /\A([^:]+): invalid channel entry\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_UUID', path => $1) if ($message =~ /\A([^:]+): invalid channel UUID\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_UUID_DUPLICATE', path => $1, uuid => $2) if ($message =~ /\A([^:]+): duplicate channel UUID (.+)\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_UUID_GLOBAL', path => $1, uuid => $2) if ($message =~ /\A([^:]+): channel UUID (.+) is duplicated across meters\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_ARRAY', path => "$1.channels") if ($message =~ /\A([^:]+): channels must be an array\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_BOOLEAN', path => $1, field => $2) if ($message =~ /\A([^:]+): (.+) must be a JSON boolean\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_ORIGIN', path => $1) if ($message =~ /\A([^:]+): invalid channel origin\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_OBIS', path => $1) if ($message =~ /\A([^:]+): invalid OBIS identifier\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_OBIS_BASE', path => $1) if ($message =~ /\A([^:]+): obis must contain the base code without \*F\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_API_BLOCKS', path => $1) if ($message =~ /\A([^:]+): invalid API option blocks\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_OUTPUT_BLOCK', path => $1) if ($message =~ /\A([^:]+): invalid plugin output block\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_DISPLAY_NAME', path => $1) if ($message =~ /\A([^:]+): display name must be a string no longer than 128 characters\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_API', path => $1, api => $2) if ($message =~ /\A([^:]+): unsupported API (.+)\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_AGGREGATION', path => $1) if ($message =~ /\A([^:]+): invalid aggregation mode\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_OUTPUT_KEY', path => $1, format => $2) if ($message =~ /\A([^:]+): invalid output key \(required format: (.+)\)\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_OUTPUT_DUPLICATE', path => $1, key => $2) if ($message =~ /\A([^:]+): duplicate output key (.+)\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_OPTION', path => $1, api => $2, field => $3) if ($message =~ /\A([^:]+): unsupported (\S+) option (\S+)\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_URL', path => $1, target => $2) if ($message =~ /\A([^:]+): (.+) must be a valid HTTP\(S\) URL\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_INFLUX_VERSION', path => $1) if ($message =~ /\A([^:]+): InfluxDB version must be 1 or 2\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_JSON_OBJECT', path => $1, field => $2) if ($message =~ /\A([^:]+): (.+) must be a JSON object\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_TYPE', path => $1) if ($message =~ /\A([^:]+): MySmartGrid type must be device or sensor\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_NONNEGATIVE', path => $1, field => $2) if ($message =~ /\A([^:]+): (.+) must be a non-negative integer\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_NUMBER', path => $1, field => $2) if ($message =~ /\A([^:]+): (.+) must be a number\.\z/);
+	return _channel_phrase($phrases, 'VZLOGGER.CHANNEL_VALID_REQUIRED', path => $1, field => $2) if ($message =~ /\A([^:]+): (.+) is required(?: for version \S+)?\.\z/);
+	return $message;
+}
+
+sub localize_validation_errors
+{
+	my ($errors, $phrases) = @_;
+	return [] if (ref($errors) ne "ARRAY");
+	return [map { _localize_validation_error($_, $phrases) } @$errors];
 }
 
 sub is_json_boolean

@@ -22,6 +22,7 @@
 use CGI::Carp qw(fatalsToBrowser);
 use CGI qw/:standard/;
 use Config::Simple;
+use LoxBerry::System;
 use File::HomeDir;
 use Cwd 'abs_path';
 use HTML::Template;
@@ -38,13 +39,10 @@ my  $cfg;
 my  $plugin_cfg;
 my  $lang;
 my  $installfolder;
-my  $languagefile;
 my  $version;
 my  $home = File::HomeDir->my_home;
 my  $psubfolder;
 my  $pname;
-my  $languagefileplugin;
-my  %TPhrases;
 my  @files;
 my  @heads;
 my  @rows;
@@ -141,36 +139,8 @@ $maintemplate = HTML::Template->new(
 # Translations
 ##########################################################################
 
-# Init Language
-# Clean up lang variable
-$lang         =~ tr/a-z//cd;
-$lang         = substr($lang,0,2);
-
-# Read Plugin transations
-# Read English language as default
-# Missing phrases in foreign language will fall back to English
-$languagefileplugin 	= "$installfolder/templates/plugins/$psubfolder/en/language.txt";
-Config::Simple->import_from($languagefileplugin, \%TPhrases);
-
-# If there's no language phrases file for choosed language, use english as default
-if (!-e "$installfolder/templates/system/$lang/language.dat")
-{
-  $lang = "en";
-}
-
-# Read foreign language if exists and not English
-$languagefileplugin = "$installfolder/templates/plugins/$psubfolder/$lang/language.txt";
-if ((-e $languagefileplugin) and ($lang ne 'en')) {
-	# Now overwrite phrase variables with user language
-	Config::Simple->import_from($languagefileplugin, \%TPhrases);
-}
-
-# Parse Language phrases to html templates
-while (my ($name, $value) = each %TPhrases){
-	$maintemplate->param("T::$name" => $value);
-	#$headertemplate->param("T::$name" => $value);
-	#$footertemplate->param("T::$name" => $value);
-}
+# LoxBerry loads the selected plugin language and fills missing phrases from English.
+LoxBerry::System::readlanguage($maintemplate, "language.ini");
 
 ##########################################################################
 # Main program

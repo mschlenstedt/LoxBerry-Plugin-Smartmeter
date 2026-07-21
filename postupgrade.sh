@@ -15,6 +15,26 @@ remove_cronjobs()
 	done
 }
 
+cleanup_obsolete_language_files()
+{
+	templatefolder="$ARGV5/templates/plugins/$ARGV3"
+
+	for languagefile in \
+		"$templatefolder/en/language.txt" \
+		"$templatefolder/de/language.txt" \
+		"$templatefolder/multi/en/language.txt" \
+		"$templatefolder/multi/de/language.txt"
+	do
+		if [ -e "$languagefile" ]; then
+			rm -f "$languagefile"
+			echo "<INFO> Removed obsolete language resource: $languagefile"
+		fi
+	done
+
+	rmdir "$templatefolder/en" "$templatefolder/de" \
+		"$templatefolder/multi/en" "$templatefolder/multi/de" 2>/dev/null || true
+}
+
 create_cronjob()
 {
 	cronfolder=$1
@@ -146,6 +166,9 @@ cp -v -r "/tmp/$ARGV1"_upgrade/config/"$ARGV3"/* "$ARGV5/config/plugins/$ARGV3/"
 
 echo "<INFO> Migrate config files"
 migrate_config
+
+echo "<INFO> Remove obsolete language resources"
+cleanup_obsolete_language_files
 
 echo "<INFO> Ensure executable permissions for vzLogger helper scripts"
 chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_config.pl" 2>/dev/null || true

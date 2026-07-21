@@ -6,7 +6,7 @@ use FindBin;
 use JSON::PP;
 use Test::More;
 use lib "$FindBin::Bin/../bin";
-use SmartMeterVZLoggerChannels qw(parse_obis compose_obis normalize_obis default_output_key valid_output_key stable_uuid load_catalog lookup_obis new_document migrate_legacy_meter validate_document native_channel output_order_mapping ordered_output_names);
+use SmartMeterVZLoggerChannels qw(parse_obis compose_obis normalize_obis default_output_key valid_output_key stable_uuid load_catalog lookup_obis new_document migrate_legacy_meter validate_document localize_validation_errors native_channel output_order_mapping ordered_output_names);
 
 my $catalog = load_catalog("$FindBin::Bin/../templates/obis_catalog.json");
 is($catalog->{version}, 1, "catalog schema version");
@@ -93,6 +93,12 @@ $doc->{meters}->{reader}->[1]->{plugin_output}->{key} = "Readable value #1|Main*
 is_deeply([validate_document($doc)], [], "expanded output-key character set passes document validation");
 $doc->{meters}->{reader}->[1]->{plugin_output}->{key} = "invalid:key";
 like(join("\n", validate_document($doc)), qr/required format: 1-64 characters/, "invalid output-key error states the required format");
+my @technical_errors = validate_document($doc);
+like(join("\n", @technical_errors), qr/invalid output key/, "default channel-validation output remains English");
+my $localized_errors = localize_validation_errors(\@technical_errors, {
+	'VZLOGGER.CHANNEL_VALID_OUTPUT_KEY' => '{path}: ungültiger Output Key (erforderliches Format: {format}).',
+});
+like(join("\n", @$localized_errors), qr/ungültiger Output Key/, "UI channel-validation output can be localized independently");
 
 my $output_order = output_order_mapping({
 	"uuid-2" => { serial => "reader", name => "Second", channel_index => 2 },

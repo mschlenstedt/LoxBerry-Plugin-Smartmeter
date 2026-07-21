@@ -24,6 +24,7 @@ use CGI qw/:standard/;
 use Config::Simple;
 use Config::Crontab;
 use LoxBerry::Log;
+use LoxBerry::System;
 use File::HomeDir;
 #use HTML::Entities;
 use String::Escape qw( unquotemeta );
@@ -50,12 +51,10 @@ my  $cfg;
 my  $plugin_cfg;
 my  $lang;
 my  $installfolder;
-my  $languagefile;
 my  $version;
 my  $home = File::HomeDir->my_home;
 my  $psubfolder;
 my  $pname;
-my  $languagefileplugin;
 my  %TPhrases;
 my  @heads;
 my  %head;
@@ -221,36 +220,8 @@ $maintemplate = HTML::Template->new(
 # Translations
 ##########################################################################
 
-# Init Language
-# Clean up lang variable
-$lang         =~ tr/a-z//cd;
-$lang         = substr($lang,0,2);
-
-# Read Plugin transations
-# Read English language as default
-# Missing phrases in foreign language will fall back to English
-$languagefileplugin 	= "$installfolder/templates/plugins/$psubfolder/en/language.txt";
-Config::Simple->import_from($languagefileplugin, \%TPhrases);
-
-# If there's no language phrases file for choosed language, use english as default
-if (!-e "$installfolder/templates/system/$lang/language.dat")
-{
-  $lang = "en";
-}
-
-# Read foreign language if exists and not English
-$languagefileplugin = "$installfolder/templates/plugins/$psubfolder/$lang/language.txt";
-if ((-e $languagefileplugin) and ($lang ne 'en')) {
-	# Now overwrite phrase variables with user language
-	Config::Simple->import_from($languagefileplugin, \%TPhrases);
-}
-
-# Parse Language phrases to html templates
-while (my ($name, $value) = each %TPhrases){
-	$maintemplate->param("T::$name" => $value);
-	#$headertemplate->param("T::$name" => $value);
-	#$footertemplate->param("T::$name" => $value);
-}
+# LoxBerry loads the selected plugin language and fills missing phrases from English.
+%TPhrases = LoxBerry::System::readlanguage($maintemplate, "language.ini");
 
 ##########################################################################
 # Main program
@@ -313,7 +284,7 @@ sub form
 			meters => \@submitted_meters,
 		}, \%meter_ids);
 		if (@validation_errors) {
-			$validation_error = ($TPhrases{"VZLOGGER.LEGACY_VALIDATION_ERROR"} || "Invalid values; nothing was saved:") . " " . join(", ", @validation_errors);
+			$validation_error = ($TPhrases{"LEGACY.VALIDATION_ERROR"} || "Invalid values; nothing was saved:") . " " . join(", ", @validation_errors);
 		} else {
 			my ($lock, $lock_error) = acquire_config_lock($runtime_dir);
 			if (!$lock) {
@@ -476,6 +447,8 @@ sub load_meter_templates
 		my $id = ref($entry) eq "HASH" ? ($entry->{id} || "") : "";
 		die "Invalid or duplicate meter template id '$id'" if ($id !~ /\A[A-Za-z0-9_.:-]+\z/ || $ids{$id}++);
 		die "Invalid protocol in meter template '$id'" if (($entry->{protocol} || "") !~ /\A(?:sml|d0)\z/);
+		my $language = $TPhrases{'COMMON.LANGUAGE_CODE'} || "en";
+		$entry->{label} = $entry->{"label_$language"} || $entry->{label_en} || $entry->{label};
 	}
 	$meter_templates_cache = $templates;
 	return $meter_templates_cache;

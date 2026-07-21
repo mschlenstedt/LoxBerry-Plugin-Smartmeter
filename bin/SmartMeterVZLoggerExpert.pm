@@ -9,7 +9,7 @@ use JSON::PP;
 
 our @EXPORT_OK = qw(
 	read_text write_text_atomic validate_expert_text format_expert_validation
-	build_expert_mapping update_expert_log_settings expert_configs_equal
+	localize_expert_validation build_expert_mapping update_expert_log_settings expert_configs_equal
 );
 
 sub read_text
@@ -187,8 +187,58 @@ sub format_expert_validation
 	my $text = "";
 	$text .= "<FAIL> $_\n" foreach @{$result->{errors} || []};
 	$text .= "<WARNING> $_\n" foreach @{$result->{warnings} || []};
-	$text .= "<OK> Expert vzLogger configuration validation passed.\n" if ($result->{valid});
+	$text .= "<OK> " . ($result->{success_message} || "Expert vzLogger configuration validation passed.") . "\n" if ($result->{valid});
 	return $text;
+}
+
+sub _localized_phrase
+{
+	my ($phrases, $key, %values) = @_;
+	my $text = ref($phrases) eq "HASH" && defined($phrases->{$key}) ? $phrases->{$key} : "";
+	foreach my $name (keys %values) {
+		my $value = defined($values{$name}) ? $values{$name} : "";
+		$text =~ s/\{\Q$name\E\}/$value/g;
+	}
+	return $text;
+}
+
+sub _localize_expert_message
+{
+	my ($message, $phrases) = @_;
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_EMPTY') if ($message eq "The expert configuration is empty.");
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_ROOT_OBJECT') if ($message eq "The top-level expert configuration must be a JSON object.");
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_RETRY') if ($message eq "retry must be a non-negative integer.");
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_VERBOSITY') if ($message eq "verbosity must be one of 0, 1, 3, 5, 10 or 15.");
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_LOG') if ($message eq "log must be an absolute path or an empty string.");
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_METERS_ARRAY') if ($message eq "meters must be an array.");
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_MQTT_HOST') if ($message eq "mqtt.host is required when MQTT is enabled.");
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_MQTT_TOPIC') if ($message eq "mqtt.topic is required when MQTT is enabled.");
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_MQTT_WILDCARDS') if ($message eq "mqtt.topic must not contain MQTT wildcards.");
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_MQTT_USER') if ($message eq "mqtt.pass requires mqtt.user.");
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_MQTT_CERT') if ($message eq "mqtt.certfile and mqtt.keyfile must be configured together.");
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_JSON', error => $1) if ($message =~ /\AThe expert configuration is not valid JSON: (.*)\z/s);
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_UNKNOWN_ROOT', name => $1) if ($message =~ /\AUnknown root parameter '([^']+)' is retained for vzLogger\.\z/);
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_NO_UUID', path => $1) if ($message =~ /\A(.+) has no UUID and cannot be published by the SmartMeter bridge\.\z/);
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_UUID_MALFORMED', path => $1) if ($message =~ /\A(.+\.uuid) is malformed\.\z/);
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_UUID_DUPLICATE', path => $1) if ($message =~ /\A(.+\.uuid) is duplicated\.\z/);
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_BOOLEAN', path => $1) if ($message =~ /\A(.+) must be a JSON boolean\.\z/);
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_PROTOCOL', path => $1) if ($message =~ /\A(.+\.protocol) must be a non-empty string\.\z/);
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_ARRAY', path => $1) if ($message =~ /\A(.+) must be an array\.\z/);
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_PORT', path => $1) if ($message =~ /\A(.+\.port) must be an integer between 1 and 65535\.\z/);
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_OBJECT', path => $1) if ($message =~ /\A(.+) must be an object\.\z/);
+	return _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_MAPPING', uuid => $1) if ($message =~ /\AExpert channel (\S+) has no existing SmartMeter output mapping and will not be published by the bridge\.\z/);
+	return $message;
+}
+
+sub localize_expert_validation
+{
+	my ($result, $phrases) = @_;
+	return $result if (ref($result) ne "HASH" || ref($phrases) ne "HASH");
+	my %localized = %$result;
+	$localized{errors} = [map { _localize_expert_message($_, $phrases) } @{$result->{errors} || []}];
+	$localized{warnings} = [map { _localize_expert_message($_, $phrases) } @{$result->{warnings} || []}];
+	$localized{success_message} = _localized_phrase($phrases, 'VZLOGGER.EXPERT_VALID_OK');
+	return \%localized;
 }
 
 sub build_expert_mapping

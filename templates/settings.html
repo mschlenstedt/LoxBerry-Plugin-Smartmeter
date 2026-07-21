@@ -322,6 +322,10 @@
 		.settings-table > tbody > tr > td:nth-child(2) { padding-top: 1px; }
 		.service-panel tr > td:nth-child(4),
 		.settings-table > tbody > tr > td:nth-child(4) { padding-top: 2px; padding-bottom: 12px; padding-left: 8px; border-left: 2px solid #d6dce1; color: #66717b; }
+		.configuration-heading { align-items: stretch; flex-direction: column; gap: .4em; }
+		.expert-mode-control { justify-content: space-between; min-width: 0; max-width: 100%; white-space: normal; }
+		.expert-mode-control label { flex: 1 1 auto; min-width: 0; }
+		.expert-mode-control .ui-flipswitch { flex: 0 0 auto; }
 		.service-inline-setting { width: 100%; min-width: 0; max-width: 100%; flex-wrap: wrap; white-space: normal; }
 		.service-inline-setting .ui-select { flex: 1 1 10em; min-width: 0; max-width: 100%; }
 		#vzlogger_form .ui-collapsible,
@@ -361,23 +365,23 @@
 <TMPL_IF FORM_VZLOGGER>
 	<div data-role="navbar" class="ui-navbar implementation-tabs" role="navigation" style="margin: 0 0 12px 0;">
 		<ul>
-			<li><a href="./index.cgi?form=vzlogger" class="ui-btn-active"><span id="vzlogger_tab_state" class="implementation-state <TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE>is-active<TMPL_ELSE>is-inactive</TMPL_IF>" data-active-label="<TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE>" data-inactive-label="<TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE>" title="<TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE></TMPL_IF>" aria-label="<TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE></TMPL_IF>"><span class="implementation-state-icon" aria-hidden="true"><TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE>✓<TMPL_ELSE>–</TMPL_IF></span></span><span class="implementation-tab-label"><TMPL_VAR NAME=T::MENU.VZLOGGER></span></a></li>
-			<li><a href="./index_legacy.cgi?form=legacy"><span id="legacy_tab_state" class="implementation-state <TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE>is-active<TMPL_ELSE>is-inactive</TMPL_IF>" data-active-label="<TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE>" data-inactive-label="<TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE>" title="<TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE></TMPL_IF>" aria-label="<TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_INACTIVE></TMPL_IF>"><span class="implementation-state-icon" aria-hidden="true"><TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE>✓<TMPL_ELSE>–</TMPL_IF></span></span><span class="implementation-tab-label"><TMPL_VAR NAME=T::MENU.LEGACY></span></a></li>
+			<li><a href="./index.cgi?form=vzlogger" class="ui-btn-active"><span id="vzlogger_tab_state" class="implementation-state <TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE>is-active<TMPL_ELSE>is-inactive</TMPL_IF>" data-active-label="<TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE>" data-inactive-label="<TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE>" title="<TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE></TMPL_IF>" aria-label="<TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE></TMPL_IF>"><span class="implementation-state-icon" aria-hidden="true"><TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE>✓<TMPL_ELSE>–</TMPL_IF></span></span><span class="implementation-tab-label"><TMPL_VAR NAME=COMMON.MENU_VZLOGGER></span></a></li>
+			<li><a href="./index_legacy.cgi?form=legacy"><span id="legacy_tab_state" class="implementation-state <TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE>is-active<TMPL_ELSE>is-inactive</TMPL_IF>" data-active-label="<TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE>" data-inactive-label="<TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE>" title="<TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE></TMPL_IF>" aria-label="<TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE></TMPL_IF>"><span class="implementation-state-icon" aria-hidden="true"><TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE>✓<TMPL_ELSE>–</TMPL_IF></span></span><span class="implementation-tab-label"><TMPL_VAR NAME=COMMON.MENU_LEGACY></span></a></li>
 		</ul>
 	</div>
 	<form method="post" data-ajax="false" name="vzlogger_form" id="vzlogger_form" action="./index.cgi">
 	<input type="hidden" name="saveformdata" value="1">
 	<input type="hidden" id="implementation_changed" name="implementation_changed" value="0">
-	<span id="expert_mode_enable_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.EXPERT_MODE_ENABLE_FAILED></span>
-	<span id="expert_mode_overwrite_confirm_text" hidden><TMPL_VAR NAME=T::VZLOGGER.EXPERT_MODE_OVERWRITE_CONFIRM></span>
-	<span id="expert_mode_active_help_text" hidden><TMPL_VAR NAME=T::VZLOGGER.EXPERT_MODE_ACTIVE_HELP></span>
-	<span id="edit_expert_config_text" hidden><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG></span>
-	<span id="edit_expert_config_help_text" hidden><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG_HELP></span>
-	<span id="show_generated_config_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG></span>
-	<span id="show_generated_config_help_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP></span>
-	<span id="reset_expert_config_confirm_text" hidden><TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG_CONFIRM></span>
-	<span id="reset_expert_config_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG_FAILED></span>
-	<span id="reset_expert_config_help_text" hidden><TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG_HELP></span>
+	<span id="expert_mode_enable_failed_text" hidden><TMPL_VAR NAME=VZLOGGER.EXPERT_MODE_ENABLE_FAILED></span>
+	<span id="expert_mode_overwrite_confirm_text" hidden><TMPL_VAR NAME=VZLOGGER.EXPERT_MODE_OVERWRITE_CONFIRM></span>
+	<span id="expert_mode_active_help_text" hidden><TMPL_VAR NAME=VZLOGGER.EXPERT_MODE_ACTIVE_HELP></span>
+	<span id="edit_expert_config_text" hidden><TMPL_VAR NAME=VZLOGGER.EDIT_EXPERT_CONFIG></span>
+	<span id="edit_expert_config_help_text" hidden><TMPL_VAR NAME=VZLOGGER.EDIT_EXPERT_CONFIG_HELP></span>
+	<span id="show_generated_config_text" hidden><TMPL_VAR NAME=VZLOGGER.SHOW_GENERATED_CONFIG></span>
+	<span id="show_generated_config_help_text" hidden><TMPL_VAR NAME=VZLOGGER.SHOW_GENERATED_CONFIG_HELP></span>
+	<span id="reset_expert_config_confirm_text" hidden><TMPL_VAR NAME=VZLOGGER.RESET_EXPERT_CONFIG_CONFIRM></span>
+	<span id="reset_expert_config_failed_text" hidden><TMPL_VAR NAME=VZLOGGER.RESET_EXPERT_CONFIG_FAILED></span>
+	<span id="reset_expert_config_help_text" hidden><TMPL_VAR NAME=VZLOGGER.RESET_EXPERT_CONFIG_HELP></span>
 	<input type="hidden" id="obis_serial" name="obis_serial" value="">
 	<textarea id="channel_definitions_json" name="channel_definitions_json" class="channel-json-state" hidden aria-hidden="true" tabindex="-1"><TMPL_VAR NAME=CHANNEL_DEFINITIONS_JSON ESCAPE=HTML></textarea>
 	<textarea id="channel_indices_json" class="channel-json-state" hidden aria-hidden="true" tabindex="-1"><TMPL_VAR NAME=CHANNEL_INDICES_JSON ESCAPE=HTML></textarea>
@@ -386,81 +390,81 @@
 	<div id="service_action_feedback" class="service-action-feedback" role="status" aria-live="polite"></div>
 
 	<div class="service-panel">
-		<h3><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_SERVICE></h3>
-		<p class="service-panel-description"><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_SERVICE_DESCRIPTION></p>
+		<h3><TMPL_VAR NAME=VZLOGGER.VZLOGGER_SERVICE></h3>
+		<p class="service-panel-description"><TMPL_VAR NAME=VZLOGGER.VZLOGGER_SERVICE_DESCRIPTION></p>
 		<table border="0">
 		<tr>
-			<td class="service-label"><label for="implementation"><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_MODE></label></td>
-			<td class="service-controls"><select id="implementation" name="implementation" data-role="flipswitch" onChange="update_vzlogger_controls();"><option value="none"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="vzlogger"><TMPL_VAR NAME=T::GENERIC.ON></option></select><span id="implementation_unsaved" class="activation-unsaved" hidden><TMPL_VAR NAME=T::VZLOGGER.ACTIVATION_UNSAVED></span></td>
+			<td class="service-label"><label for="implementation"><TMPL_VAR NAME=COMMON.IMPLEMENTATION_MODE></label></td>
+			<td class="service-controls"><select id="implementation" name="implementation" data-role="flipswitch" onChange="update_vzlogger_controls();"><option value="none"><TMPL_VAR NAME=COMMON.OFF></option><option value="vzlogger"><TMPL_VAR NAME=COMMON.ON></option></select><span id="implementation_unsaved" class="activation-unsaved" hidden><TMPL_VAR NAME=COMMON.ACTIVATION_UNSAVED></span></td>
 			<td class="service-spacer">&nbsp;</td>
-			<td class="service-help"><TMPL_VAR NAME=T::VZLOGGER.IMPLEMENTATION_MODE_HELP></td>
+			<td class="service-help"><TMPL_VAR NAME=COMMON.IMPLEMENTATION_MODE_HELP></td>
 		</tr>
 		<tr>
-			<td class="service-label"><TMPL_VAR NAME=T::VZLOGGER.STATUS></td>
+			<td class="service-label"><TMPL_VAR NAME=VZLOGGER.STATUS></td>
 			<td class="service-controls">
 				<span id="vzlogger_service_status" class="service-status <TMPL_VAR VZLOGGER_SERVICE_STATUS_CLASS>"><TMPL_VAR VZLOGGER_SERVICE_STATUS></span>
 				<div class="service-action-line">
-					<button id="vzlogger_restart_button" class="service-control-button" type="button" onclick="run_service_action('restart-vzlogger');" title="<TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" disabled><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE></button>
-					<button id="vzlogger_start_button" class="service-control-button" type="button" onclick="run_service_action('start-vzlogger');" title="<TMPL_VAR NAME=T::VZLOGGER.START_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=T::VZLOGGER.START_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="power" disabled <TMPL_IF VZLOGGER_SERVICE_RUNNING>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE></button>
-					<button id="vzlogger_stop_button" class="service-control-button" type="button" onclick="run_service_action('stop-vzlogger');" title="<TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="delete" disabled <TMPL_IF VZLOGGER_SERVICE_RUNNING><TMPL_ELSE>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE></button>
-					<a href="<TMPL_VAR VZLOGGER_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR VZLOGGER_LOG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_LOG></a>
-					<span class="service-inline-setting"><label for="vzlogger_service_debug"><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG></label><select id="vzlogger_service_debug" name="vzlogger_service_debug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></span>
-					<span class="service-inline-setting"><label for="vzlogger_loglevel"><TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL></label><select id="vzlogger_loglevel" name="vzlogger_loglevel" data-inline="true" data-mini="true"><option value="0">0 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_0></option><option value="1">1 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_1></option><option value="3">3 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_3></option><option value="5">5 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_5></option><option value="10">10 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_10></option><option value="15">15 - <TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_15></option></select></span>
+					<button id="vzlogger_restart_button" class="service-control-button" type="button" onclick="run_service_action('restart-vzlogger');" title="<TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" disabled><TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE></button>
+					<button id="vzlogger_start_button" class="service-control-button" type="button" onclick="run_service_action('start-vzlogger');" title="<TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="power" disabled <TMPL_IF VZLOGGER_SERVICE_RUNNING>style="display:none"</TMPL_IF>><TMPL_VAR NAME=VZLOGGER.START_SERVICE></button>
+					<button id="vzlogger_stop_button" class="service-control-button" type="button" onclick="run_service_action('stop-vzlogger');" title="<TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="delete" disabled <TMPL_IF VZLOGGER_SERVICE_RUNNING><TMPL_ELSE>style="display:none"</TMPL_IF>><TMPL_VAR NAME=VZLOGGER.STOP_SERVICE></button>
+					<a href="<TMPL_VAR VZLOGGER_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR VZLOGGER_LOG_DISABLED>"><TMPL_VAR NAME=VZLOGGER.SHOW_LOG></a>
+					<span class="service-inline-setting"><label for="vzlogger_service_debug"><TMPL_VAR NAME=VZLOGGER.DEBUG_LOG></label><select id="vzlogger_service_debug" name="vzlogger_service_debug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></span>
+					<span class="service-inline-setting"><label for="vzlogger_loglevel"><TMPL_VAR NAME=VZLOGGER.LOG_LEVEL></label><select id="vzlogger_loglevel" name="vzlogger_loglevel" data-inline="true" data-mini="true"><option value="0">0 - <TMPL_VAR NAME=VZLOGGER.LOG_LEVEL_0></option><option value="1">1 - <TMPL_VAR NAME=VZLOGGER.LOG_LEVEL_1></option><option value="3">3 - <TMPL_VAR NAME=VZLOGGER.LOG_LEVEL_3></option><option value="5">5 - <TMPL_VAR NAME=VZLOGGER.LOG_LEVEL_5></option><option value="10">10 - <TMPL_VAR NAME=VZLOGGER.LOG_LEVEL_10></option><option value="15">15 - <TMPL_VAR NAME=VZLOGGER.LOG_LEVEL_15></option></select></span>
 				</div>
 				<div id="vzlogger_service_action_reason" class="service-action-reason" aria-live="polite"></div>
-				<div class="vzlogger-live-links"><a id="vzlogger_live_link" class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_LIVEURL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_LIVE_READINGS></a><a id="vzlogger_rendered_link" class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_RENDERED_URL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_RENDERED_READINGS></a></div>
+				<div class="vzlogger-live-links"><a id="vzlogger_live_link" class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_LIVEURL>" target="_blank"><TMPL_VAR NAME=VZLOGGER.OPEN_LIVE_READINGS></a><a id="vzlogger_rendered_link" class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_RENDERED_URL>" target="_blank"><TMPL_VAR NAME=VZLOGGER.OPEN_RENDERED_READINGS></a></div>
 			</td>
 			<td class="service-spacer">&nbsp;</td>
-			<td class="service-help"><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_SERVICE_CONTROL_HELP><br><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE_HELP><br><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE_HELP><br><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE_HELP><br><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_DEBUG_HELP><br><TMPL_VAR NAME=T::VZLOGGER.LOG_LEVEL_HELP></td>
+			<td class="service-help"><TMPL_VAR NAME=VZLOGGER.VZLOGGER_SERVICE_CONTROL_HELP><br><TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.VZLOGGER_DEBUG_HELP><br><TMPL_VAR NAME=VZLOGGER.LOG_LEVEL_HELP></td>
 		</tr>
 		</table>
 	</div>
 
 	<div class="service-panel">
-		<h3><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_SERVICE></h3>
-		<p class="service-panel-description"><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_SERVICE_DESCRIPTION></p>
+		<h3><TMPL_VAR NAME=VZLOGGER.BRIDGE_SERVICE></h3>
+		<p class="service-panel-description"><TMPL_VAR NAME=VZLOGGER.BRIDGE_SERVICE_DESCRIPTION></p>
 		<table border="0">
 		<tr>
-			<td class="service-label"><label for="read"><TMPL_VAR NAME=T::VZLOGGER.READ_METERS></label></td>
-			<td class="service-controls"><select onChange="update_bridge_controls();" id="read" name="read" data-role="flipswitch" disabled><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select><span id="bridge_activation_unsaved" class="activation-unsaved" hidden><TMPL_VAR NAME=T::VZLOGGER.ACTIVATION_UNSAVED></span></td>
+			<td class="service-label"><label for="read"><TMPL_VAR NAME=VZLOGGER.READ_METERS></label></td>
+			<td class="service-controls"><select onChange="update_bridge_controls();" id="read" name="read" data-role="flipswitch" disabled><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select><span id="bridge_activation_unsaved" class="activation-unsaved" hidden><TMPL_VAR NAME=COMMON.ACTIVATION_UNSAVED></span></td>
 			<td class="service-spacer">&nbsp;</td>
-			<td class="service-help"><TMPL_VAR NAME=T::VZLOGGER.READ_METERS_HELP></td>
+			<td class="service-help"><TMPL_VAR NAME=VZLOGGER.READ_METERS_HELP></td>
 		</tr>
 		<tr>
-			<td class="service-label"><TMPL_VAR NAME=T::VZLOGGER.STATUS></td>
+			<td class="service-label"><TMPL_VAR NAME=VZLOGGER.STATUS></td>
 			<td class="service-controls">
 				<span id="bridge_service_status" class="service-status <TMPL_VAR BRIDGE_SERVICE_STATUS_CLASS>"><TMPL_VAR BRIDGE_SERVICE_STATUS></span>
 				<div class="service-action-line">
-					<button id="bridge_restart_button" class="service-control-button" type="button" onclick="run_service_action('restart-bridge');" title="<TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" disabled><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE></button>
-					<button id="bridge_start_button" class="service-control-button" type="button" onclick="run_service_action('start-bridge');" title="<TMPL_VAR NAME=T::VZLOGGER.START_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=T::VZLOGGER.START_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="power" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE></button>
-					<button id="bridge_stop_button" class="service-control-button" type="button" onclick="run_service_action('stop-bridge');" title="<TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="delete" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING><TMPL_ELSE>style="display:none"</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE></button>
-					<a href="<TMPL_VAR BRIDGE_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR BRIDGE_LOG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_LOG></a>
-					<span class="service-inline-setting"><label for="vzlogger_debug"><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG></label><select id="vzlogger_debug" name="vzlogger_debug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></span>
+					<button id="bridge_restart_button" class="service-control-button" type="button" onclick="run_service_action('restart-bridge');" title="<TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" disabled><TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE></button>
+					<button id="bridge_start_button" class="service-control-button" type="button" onclick="run_service_action('start-bridge');" title="<TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="power" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING>style="display:none"</TMPL_IF>><TMPL_VAR NAME=VZLOGGER.START_SERVICE></button>
+					<button id="bridge_stop_button" class="service-control-button" type="button" onclick="run_service_action('stop-bridge');" title="<TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="delete" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING><TMPL_ELSE>style="display:none"</TMPL_IF>><TMPL_VAR NAME=VZLOGGER.STOP_SERVICE></button>
+					<a href="<TMPL_VAR BRIDGE_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR BRIDGE_LOG_DISABLED>"><TMPL_VAR NAME=VZLOGGER.SHOW_LOG></a>
+					<span class="service-inline-setting"><label for="vzlogger_debug"><TMPL_VAR NAME=VZLOGGER.DEBUG_LOG></label><select id="vzlogger_debug" name="vzlogger_debug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></span>
 				</div>
 				<div id="bridge_service_action_reason" class="service-action-reason" aria-live="polite"></div>
 			</td>
 			<td class="service-spacer">&nbsp;</td>
-			<td class="service-help"><TMPL_VAR BRIDGE_AVAILABILITY_HELP><br><TMPL_VAR NAME=T::VZLOGGER.START_SERVICE_HELP><br><TMPL_VAR NAME=T::VZLOGGER.STOP_SERVICE_HELP><br><TMPL_VAR NAME=T::VZLOGGER.RESTART_SERVICE_HELP><br><TMPL_VAR NAME=T::VZLOGGER.DEBUG_LOG_HELP><br>/opt/loxberry/log/plugins/smartmeter-v2/vzlogger_mqtt_bridge.log</td>
+			<td class="service-help"><TMPL_VAR BRIDGE_AVAILABILITY_HELP><br><TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.DEBUG_LOG_HELP><br>/opt/loxberry/log/plugins/smartmeter-v2/vzlogger_mqtt_bridge.log</td>
 		</tr>
 		</table>
 	</div>
-	<div class="service-control-log"><span><TMPL_VAR NAME=T::VZLOGGER.SERVICE_CONTROL_LOG_LABEL></span> <a href="<TMPL_VAR CONTROL_LOG_URL>" target="log" class="<TMPL_VAR CONTROL_LOG_DISABLED>"><TMPL_VAR NAME=T::VZLOGGER.SHOW_CONTROL_LOG></a></div>
+	<div class="service-control-log"><span><TMPL_VAR NAME=VZLOGGER.SERVICE_CONTROL_LOG_LABEL></span> <a href="<TMPL_VAR CONTROL_LOG_URL>" target="log" class="<TMPL_VAR CONTROL_LOG_DISABLED>"><TMPL_VAR NAME=VZLOGGER.SHOW_CONTROL_LOG></a></div>
 
 	<div id="vzlogger_configuration_section" class="configuration-section <TMPL_IF VZLOGGER_EXPERT_MODE>configuration-disabled</TMPL_IF>">
-	<div class="configuration-heading"><h2><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_CONFIGURATION></h2><span class="expert-mode-control"><label for="expert_mode"><TMPL_VAR NAME=T::VZLOGGER.EXPERT_MODE></label><select id="expert_mode" data-role="flipswitch" onchange="set_expert_mode(this.value);"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></span></div>
-	<p id="expert_mode_notice" class="expert-mode-notice"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> hidden</TMPL_IF>><TMPL_VAR NAME=T::VZLOGGER.EXPERT_MODE_ACTIVE_HELP></p>
-	<p><TMPL_VAR NAME=T::VZLOGGER.VZLOGGER_CONFIGURATION_HELP></p>
+	<div class="configuration-heading"><h2><TMPL_VAR NAME=VZLOGGER.VZLOGGER_CONFIGURATION></h2><span class="expert-mode-control"><label for="expert_mode"><TMPL_VAR NAME=VZLOGGER.EXPERT_MODE></label><select id="expert_mode" data-role="flipswitch" onchange="set_expert_mode(this.value);"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></span></div>
+	<p id="expert_mode_notice" class="expert-mode-notice"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> hidden</TMPL_IF>><TMPL_VAR NAME=VZLOGGER.EXPERT_MODE_ACTIVE_HELP></p>
+	<p><TMPL_VAR NAME=VZLOGGER.VZLOGGER_CONFIGURATION_HELP></p>
 	<table border="0" class="settings-table">
 	<tr>
 		<td colspan="4">
 			<div id="advanced_service_settings_panel" data-role="collapsible" data-collapsed="true" data-mini="true">
-				<h3><TMPL_VAR NAME=T::VZLOGGER.ADVANCED_SERVICE_SETTINGS></h3>
+				<h3><TMPL_VAR NAME=VZLOGGER.ADVANCED_SERVICE_SETTINGS></h3>
 				<table border="0" class="settings-table compact-settings">
 				<tr>
-					<td width="18%"><label for="vzlogger_retry"><TMPL_VAR NAME=T::VZLOGGER.RETRY></label></td>
+					<td width="18%"><label for="vzlogger_retry"><TMPL_VAR NAME=VZLOGGER.RETRY></label></td>
 					<td><input id="vzlogger_retry" name="vzlogger_retry" type="text" data-validation="number" data-validation-allowing="range[0;86400]" value="<TMPL_VAR VZLOGGER_RETRY>" data-mini="true"></td>
 					<td>&nbsp;</td>
-					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.RETRY_HELP></font></td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.RETRY_HELP></font></td>
 				</tr>
 				</table>
 			</div>
@@ -469,38 +473,38 @@
 	<tr>
 		<td colspan="4">
 			<div id="local_settings_panel" data-role="collapsible" data-collapsed="true" data-mini="true">
-				<h3><TMPL_VAR NAME=T::VZLOGGER.LOCAL_SETTINGS></h3>
-				<p><TMPL_VAR NAME=T::VZLOGGER.LOCAL_SETTINGS_HELP></p>
+				<h3><TMPL_VAR NAME=VZLOGGER.LOCAL_SETTINGS></h3>
+				<p><TMPL_VAR NAME=VZLOGGER.LOCAL_SETTINGS_HELP></p>
 				<table border="0" class="settings-table compact-settings">
 				<tr>
-					<td width="20%"><label for="vzlogger_localenabled"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_ENABLED></label></td>
-					<td width="55%"><select id="vzlogger_localenabled" name="vzlogger_localenabled" data-role="flipswitch" onchange="update_local_controls();"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+					<td width="20%"><label for="vzlogger_localenabled"><TMPL_VAR NAME=VZLOGGER.LOCAL_ENABLED></label></td>
+					<td width="55%"><select id="vzlogger_localenabled" name="vzlogger_localenabled" data-role="flipswitch" onchange="update_local_controls();"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td>
 					<td width="5%">&nbsp;</td>
-					<td width="20%"><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_ENABLED_HELP></font></td>
+					<td width="20%"><font size="-1"><TMPL_VAR NAME=VZLOGGER.LOCAL_ENABLED_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_localport"><TMPL_VAR NAME=T::VZLOGGER.HTTP_PORT></label></td>
+					<td><label for="vzlogger_localport"><TMPL_VAR NAME=VZLOGGER.HTTP_PORT></label></td>
 					<td><input id="vzlogger_localport" name="vzlogger_localport" type="text" data-validation="number" value="<TMPL_VAR VZLOGGER_LOCALPORT>" data-validation-allowing="range[1024;65000]" data-mini="true"></td>
 					<td>&nbsp;</td>
-					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.HTTP_PORT_HELP></font></td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.HTTP_PORT_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_localindex"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_INDEX></label></td>
-					<td><select id="vzlogger_localindex" name="vzlogger_localindex" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+					<td><label for="vzlogger_localindex"><TMPL_VAR NAME=VZLOGGER.LOCAL_INDEX></label></td>
+					<td><select id="vzlogger_localindex" name="vzlogger_localindex" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td>
 					<td>&nbsp;</td>
-					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_INDEX_HELP></font></td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.LOCAL_INDEX_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_localtimeout"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_TIMEOUT></label></td>
+					<td><label for="vzlogger_localtimeout"><TMPL_VAR NAME=VZLOGGER.LOCAL_TIMEOUT></label></td>
 					<td><input id="vzlogger_localtimeout" name="vzlogger_localtimeout" type="text" data-validation="number" data-validation-allowing="range[0;86400]" value="<TMPL_VAR VZLOGGER_LOCALTIMEOUT>" data-mini="true"></td>
 					<td>&nbsp;</td>
-					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_TIMEOUT_HELP></font></td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.LOCAL_TIMEOUT_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_localbuffer"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_BUFFER></label></td>
+					<td><label for="vzlogger_localbuffer"><TMPL_VAR NAME=VZLOGGER.LOCAL_BUFFER></label></td>
 					<td><input id="vzlogger_localbuffer" name="vzlogger_localbuffer" type="text" data-validation="custom" data-validation-regexp="^-?\d+$" value="<TMPL_VAR VZLOGGER_LOCALBUFFER>" data-mini="true"></td>
 					<td>&nbsp;</td>
-					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.LOCAL_BUFFER_HELP></font></td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.LOCAL_BUFFER_HELP></font></td>
 				</tr>
 				</table>
 			</div>
@@ -509,154 +513,154 @@
 	<tr>
 		<td colspan="4">
 			<div id="mqtt_settings_panel" data-role="collapsible" data-collapsed="true" data-mini="true">
-				<h3><TMPL_VAR NAME=T::VZLOGGER.MQTT_SETTINGS></h3>
-				<p><TMPL_VAR NAME=T::VZLOGGER.MQTT_SETTINGS_HELP></p>
+				<h3><TMPL_VAR NAME=VZLOGGER.MQTT_SETTINGS></h3>
+				<p><TMPL_VAR NAME=VZLOGGER.MQTT_SETTINGS_HELP></p>
 				<table border="0" class="settings-table compact-settings">
-				<tr><td colspan="4"><h4><TMPL_VAR NAME=T::VZLOGGER.MQTT_CONNECTION_SETTINGS></h4></td></tr>
+				<tr><td colspan="4"><h4><TMPL_VAR NAME=VZLOGGER.MQTT_CONNECTION_SETTINGS></h4></td></tr>
 				<tr>
-					<td width="20%"><label for="vzlogger_mqttenabled"><TMPL_VAR NAME=T::VZLOGGER.MQTT_ENABLED></label></td>
-					<td width="55%"><select id="vzlogger_mqttenabled" name="vzlogger_mqttenabled" data-role="flipswitch" onChange="update_mqtt_controls();"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+					<td width="20%"><label for="vzlogger_mqttenabled"><TMPL_VAR NAME=VZLOGGER.MQTT_ENABLED></label></td>
+					<td width="55%"><select id="vzlogger_mqttenabled" name="vzlogger_mqttenabled" data-role="flipswitch" onChange="update_mqtt_controls();"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td>
 					<td width="5%">&nbsp;</td>
-					<td width="20%"><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_ENABLED_HELP></font></td>
+					<td width="20%"><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_ENABLED_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_mqtthost"><TMPL_VAR NAME=T::VZLOGGER.MQTT_HOST></label></td>
+					<td><label for="vzlogger_mqtthost"><TMPL_VAR NAME=VZLOGGER.MQTT_HOST></label></td>
 					<td><input id="vzlogger_mqtthost" name="vzlogger_mqtthost" type="text" value="<TMPL_VAR VZLOGGER_MQTTHOST>" data-mini="true"></td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_HOST_HELP></font></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_HOST_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_mqttport"><TMPL_VAR NAME=T::VZLOGGER.MQTT_PORT></label></td>
+					<td><label for="vzlogger_mqttport"><TMPL_VAR NAME=VZLOGGER.MQTT_PORT></label></td>
 					<td><input id="vzlogger_mqttport" name="vzlogger_mqttport" type="text" value="<TMPL_VAR VZLOGGER_MQTTPORT>" data-validation="number" data-validation-optional="true" data-validation-allowing="range[1;65535]" data-mini="true"></td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_PORT_HELP></font></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_PORT_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_mqttkeepalive"><TMPL_VAR NAME=T::VZLOGGER.MQTT_KEEPALIVE></label></td>
+					<td><label for="vzlogger_mqttkeepalive"><TMPL_VAR NAME=VZLOGGER.MQTT_KEEPALIVE></label></td>
 					<td><input id="vzlogger_mqttkeepalive" name="vzlogger_mqttkeepalive" type="text" value="<TMPL_VAR VZLOGGER_MQTTKEEPALIVE>" data-validation="number" data-validation-allowing="range[0;65535]" data-mini="true"></td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_KEEPALIVE_HELP></font></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_KEEPALIVE_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="mqtttopic"><TMPL_VAR NAME=T::VZLOGGER.MQTT_BASE_TOPIC></label></td>
+					<td><label for="mqtttopic"><TMPL_VAR NAME=VZLOGGER.MQTT_BASE_TOPIC></label></td>
 					<td><input id="mqtttopic" name="mqtttopic" type="text" class="textfield" value="<TMPL_VAR MQTTTOPIC>" data-validation="custom" data-validation-regexp="^[^#+]+$"></td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_BASE_TOPIC_HELP></font></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_BASE_TOPIC_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_mqttid"><TMPL_VAR NAME=T::VZLOGGER.MQTT_ID></label></td>
+					<td><label for="vzlogger_mqttid"><TMPL_VAR NAME=VZLOGGER.MQTT_ID></label></td>
 					<td><input id="vzlogger_mqttid" name="vzlogger_mqttid" type="text" value="<TMPL_VAR VZLOGGER_MQTTID>" data-mini="true"></td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_ID_HELP></font></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_ID_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_mqttretain"><TMPL_VAR NAME=T::VZLOGGER.MQTT_RETAIN></label></td>
-					<td><select id="vzlogger_mqttretain" name="vzlogger_mqttretain" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_RETAIN_HELP></font></td>
+					<td><label for="vzlogger_mqttretain"><TMPL_VAR NAME=VZLOGGER.MQTT_RETAIN></label></td>
+					<td><select id="vzlogger_mqttretain" name="vzlogger_mqttretain" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_RETAIN_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_mqttrawandagg"><TMPL_VAR NAME=T::VZLOGGER.MQTT_RAW_AND_AGG></label></td>
-					<td><select id="vzlogger_mqttrawandagg" name="vzlogger_mqttrawandagg" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_RAW_AND_AGG_HELP></font></td>
+					<td><label for="vzlogger_mqttrawandagg"><TMPL_VAR NAME=VZLOGGER.MQTT_RAW_AND_AGG></label></td>
+					<td><select id="vzlogger_mqttrawandagg" name="vzlogger_mqttrawandagg" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_RAW_AND_AGG_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_mqttqos"><TMPL_VAR NAME=T::VZLOGGER.MQTT_QOS></label></td>
+					<td><label for="vzlogger_mqttqos"><TMPL_VAR NAME=VZLOGGER.MQTT_QOS></label></td>
 					<td><select id="vzlogger_mqttqos" name="vzlogger_mqttqos" data-mini="true" data-native-menu="true"><option value="0">0</option><option value="1">1</option></select></td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_QOS_HELP></font></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_QOS_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_mqtttimestamp"><TMPL_VAR NAME=T::VZLOGGER.MQTT_TIMESTAMP></label></td>
-					<td><select id="vzlogger_mqtttimestamp" name="vzlogger_mqtttimestamp" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_TIMESTAMP_HELP></font></td>
+					<td><label for="vzlogger_mqtttimestamp"><TMPL_VAR NAME=VZLOGGER.MQTT_TIMESTAMP></label></td>
+					<td><select id="vzlogger_mqtttimestamp" name="vzlogger_mqtttimestamp" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_TIMESTAMP_HELP></font></td>
 				</tr>
-				<tr><td colspan="4"><h4><TMPL_VAR NAME=T::VZLOGGER.MQTT_USER_AUTH></h4></td></tr>
+				<tr><td colspan="4"><h4><TMPL_VAR NAME=VZLOGGER.MQTT_USER_AUTH></h4></td></tr>
 				<tr>
-					<td><label for="vzlogger_mqttuser"><TMPL_VAR NAME=T::VZLOGGER.MQTT_USER></label></td>
+					<td><label for="vzlogger_mqttuser"><TMPL_VAR NAME=VZLOGGER.MQTT_USER></label></td>
 					<td><input id="vzlogger_mqttuser" name="vzlogger_mqttuser" type="text" value="<TMPL_VAR VZLOGGER_MQTTUSER>" autocomplete="username" data-mini="true"></td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_USER_HELP></font></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_USER_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_mqttpass"><TMPL_VAR NAME=T::VZLOGGER.MQTT_PASSWORD></label></td>
+					<td><label for="vzlogger_mqttpass"><TMPL_VAR NAME=VZLOGGER.MQTT_PASSWORD></label></td>
 					<td>
 						<input id="vzlogger_mqttpass" name="vzlogger_mqttpass" type="password" value="" autocomplete="new-password" placeholder="<TMPL_VAR VZLOGGER_MQTTPASS_STATUS>" data-mini="true">
-						<label for="vzlogger_mqttpass_reset"><input id="vzlogger_mqttpass_reset" name="vzlogger_mqttpass_reset" type="checkbox" value="1" data-mini="true"><TMPL_VAR NAME=T::VZLOGGER.MQTT_PASSWORD_RESET></label>
+						<label for="vzlogger_mqttpass_reset"><input id="vzlogger_mqttpass_reset" name="vzlogger_mqttpass_reset" type="checkbox" value="1" data-mini="true"><TMPL_VAR NAME=VZLOGGER.MQTT_PASSWORD_RESET></label>
 					</td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_PASSWORD_HELP></font></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_PASSWORD_HELP></font></td>
 				</tr>
-				<tr><td colspan="4"><h4><TMPL_VAR NAME=T::VZLOGGER.MQTT_CERT_AUTH></h4></td></tr>
+				<tr><td colspan="4"><h4><TMPL_VAR NAME=VZLOGGER.MQTT_CERT_AUTH></h4></td></tr>
 				<tr>
-					<td><label for="vzlogger_mqttcafile"><TMPL_VAR NAME=T::VZLOGGER.MQTT_CAFILE></label></td>
+					<td><label for="vzlogger_mqttcafile"><TMPL_VAR NAME=VZLOGGER.MQTT_CAFILE></label></td>
 					<td><input id="vzlogger_mqttcafile" name="vzlogger_mqttcafile" type="text" value="<TMPL_VAR VZLOGGER_MQTTCAFILE>" data-mini="true"></td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_CAFILE_HELP></font></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_CAFILE_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_mqttcapath"><TMPL_VAR NAME=T::VZLOGGER.MQTT_CAPATH></label></td>
+					<td><label for="vzlogger_mqttcapath"><TMPL_VAR NAME=VZLOGGER.MQTT_CAPATH></label></td>
 					<td><input id="vzlogger_mqttcapath" name="vzlogger_mqttcapath" type="text" value="<TMPL_VAR VZLOGGER_MQTTCAPATH>" data-mini="true"></td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_CAPATH_HELP></font></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_CAPATH_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_mqttcertfile"><TMPL_VAR NAME=T::VZLOGGER.MQTT_CERTFILE></label></td>
+					<td><label for="vzlogger_mqttcertfile"><TMPL_VAR NAME=VZLOGGER.MQTT_CERTFILE></label></td>
 					<td><input id="vzlogger_mqttcertfile" name="vzlogger_mqttcertfile" type="text" value="<TMPL_VAR VZLOGGER_MQTTCERTFILE>" data-mini="true"></td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_CERTFILE_HELP></font></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_CERTFILE_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_mqttkeyfile"><TMPL_VAR NAME=T::VZLOGGER.MQTT_KEYFILE></label></td>
+					<td><label for="vzlogger_mqttkeyfile"><TMPL_VAR NAME=VZLOGGER.MQTT_KEYFILE></label></td>
 					<td><input id="vzlogger_mqttkeyfile" name="vzlogger_mqttkeyfile" type="text" value="<TMPL_VAR VZLOGGER_MQTTKEYFILE>" data-mini="true"></td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_KEYFILE_HELP></font></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_KEYFILE_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label for="vzlogger_mqttkeypass"><TMPL_VAR NAME=T::VZLOGGER.MQTT_KEYPASS></label></td>
+					<td><label for="vzlogger_mqttkeypass"><TMPL_VAR NAME=VZLOGGER.MQTT_KEYPASS></label></td>
 					<td>
-						<input id="vzlogger_mqttkeypass" name="vzlogger_mqttkeypass" type="password" value="" autocomplete="new-password" placeholder="<TMPL_VAR NAME=T::VZLOGGER.MQTT_PASSWORD_UNCHANGED>" data-mini="true">
-						<label for="vzlogger_mqttkeypass_reset"><input id="vzlogger_mqttkeypass_reset" name="vzlogger_mqttkeypass_reset" type="checkbox" value="1" data-mini="true"><TMPL_VAR NAME=T::VZLOGGER.MQTT_KEYPASS_RESET></label>
+						<input id="vzlogger_mqttkeypass" name="vzlogger_mqttkeypass" type="password" value="" autocomplete="new-password" placeholder="<TMPL_VAR NAME=VZLOGGER.MQTT_PASSWORD_UNCHANGED>" data-mini="true">
+						<label for="vzlogger_mqttkeypass_reset"><input id="vzlogger_mqttkeypass_reset" name="vzlogger_mqttkeypass_reset" type="checkbox" value="1" data-mini="true"><TMPL_VAR NAME=VZLOGGER.MQTT_KEYPASS_RESET></label>
 					</td>
-					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.MQTT_KEYPASS_HELP></font></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_KEYPASS_HELP></font></td>
 				</tr>
 				</table>
 			</div>
 		</td>
 	</tr>
 	<tr>
-		<td colspan=4><h3><TMPL_VAR NAME=T::VZLOGGER.IR_HEADS></h3><p><TMPL_VAR NAME=T::VZLOGGER.IR_HEADS_HELP></p></td>
+		<td colspan=4><h3><TMPL_VAR NAME=VZLOGGER.IR_HEADS></h3><p><TMPL_VAR NAME=VZLOGGER.IR_HEADS_HELP></p></td>
 	</tr>
 	<tr>
-		<td>&nbsp;</td><td><a id="rescan_ir_heads" title="<TMPL_VAR NAME=T::VZLOGGER.RESCAN_IR_HEADS_HELP>" data-icon="refresh" data-role="button" data-inline="true" data-mini="true" href="./index.cgi?rescan=1" onclick="return start_ir_head_scan(event);"><TMPL_VAR NAME=T::VZLOGGER.RESCAN_IR_HEADS></a></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.RESCAN_IR_HEADS_HELP></td>
+		<td>&nbsp;</td><td><a id="rescan_ir_heads" title="<TMPL_VAR NAME=VZLOGGER.RESCAN_IR_HEADS_HELP>" data-icon="refresh" data-role="button" data-inline="true" data-mini="true" href="./index.cgi?rescan=1" onclick="return start_ir_head_scan(event);"><TMPL_VAR NAME=VZLOGGER.RESCAN_IR_HEADS></a></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.RESCAN_IR_HEADS_HELP></td>
 	</tr>
 	<TMPL_LOOP NAME=ROWS>
 	<tr id="meter_row_<TMPL_VAR NAME=SERIAL>" class="meter-row" data-meter-serial="<TMPL_VAR NAME=SERIAL ESCAPE=HTML>"><td colspan="4">
 		<div id="meter_<TMPL_VAR NAME=SERIAL>" class="meter-panel" data-role="collapsible" data-mini="true" data-collapsed="<TMPL_VAR NAME=COLLAPSED>" data-warning-kind="<TMPL_VAR NAME=WARNING_KIND>" data-oms-supported="<TMPL_VAR NAME=OMS_SUPPORTED>" data-current-mode="<TMPL_VAR NAME=METER>" data-meter-enabled="<TMPL_VAR NAME=METER_ENABLED>" data-allowskip="<TMPL_VAR NAME=ALLOWSKIP>" data-parity="<TMPL_VAR NAME=PARITYMODE>" data-local-time="<TMPL_VAR NAME=USELOCALTIME>" data-wait-sync="<TMPL_VAR NAME=WAITSYNC>" data-mbus-debug="<TMPL_VAR NAME=MBUSDEBUG>">
 			<h4>
 				<TMPL_VAR NAME=NAME ESCAPE=HTML>
-				<TMPL_IF NAME=PENDING_METER><span class="meter-pending-badge"><TMPL_VAR NAME=T::VZLOGGER.METER_PENDING_NEW></span></TMPL_IF>
+				<TMPL_IF NAME=PENDING_METER><span class="meter-pending-badge"><TMPL_VAR NAME=VZLOGGER.METER_PENDING_NEW></span></TMPL_IF>
 				<span class="meter-summary-device">– <TMPL_VAR NAME=DEVICE ESCAPE=HTML> – <span class="meter-protocol-summary"><TMPL_VAR NAME=PROTOCOL_LABEL ESCAPE=HTML></span></span>
 				<TMPL_IF NAME=HAS_WARNING><span class="meter-warning-icon" title="<TMPL_VAR NAME=WARNING_TEXT ESCAPE=HTML>" aria-label="<TMPL_VAR NAME=WARNING_TEXT ESCAPE=HTML>">!</span></TMPL_IF>
 			</h4>
 			<TMPL_IF NAME=SHOW_WARNING_DETAIL><div class="meter-primary-warning meter-warning-message" role="alert"><TMPL_VAR NAME=WARNING_TEXT ESCAPE=HTML></div></TMPL_IF>
-			<TMPL_IF NAME=OMS_UNSUPPORTED><div class="meter-oms-runtime-warning meter-warning-message" role="alert"><TMPL_VAR NAME=T::VZLOGGER.METER_WARNING_OMS_UNAVAILABLE></div></TMPL_IF>
+			<TMPL_IF NAME=OMS_UNSUPPORTED><div class="meter-oms-runtime-warning meter-warning-message" role="alert"><TMPL_VAR NAME=VZLOGGER.METER_WARNING_OMS_UNAVAILABLE></div></TMPL_IF>
 			<table border="0" class="settings-table compact-settings">
-			<tr class="meter-name-row"><td><label for="<TMPL_VAR NAME=SERIAL>_name"><TMPL_VAR NAME=T::FORMTABLEROWS.NAME></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_name" name="<TMPL_VAR NAME=SERIAL>_name" type="text" value="<TMPL_VAR NAME=NAME ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_NAME_HELP></td></tr>
-			<tr class="meter-common-field meter-enabled-row"><td><label for="<TMPL_VAR NAME=SERIAL>_enabled"><TMPL_VAR NAME=T::VZLOGGER.METER_ENABLED></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_enabled" name="<TMPL_VAR NAME=SERIAL>_enabled" data-role="flipswitch" onchange="update_meter_enabled('<TMPL_VAR NAME=SERIAL>');"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_ENABLED_HELP></td></tr>
-			<tr><td><TMPL_VAR NAME=T::VZLOGGER.METER_DEVICE></td><td><code><TMPL_VAR NAME=DEVICE ESCAPE=HTML></code></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_DEVICE_HELP></td></tr>
-			<tr><td><label for="<TMPL_VAR NAME=SERIAL>_meter"><TMPL_VAR NAME=T::VZLOGGER.METER_PROTOCOL></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_meter" name="<TMPL_VAR NAME=SERIAL>_meter" data-mini="true" data-native-menu="true" onchange="update_meter_protocol(this.id.substring(0, this.id.length - 6));"><option value="0"><TMPL_VAR NAME=T::FORMTABLEROWS.PLEASESELECT></option><option value="sml">SML</option><option value="d0">D0</option><option value="oms">OMS</option><option value="user"><TMPL_VAR NAME=T::VZLOGGER.PROTOCOL_USER></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_PROTOCOL_HELP></td></tr>
-			<tr class="meter-template-row"><td><label for="<TMPL_VAR NAME=SERIAL>_template"><TMPL_VAR NAME=T::VZLOGGER.METER_TEMPLATE></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_template" class="meter-template-select" data-placeholder="<TMPL_VAR NAME=T::VZLOGGER.METER_TEMPLATE_SELECT ESCAPE=HTML>" data-mini="true" data-native-menu="true" onchange="apply_meter_template('<TMPL_VAR NAME=SERIAL>');"><option value=""><TMPL_VAR NAME=T::VZLOGGER.METER_TEMPLATE_SELECT></option></select><span id="<TMPL_VAR NAME=SERIAL>_template_unsaved" class="meter-template-note" hidden><TMPL_VAR NAME=T::VZLOGGER.ACTIVATION_UNSAVED></span><span id="<TMPL_VAR NAME=SERIAL>_template_warning" class="meter-template-note" hidden><TMPL_VAR NAME=T::VZLOGGER.METER_TEMPLATE_LIMITED></span></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_TEMPLATE_HELP></td></tr>
-			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_allowskip"><TMPL_VAR NAME=T::VZLOGGER.METER_ALLOWSKIP></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_allowskip" name="<TMPL_VAR NAME=SERIAL>_allowskip" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_ALLOWSKIP_HELP></td></tr>
-			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_aggtime"><TMPL_VAR NAME=T::VZLOGGER.METER_AGGTIME></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_aggtime" name="<TMPL_VAR NAME=SERIAL>_aggtime" type="number" value="<TMPL_VAR NAME=AGGTIME>" oninput="render_channel_editor('<TMPL_VAR NAME=SERIAL>'); update_meter_enabled('<TMPL_VAR NAME=SERIAL>');"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_AGGTIME_HELP></td></tr>
+			<tr class="meter-name-row"><td><label for="<TMPL_VAR NAME=SERIAL>_name"><TMPL_VAR NAME=COMMON.METER_NAME></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_name" name="<TMPL_VAR NAME=SERIAL>_name" type="text" value="<TMPL_VAR NAME=NAME ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_NAME_HELP></td></tr>
+			<tr class="meter-common-field meter-enabled-row"><td><label for="<TMPL_VAR NAME=SERIAL>_enabled"><TMPL_VAR NAME=VZLOGGER.METER_ENABLED></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_enabled" name="<TMPL_VAR NAME=SERIAL>_enabled" data-role="flipswitch" onchange="update_meter_enabled('<TMPL_VAR NAME=SERIAL>');"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_ENABLED_HELP></td></tr>
+			<tr><td><TMPL_VAR NAME=VZLOGGER.METER_DEVICE></td><td><code><TMPL_VAR NAME=DEVICE ESCAPE=HTML></code></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_DEVICE_HELP></td></tr>
+			<tr><td><label for="<TMPL_VAR NAME=SERIAL>_meter"><TMPL_VAR NAME=VZLOGGER.METER_PROTOCOL></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_meter" name="<TMPL_VAR NAME=SERIAL>_meter" data-mini="true" data-native-menu="true" onchange="update_meter_protocol(this.id.substring(0, this.id.length - 6));"><option value="0"><TMPL_VAR NAME=COMMON.PLEASE_SELECT></option><option value="sml">SML</option><option value="d0">D0</option><option value="oms">OMS</option><option value="user"><TMPL_VAR NAME=VZLOGGER.PROTOCOL_USER></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_PROTOCOL_HELP></td></tr>
+			<tr class="meter-template-row"><td><label for="<TMPL_VAR NAME=SERIAL>_template"><TMPL_VAR NAME=VZLOGGER.METER_TEMPLATE></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_template" class="meter-template-select" data-placeholder="<TMPL_VAR NAME=VZLOGGER.METER_TEMPLATE_SELECT ESCAPE=HTML>" data-mini="true" data-native-menu="true" onchange="apply_meter_template('<TMPL_VAR NAME=SERIAL>');"><option value=""><TMPL_VAR NAME=VZLOGGER.METER_TEMPLATE_SELECT></option></select><span id="<TMPL_VAR NAME=SERIAL>_template_unsaved" class="meter-template-note" hidden><TMPL_VAR NAME=COMMON.ACTIVATION_UNSAVED></span><span id="<TMPL_VAR NAME=SERIAL>_template_warning" class="meter-template-note" hidden><TMPL_VAR NAME=VZLOGGER.METER_TEMPLATE_LIMITED></span></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_TEMPLATE_HELP></td></tr>
+			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_allowskip"><TMPL_VAR NAME=VZLOGGER.METER_ALLOWSKIP></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_allowskip" name="<TMPL_VAR NAME=SERIAL>_allowskip" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_ALLOWSKIP_HELP></td></tr>
+			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_aggtime"><TMPL_VAR NAME=VZLOGGER.METER_AGGTIME></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_aggtime" name="<TMPL_VAR NAME=SERIAL>_aggtime" type="number" value="<TMPL_VAR NAME=AGGTIME>" oninput="render_channel_editor('<TMPL_VAR NAME=SERIAL>'); update_meter_enabled('<TMPL_VAR NAME=SERIAL>');"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_AGGTIME_HELP></td></tr>
 
-			<tr class="meter-field" data-meter-field="interval" data-protocols="sml d0"><td><label for="<TMPL_VAR NAME=SERIAL>_interval"><TMPL_VAR NAME=T::VZLOGGER.METER_INTERVAL></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_interval" name="<TMPL_VAR NAME=SERIAL>_interval" type="number" value="<TMPL_VAR NAME=INTERVAL>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_INTERVAL_HELP></td></tr>
-			<tr class="meter-field" data-meter-field="pullseq" data-protocols="sml d0"><td><label for="<TMPL_VAR NAME=SERIAL>_pullseq"><TMPL_VAR NAME=T::VZLOGGER.METER_PULLSEQ></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_pullseq" name="<TMPL_VAR NAME=SERIAL>_pullseq" type="text" value="<TMPL_VAR NAME=PULLSEQ ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_PULLSEQ_HELP></td></tr>
-			<tr class="meter-field" data-meter-field="baudrate" data-protocols="sml d0 oms"><td><label for="<TMPL_VAR NAME=SERIAL>_baudrate"><TMPL_VAR NAME=T::VZLOGGER.METER_BAUDRATE></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_baudrate" name="<TMPL_VAR NAME=SERIAL>_baudrate" type="number" min="1" value="<TMPL_VAR NAME=BAUDRATE>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_BAUDRATE_HELP></td></tr>
-			<tr class="meter-field" data-meter-field="parity" data-protocols="sml d0"><td><label for="<TMPL_VAR NAME=SERIAL>_paritymode"><TMPL_VAR NAME=T::VZLOGGER.METER_PARITY></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_paritymode" name="<TMPL_VAR NAME=SERIAL>_paritymode" data-mini="true" data-native-menu="true"><option value=""><TMPL_VAR NAME=T::VZLOGGER.METER_AUTO_EMPTY></option><option value="8n1">8N1</option><option value="7e1">7E1</option><option value="7o1">7O1</option><option value="7n1">7N1</option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_PARITY_HELP></td></tr>
-			<tr class="meter-field" data-meter-field="use_local_time" data-protocols="sml oms"><td><label for="<TMPL_VAR NAME=SERIAL>_uselocaltime"><TMPL_VAR NAME=T::VZLOGGER.METER_USE_LOCAL_TIME></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_uselocaltime" name="<TMPL_VAR NAME=SERIAL>_uselocaltime" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_USE_LOCAL_TIME_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="interval" data-protocols="sml d0"><td><label for="<TMPL_VAR NAME=SERIAL>_interval"><TMPL_VAR NAME=VZLOGGER.METER_INTERVAL></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_interval" name="<TMPL_VAR NAME=SERIAL>_interval" type="number" value="<TMPL_VAR NAME=INTERVAL>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_INTERVAL_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="pullseq" data-protocols="sml d0"><td><label for="<TMPL_VAR NAME=SERIAL>_pullseq"><TMPL_VAR NAME=VZLOGGER.METER_PULLSEQ></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_pullseq" name="<TMPL_VAR NAME=SERIAL>_pullseq" type="text" value="<TMPL_VAR NAME=PULLSEQ ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_PULLSEQ_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="baudrate" data-protocols="sml d0 oms"><td><label for="<TMPL_VAR NAME=SERIAL>_baudrate"><TMPL_VAR NAME=VZLOGGER.METER_BAUDRATE></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_baudrate" name="<TMPL_VAR NAME=SERIAL>_baudrate" type="number" min="1" value="<TMPL_VAR NAME=BAUDRATE>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_BAUDRATE_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="parity" data-protocols="sml d0"><td><label for="<TMPL_VAR NAME=SERIAL>_paritymode"><TMPL_VAR NAME=VZLOGGER.METER_PARITY></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_paritymode" name="<TMPL_VAR NAME=SERIAL>_paritymode" data-mini="true" data-native-menu="true"><option value=""><TMPL_VAR NAME=VZLOGGER.METER_AUTO_EMPTY></option><option value="8n1">8N1</option><option value="7e1">7E1</option><option value="7o1">7O1</option><option value="7n1">7N1</option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_PARITY_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="use_local_time" data-protocols="sml oms"><td><label for="<TMPL_VAR NAME=SERIAL>_uselocaltime"><TMPL_VAR NAME=VZLOGGER.METER_USE_LOCAL_TIME></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_uselocaltime" name="<TMPL_VAR NAME=SERIAL>_uselocaltime" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_USE_LOCAL_TIME_HELP></td></tr>
 
-			<tr class="meter-field" data-meter-field="dump_file" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_dumpfile"><TMPL_VAR NAME=T::VZLOGGER.METER_DUMP_FILE></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_dumpfile" name="<TMPL_VAR NAME=SERIAL>_dumpfile" type="text" value="<TMPL_VAR NAME=DUMPFILE ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_DUMP_FILE_HELP></td></tr>
-			<tr class="meter-field" data-meter-field="ackseq" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_ackseq"><TMPL_VAR NAME=T::VZLOGGER.METER_ACKSEQ></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_ackseq" name="<TMPL_VAR NAME=SERIAL>_ackseq" type="text" value="<TMPL_VAR NAME=ACKSEQ ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_ACKSEQ_HELP></td></tr>
-			<tr class="meter-field" data-meter-field="baudrate_read" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_baudrateread"><TMPL_VAR NAME=T::VZLOGGER.METER_BAUDRATE_READ></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_baudrateread" name="<TMPL_VAR NAME=SERIAL>_baudrateread" type="number" min="1" value="<TMPL_VAR NAME=BAUDRATEREAD>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_BAUDRATE_READ_HELP></td></tr>
-			<tr class="meter-field" data-meter-field="wait_sync" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_waitsync"><TMPL_VAR NAME=T::VZLOGGER.METER_WAIT_SYNC></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_waitsync" name="<TMPL_VAR NAME=SERIAL>_waitsync" data-mini="true" data-native-menu="true"><option value=""><TMPL_VAR NAME=T::VZLOGGER.METER_AUTO_EMPTY></option><option value="off">off</option><option value="end">end</option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_WAIT_SYNC_HELP></td></tr>
-			<tr class="meter-field" data-meter-field="read_timeout" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_readtimeout"><TMPL_VAR NAME=T::VZLOGGER.METER_READ_TIMEOUT></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_readtimeout" name="<TMPL_VAR NAME=SERIAL>_readtimeout" type="number" min="0" value="<TMPL_VAR NAME=READTIMEOUT>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_READ_TIMEOUT_HELP></td></tr>
-			<tr class="meter-field" data-meter-field="baudrate_change_delay" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_baudratechangedelay"><TMPL_VAR NAME=T::VZLOGGER.METER_BAUDRATE_CHANGE_DELAY></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_baudratechangedelay" name="<TMPL_VAR NAME=SERIAL>_baudratechangedelay" type="number" min="0" value="<TMPL_VAR NAME=BAUDRATECHANGEDELAY>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_BAUDRATE_CHANGE_DELAY_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="dump_file" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_dumpfile"><TMPL_VAR NAME=VZLOGGER.METER_DUMP_FILE></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_dumpfile" name="<TMPL_VAR NAME=SERIAL>_dumpfile" type="text" value="<TMPL_VAR NAME=DUMPFILE ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_DUMP_FILE_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="ackseq" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_ackseq"><TMPL_VAR NAME=VZLOGGER.METER_ACKSEQ></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_ackseq" name="<TMPL_VAR NAME=SERIAL>_ackseq" type="text" value="<TMPL_VAR NAME=ACKSEQ ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_ACKSEQ_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="baudrate_read" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_baudrateread"><TMPL_VAR NAME=VZLOGGER.METER_BAUDRATE_READ></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_baudrateread" name="<TMPL_VAR NAME=SERIAL>_baudrateread" type="number" min="1" value="<TMPL_VAR NAME=BAUDRATEREAD>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_BAUDRATE_READ_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="wait_sync" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_waitsync"><TMPL_VAR NAME=VZLOGGER.METER_WAIT_SYNC></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_waitsync" name="<TMPL_VAR NAME=SERIAL>_waitsync" data-mini="true" data-native-menu="true"><option value=""><TMPL_VAR NAME=VZLOGGER.METER_AUTO_EMPTY></option><option value="off">off</option><option value="end">end</option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_WAIT_SYNC_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="read_timeout" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_readtimeout"><TMPL_VAR NAME=VZLOGGER.METER_READ_TIMEOUT></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_readtimeout" name="<TMPL_VAR NAME=SERIAL>_readtimeout" type="number" min="0" value="<TMPL_VAR NAME=READTIMEOUT>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_READ_TIMEOUT_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="baudrate_change_delay" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_baudratechangedelay"><TMPL_VAR NAME=VZLOGGER.METER_BAUDRATE_CHANGE_DELAY></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_baudratechangedelay" name="<TMPL_VAR NAME=SERIAL>_baudratechangedelay" type="number" min="0" value="<TMPL_VAR NAME=BAUDRATECHANGEDELAY>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_BAUDRATE_CHANGE_DELAY_HELP></td></tr>
 
-			<tr class="meter-field" data-meter-field="key" data-protocols="oms"><td><label for="<TMPL_VAR NAME=SERIAL>_omskey"><TMPL_VAR NAME=T::VZLOGGER.METER_OMS_KEY></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_omskey" name="<TMPL_VAR NAME=SERIAL>_omskey" type="password" autocomplete="off" maxlength="32" value="<TMPL_VAR NAME=OMSKEY ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_OMS_KEY_HELP></td></tr>
-			<tr class="meter-field" data-meter-field="mbus_debug" data-protocols="oms"><td><label for="<TMPL_VAR NAME=SERIAL>_mbusdebug"><TMPL_VAR NAME=T::VZLOGGER.METER_MBUS_DEBUG></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_mbusdebug" name="<TMPL_VAR NAME=SERIAL>_mbusdebug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_MBUS_DEBUG_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="key" data-protocols="oms"><td><label for="<TMPL_VAR NAME=SERIAL>_omskey"><TMPL_VAR NAME=VZLOGGER.METER_OMS_KEY></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_omskey" name="<TMPL_VAR NAME=SERIAL>_omskey" type="password" autocomplete="off" maxlength="32" value="<TMPL_VAR NAME=OMSKEY ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_OMS_KEY_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="mbus_debug" data-protocols="oms"><td><label for="<TMPL_VAR NAME=SERIAL>_mbusdebug"><TMPL_VAR NAME=VZLOGGER.METER_MBUS_DEBUG></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_mbusdebug" name="<TMPL_VAR NAME=SERIAL>_mbusdebug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_MBUS_DEBUG_HELP></td></tr>
 
-			<tr class="meter-user-settings"><td><label for="<TMPL_VAR NAME=SERIAL>_userjson"><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON></label></td><td><textarea class="meter-json-editor" id="<TMPL_VAR NAME=SERIAL>_userjson" name="<TMPL_VAR NAME=SERIAL>_userjson" maxlength="65536"><TMPL_VAR NAME=USER_JSON ESCAPE=HTML></textarea><div class="meter-doc-links"><a href="https://wiki.volkszaehler.org/software/controller/vzlogger/vzlogger_conf_parameter" target="_blank" rel="noopener"><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON_DOCS></a> · <a href="https://github.com/volkszaehler/vzlogger/tree/master/etc" target="_blank" rel="noopener"><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON_EXAMPLES></a></div></td><td>&nbsp;</td><td><TMPL_VAR NAME=T::VZLOGGER.METER_USER_JSON_HELP></td></tr>
+			<tr class="meter-user-settings"><td><label for="<TMPL_VAR NAME=SERIAL>_userjson"><TMPL_VAR NAME=VZLOGGER.METER_USER_JSON></label></td><td><textarea class="meter-json-editor" id="<TMPL_VAR NAME=SERIAL>_userjson" name="<TMPL_VAR NAME=SERIAL>_userjson" maxlength="65536"><TMPL_VAR NAME=USER_JSON ESCAPE=HTML></textarea><div class="meter-doc-links"><a href="https://wiki.volkszaehler.org/software/controller/vzlogger/vzlogger_conf_parameter" target="_blank" rel="noopener"><TMPL_VAR NAME=VZLOGGER.METER_USER_JSON_DOCS></a> · <a href="https://github.com/volkszaehler/vzlogger/tree/master/etc" target="_blank" rel="noopener"><TMPL_VAR NAME=VZLOGGER.METER_USER_JSON_EXAMPLES></a></div></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_USER_JSON_HELP></td></tr>
 
-			<tr class="meter-obis-settings"><td colspan="4"><div class="obis-channel-toolbar"><span class="obis-channel-toolbar-title"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS></span><button class="obis-discovery" type="button" onclick="start_obis_discovery('<TMPL_VAR NAME=SERIAL>');" title="<TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search" <TMPL_VAR NAME=OBIS_DISABLED>><TMPL_VAR NAME=T::VZLOGGER.READ_OBIS_CHANNELS></button><button type="button" onclick="add_manual_obis_channel('<TMPL_VAR NAME=SERIAL>');" data-role="button" data-inline="true" data-mini="true" data-icon="plus"><TMPL_VAR NAME=T::VZLOGGER.CHANNEL_ADD></button></div><span class="obis-channel-help"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_HELP></span><p id="<TMPL_VAR NAME=SERIAL>_obis_empty"><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNELS_EMPTY></p><div id="<TMPL_VAR NAME=SERIAL>_obis_channels" class="obis-editor" data-protocol="<TMPL_VAR NAME=METER ESCAPE=HTML>"></div></td></tr>
-			<tr class="meter-remove-row"><td colspan="4"><input class="meter-remove-marker" type="hidden" name="remove_meter" value="<TMPL_VAR NAME=SERIAL>" disabled><button class="meter-remove-button" type="button" onclick="stage_meter_removal('<TMPL_VAR NAME=SERIAL>');" data-role="button" data-inline="true" data-mini="true" data-icon="delete"><TMPL_VAR NAME=T::VZLOGGER.REMOVE_METER></button><span class="meter-remove-help"><TMPL_VAR NAME=T::VZLOGGER.REMOVE_METER_HELP></span></td></tr>
+			<tr class="meter-obis-settings"><td colspan="4"><div class="obis-channel-toolbar"><span class="obis-channel-toolbar-title"><TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS></span><button class="obis-discovery" type="button" onclick="start_obis_discovery('<TMPL_VAR NAME=SERIAL>');" title="<TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search" <TMPL_VAR NAME=OBIS_DISABLED>><TMPL_VAR NAME=VZLOGGER.READ_OBIS_CHANNELS></button><button type="button" onclick="add_manual_obis_channel('<TMPL_VAR NAME=SERIAL>');" data-role="button" data-inline="true" data-mini="true" data-icon="plus"><TMPL_VAR NAME=VZLOGGER.CHANNEL_ADD></button></div><span class="obis-channel-help"><TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS_HELP></span><p id="<TMPL_VAR NAME=SERIAL>_obis_empty"><TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS_EMPTY></p><div id="<TMPL_VAR NAME=SERIAL>_obis_channels" class="obis-editor" data-protocol="<TMPL_VAR NAME=METER ESCAPE=HTML>"></div></td></tr>
+			<tr class="meter-remove-row"><td colspan="4"><input class="meter-remove-marker" type="hidden" name="remove_meter" value="<TMPL_VAR NAME=SERIAL>" disabled><button class="meter-remove-button" type="button" onclick="stage_meter_removal('<TMPL_VAR NAME=SERIAL>');" data-role="button" data-inline="true" data-mini="true" data-icon="delete"><TMPL_VAR NAME=VZLOGGER.REMOVE_METER></button><span class="meter-remove-help"><TMPL_VAR NAME=VZLOGGER.REMOVE_METER_HELP></span></td></tr>
 			</table>
 		</div>
 	</td></tr>
@@ -666,40 +670,40 @@
 	</div>
 
 	<div id="bridge_configuration_section" class="configuration-section">
-	<h2><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_CONFIGURATION></h2>
-	<p><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_CONFIGURATION_HELP></p>
+	<h2><TMPL_VAR NAME=VZLOGGER.BRIDGE_CONFIGURATION></h2>
+	<p><TMPL_VAR NAME=VZLOGGER.BRIDGE_CONFIGURATION_HELP></p>
 	<table border="0" class="settings-table">
 	<tr>
 		<td colspan="4">
 			<div id="bridge_settings_panel" data-role="collapsible" data-collapsed="true" data-mini="true">
-				<h3><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_SETTINGS></h3>
-				<p><TMPL_VAR NAME=T::VZLOGGER.BRIDGE_SETTINGS_HELP></p>
+				<h3><TMPL_VAR NAME=VZLOGGER.BRIDGE_SETTINGS></h3>
+				<p><TMPL_VAR NAME=VZLOGGER.BRIDGE_SETTINGS_HELP></p>
 				<table border="0" class="settings-table compact-settings">
 				<tr>
-					<td width="20%"><label for="vzlogger_udpinterval"><TMPL_VAR NAME=T::VZLOGGER.UPDATE_CYCLE></label></td>
+					<td width="20%"><label for="vzlogger_udpinterval"><TMPL_VAR NAME=VZLOGGER.UPDATE_CYCLE></label></td>
 					<td width="55%"><select id="vzlogger_udpinterval" name="vzlogger_udpinterval" data-mini="true" data-native-menu="true"><TMPL_LOOP NAME=VZLOGGER_UDPINTERVAL_OPTIONS><option value="<TMPL_VAR NAME=VALUE>" <TMPL_VAR NAME=SELECTED>><TMPL_VAR NAME=LABEL></option></TMPL_LOOP></select></td>
 					<td width="5%">&nbsp;</td>
-					<td width="20%"><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.UPDATE_CYCLE_HELP></font></td>
+					<td width="20%"><font size="-1"><TMPL_VAR NAME=VZLOGGER.UPDATE_CYCLE_HELP></font></td>
 				</tr>
-				<tr><td colspan="4"><h4><TMPL_VAR NAME=T::VZLOGGER.HTTP_CACHE></h4></td></tr>
+				<tr><td colspan="4"><h4><TMPL_VAR NAME=VZLOGGER.HTTP_CACHE></h4></td></tr>
 				<tr id="http_cache_status_row">
-					<td><TMPL_VAR NAME=T::VZLOGGER.HTTP_CACHE_STATUS></td>
-					<td><span><TMPL_VAR NAME=HTTP_CACHE_STATUS></span><br><a id="http_cache_link" data-cache-available="<TMPL_VAR HTTP_CACHE_AVAILABLE>" class="inline-link <TMPL_VAR HTTP_CACHE_DISABLED>" href="<TMPL_VAR HTTP_CACHE_URL>" target="_blank"><TMPL_VAR NAME=T::VZLOGGER.OPEN_HTTP_CACHE></a></td>
+					<td><TMPL_VAR NAME=VZLOGGER.HTTP_CACHE_STATUS></td>
+					<td><span><TMPL_VAR NAME=HTTP_CACHE_STATUS></span><br><a id="http_cache_link" data-cache-available="<TMPL_VAR HTTP_CACHE_AVAILABLE>" class="inline-link <TMPL_VAR HTTP_CACHE_DISABLED>" href="<TMPL_VAR HTTP_CACHE_URL>" target="_blank"><TMPL_VAR NAME=VZLOGGER.OPEN_HTTP_CACHE></a></td>
 					<td>&nbsp;</td>
-					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.HTTP_CACHE_HELP></font></td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.HTTP_CACHE_HELP></font></td>
 				</tr>
-				<tr><td colspan="4"><h4><TMPL_VAR NAME=T::VZLOGGER.UDP_OPTIONS></h4></td></tr>
+				<tr><td colspan="4"><h4><TMPL_VAR NAME=VZLOGGER.UDP_OPTIONS></h4></td></tr>
 				<tr>
-					<td><label for="sendudp"><TMPL_VAR NAME=T::VZLOGGER.SEND_UDP></label></td>
-					<td><select id="sendudp" name="sendudp" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=T::GENERIC.OFF></option><option value="1"><TMPL_VAR NAME=T::GENERIC.ON></option></select></td>
+					<td><label for="sendudp"><TMPL_VAR NAME=VZLOGGER.SEND_UDP></label></td>
+					<td><select id="sendudp" name="sendudp" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td>
 					<td>&nbsp;</td>
-					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.SEND_UDP_HELP></font></td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.SEND_UDP_HELP></font></td>
 				</tr>
 				<tr>
-					<td><label id="labeludpport" for="udpport"><TMPL_VAR NAME=T::VZLOGGER.PORT></label></td>
+					<td><label id="labeludpport" for="udpport"><TMPL_VAR NAME=VZLOGGER.PORT></label></td>
 					<td><input id="udpport" name="udpport" type="text" data-validation="number" value="<TMPL_VAR UDPPORT>" data-validation-allowing="range[1;65000]"></td>
 					<td>&nbsp;</td>
-					<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.UDP_PORT_HELP></font></td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.UDP_PORT_HELP></font></td>
 				</tr>
 				</table>
 			</div>
@@ -710,84 +714,84 @@
 
 	<table border="0" class="settings-table">
 	<tr>
-		<td><TMPL_VAR NAME=T::VZLOGGER.GENERATED_CONFIG></td>
-		<td><div class="generated-config-path"><code><TMPL_VAR VZLOGGER_CONFIG></code></div><div class="generated-config-actions"><a id="show_generated_config" href="<TMPL_VAR VZLOGGER_CONFIG_URL>" target="_blank"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> rel="noopener"</TMPL_IF> title="<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG_HELP><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP></TMPL_IF>" data-role="button" data-inline="true" data-mini="true" data-icon="<TMPL_IF VZLOGGER_EXPERT_MODE>edit<TMPL_ELSE>search</TMPL_IF>" class="<TMPL_VAR VZLOGGER_CONFIG_DISABLED>"><TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG></TMPL_IF></a><span id="reset_expert_config_container"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> hidden</TMPL_IF>><button id="reset_expert_config" type="button" onclick="reset_expert_configuration();" title="<TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="refresh"><TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG></button></span></div></td><td>&nbsp;</td><td id="generated_config_help"><TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=T::VZLOGGER.EDIT_EXPERT_CONFIG_HELP><br><TMPL_VAR NAME=T::VZLOGGER.RESET_EXPERT_CONFIG_HELP><TMPL_ELSE><TMPL_VAR NAME=T::VZLOGGER.SHOW_GENERATED_CONFIG_HELP></TMPL_IF></td>
+		<td><TMPL_VAR NAME=VZLOGGER.GENERATED_CONFIG></td>
+		<td><div class="generated-config-path"><code><TMPL_VAR VZLOGGER_CONFIG></code></div><div class="generated-config-actions"><a id="show_generated_config" href="<TMPL_VAR VZLOGGER_CONFIG_URL>" target="_blank"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> rel="noopener"</TMPL_IF> title="<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=VZLOGGER.EDIT_EXPERT_CONFIG_HELP><TMPL_ELSE><TMPL_VAR NAME=VZLOGGER.SHOW_GENERATED_CONFIG_HELP></TMPL_IF>" data-role="button" data-inline="true" data-mini="true" data-icon="<TMPL_IF VZLOGGER_EXPERT_MODE>edit<TMPL_ELSE>search</TMPL_IF>" class="<TMPL_VAR VZLOGGER_CONFIG_DISABLED>"><TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=VZLOGGER.EDIT_EXPERT_CONFIG><TMPL_ELSE><TMPL_VAR NAME=VZLOGGER.SHOW_GENERATED_CONFIG></TMPL_IF></a><span id="reset_expert_config_container"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> hidden</TMPL_IF>><button id="reset_expert_config" type="button" onclick="reset_expert_configuration();" title="<TMPL_VAR NAME=VZLOGGER.RESET_EXPERT_CONFIG_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="refresh"><TMPL_VAR NAME=VZLOGGER.RESET_EXPERT_CONFIG></button></span></div></td><td>&nbsp;</td><td id="generated_config_help"><TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=VZLOGGER.EDIT_EXPERT_CONFIG_HELP><br><TMPL_VAR NAME=VZLOGGER.RESET_EXPERT_CONFIG_HELP><TMPL_ELSE><TMPL_VAR NAME=VZLOGGER.SHOW_GENERATED_CONFIG_HELP></TMPL_IF></td>
 	</tr>
 	<tr>
-		<td><TMPL_VAR NAME=T::VZLOGGER.ACTIONS></td>
+		<td><TMPL_VAR NAME=VZLOGGER.ACTIONS></td>
 		<td>
-			<button id="validate_config_button" type="button" onclick="run_configuration_action('validate');" title="<TMPL_VAR NAME=T::VZLOGGER.VALIDATE_CONFIG_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="alert"><TMPL_VAR NAME=T::VZLOGGER.VALIDATE_CONFIG></button>
-			<button id="debug_log_button" type="button" onclick="run_configuration_action('debug-log');" title="<TMPL_VAR NAME=T::VZLOGGER.CREATE_DEBUG_LOG_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search"><TMPL_VAR NAME=T::VZLOGGER.CREATE_DEBUG_LOG></button>
-			<button id="save_apply_button" type="button" onclick="run_configuration_action('apply');" title="<TMPL_VAR NAME=T::VZLOGGER.SAVE_APPLY_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="gear"><TMPL_VAR NAME=T::VZLOGGER.SAVE_APPLY></button>
+			<button id="validate_config_button" type="button" onclick="run_configuration_action('validate');" title="<TMPL_VAR NAME=VZLOGGER.VALIDATE_CONFIG_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="alert"><TMPL_VAR NAME=VZLOGGER.VALIDATE_CONFIG></button>
+			<button id="debug_log_button" type="button" onclick="run_configuration_action('debug-log');" title="<TMPL_VAR NAME=VZLOGGER.CREATE_DEBUG_LOG_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search"><TMPL_VAR NAME=VZLOGGER.CREATE_DEBUG_LOG></button>
+			<button id="save_apply_button" type="button" onclick="run_configuration_action('apply');" title="<TMPL_VAR NAME=VZLOGGER.SAVE_APPLY_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="gear"><TMPL_VAR NAME=VZLOGGER.SAVE_APPLY></button>
 		</td>
 		<td>&nbsp;</td>
-		<td><font size="-1"><TMPL_VAR NAME=T::VZLOGGER.VALIDATE_CONFIG_HELP><br><br><TMPL_VAR NAME=T::VZLOGGER.CREATE_DEBUG_LOG_HELP><br><br><TMPL_VAR NAME=T::VZLOGGER.SAVE_APPLY_HELP></font></td>
+		<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.VALIDATE_CONFIG_HELP><br><br><TMPL_VAR NAME=VZLOGGER.CREATE_DEBUG_LOG_HELP><br><br><TMPL_VAR NAME=VZLOGGER.SAVE_APPLY_HELP></font></td>
 	</tr>
 	</table>
 	</form>
 	<div id="ir_scan_overlay" class="obis-search-overlay" role="dialog" aria-modal="true" aria-labelledby="ir_scan_title" aria-describedby="ir_scan_message" aria-hidden="true" tabindex="-1">
 		<div class="obis-search-dialog">
 			<div id="ir_scan_spinner" class="obis-search-spinner" aria-hidden="true"></div>
-			<div id="ir_scan_title" class="obis-search-title"><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_RUNNING></div>
-			<div id="ir_scan_message" class="obis-search-message" role="status" aria-live="polite"><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_WAIT></div>
+			<div id="ir_scan_title" class="obis-search-title"><TMPL_VAR NAME=VZLOGGER.IR_SCAN_RUNNING></div>
+			<div id="ir_scan_message" class="obis-search-message" role="status" aria-live="polite"><TMPL_VAR NAME=VZLOGGER.IR_SCAN_WAIT></div>
 			<ul id="ir_scan_results" class="ir-scan-results" hidden></ul>
 			<div id="ir_scan_staged_heading" class="obis-search-message" hidden></div>
 			<ul id="ir_scan_staged_results" class="ir-scan-results" hidden></ul>
 			<div id="ir_scan_countdown" class="ir-scan-countdown" aria-live="polite" hidden></div>
-			<div class="obis-search-actions"><button id="ir_scan_close" type="button" data-role="button" data-inline="true" data-mini="true" onclick="close_ir_head_scan();" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_CLOSE></button></div>
-			<span id="ir_scan_running_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_RUNNING></span>
-			<span id="ir_scan_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_WAIT></span>
-			<span id="ir_scan_result_title_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_RESULT_TITLE></span>
-			<span id="ir_scan_none_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_NONE></span>
-			<span id="ir_scan_no_new_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_NO_NEW></span>
-			<span id="ir_scan_found_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_FOUND></span>
-			<span id="ir_scan_staged_found_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_STAGED_FOUND></span>
-			<span id="ir_scan_failed_title_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_FAILED_TITLE></span>
-			<span id="ir_scan_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_FAILED></span>
-			<span id="ir_scan_timeout_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_TIMEOUT></span>
-			<span id="ir_scan_autoclose_text" hidden><TMPL_VAR NAME=T::VZLOGGER.IR_SCAN_AUTOCLOSE></span>
+			<div class="obis-search-actions"><button id="ir_scan_close" type="button" data-role="button" data-inline="true" data-mini="true" onclick="close_ir_head_scan();" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_CLOSE></button></div>
+			<span id="ir_scan_running_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_RUNNING></span>
+			<span id="ir_scan_wait_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_WAIT></span>
+			<span id="ir_scan_result_title_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_RESULT_TITLE></span>
+			<span id="ir_scan_none_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_NONE></span>
+			<span id="ir_scan_no_new_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_NO_NEW></span>
+			<span id="ir_scan_found_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_FOUND></span>
+			<span id="ir_scan_staged_found_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_STAGED_FOUND></span>
+			<span id="ir_scan_failed_title_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_FAILED_TITLE></span>
+			<span id="ir_scan_failed_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_FAILED></span>
+			<span id="ir_scan_timeout_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_TIMEOUT></span>
+			<span id="ir_scan_autoclose_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_AUTOCLOSE></span>
 		</div>
 	</div>
 	<div id="obis_search_overlay" class="obis-search-overlay" role="dialog" aria-modal="true" aria-labelledby="obis_search_title" aria-describedby="obis_search_message" aria-hidden="true" tabindex="-1">
 		<div class="obis-search-dialog">
 			<div class="obis-search-spinner" aria-hidden="true"></div>
-			<div id="obis_search_title" class="obis-search-title"><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_RUNNING></div>
-			<div id="obis_search_message" class="obis-search-message" role="status" aria-live="polite"><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_WAIT></div>
-			<div class="obis-search-actions"><button id="obis_search_cancel" type="button" data-role="button" data-inline="true" data-mini="true" data-icon="delete" onclick="cancel_obis_discovery();"><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_CANCEL></button></div>
-			<span id="obis_search_running_text" hidden><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_RUNNING></span>
-			<span id="obis_search_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_WAIT></span>
-			<span id="obis_search_cancelling_text" hidden><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_CANCELLING></span>
-			<span id="obis_search_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_FAILED></span>
-			<span id="obis_search_restore_warning_text" hidden><TMPL_VAR NAME=T::VZLOGGER.OBIS_SEARCH_RESTORE_WARNING></span>
-			<span id="obis_channel_new_text" hidden><TMPL_VAR NAME=T::VZLOGGER.OBIS_CHANNEL_NEW></span>
-			<span id="service_reason_waiting" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_REASON_WAITING></span>
-			<span id="service_reason_activation" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_REASON_ACTIVATION></span>
-			<span id="service_reason_config" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_REASON_CONFIG></span>
-			<span id="service_reason_mqtt" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_REASON_MQTT></span>
-			<span id="service_reason_busy" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_REASON_BUSY></span>
+			<div id="obis_search_title" class="obis-search-title"><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_RUNNING></div>
+			<div id="obis_search_message" class="obis-search-message" role="status" aria-live="polite"><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_WAIT></div>
+			<div class="obis-search-actions"><button id="obis_search_cancel" type="button" data-role="button" data-inline="true" data-mini="true" data-icon="delete" onclick="cancel_obis_discovery();"><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_CANCEL></button></div>
+			<span id="obis_search_running_text" hidden><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_RUNNING></span>
+			<span id="obis_search_wait_text" hidden><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_WAIT></span>
+			<span id="obis_search_cancelling_text" hidden><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_CANCELLING></span>
+			<span id="obis_search_failed_text" hidden><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_FAILED></span>
+			<span id="obis_search_restore_warning_text" hidden><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_RESTORE_WARNING></span>
+			<span id="obis_channel_new_text" hidden><TMPL_VAR NAME=VZLOGGER.OBIS_CHANNEL_NEW></span>
+			<span id="service_reason_waiting" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_REASON_WAITING></span>
+			<span id="service_reason_activation" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_REASON_ACTIVATION></span>
+			<span id="service_reason_config" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_REASON_CONFIG></span>
+			<span id="service_reason_mqtt" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_REASON_MQTT></span>
+			<span id="service_reason_busy" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_REASON_BUSY></span>
 		</div>
 	</div>
 	<div id="service_action_overlay" class="obis-search-overlay" role="dialog" aria-modal="true" aria-labelledby="service_action_title" aria-describedby="service_action_overlay_message" aria-hidden="true" tabindex="-1">
 		<div class="obis-search-dialog">
 			<div id="service_action_spinner" class="obis-search-spinner" aria-hidden="true"></div>
 			<div id="service_action_title" class="obis-search-title"></div>
-			<div id="service_action_overlay_message" class="obis-search-message" role="status" aria-live="polite"><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_WAIT></div>
+			<div id="service_action_overlay_message" class="obis-search-message" role="status" aria-live="polite"><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_WAIT></div>
 			<pre id="service_action_details" class="service-action-details" hidden></pre>
 			<div class="obis-search-actions">
-				<button id="service_action_hide" type="button" data-role="button" data-inline="true" data-mini="true" onclick="hide_service_action_overlay();"><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_HIDE></button>
-				<button id="service_action_close" type="button" data-role="button" data-inline="true" data-mini="true" onclick="close_service_action_overlay();" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_CLOSE></button>
+				<button id="service_action_hide" type="button" data-role="button" data-inline="true" data-mini="true" onclick="hide_service_action_overlay();"><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_HIDE></button>
+				<button id="service_action_close" type="button" data-role="button" data-inline="true" data-mini="true" onclick="close_service_action_overlay();" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_CLOSE></button>
 			</div>
-			<span id="service_action_start_vzlogger_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_START_VZLOGGER></span>
-			<span id="service_action_stop_vzlogger_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_STOP_VZLOGGER></span>
-			<span id="service_action_restart_vzlogger_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_RESTART_VZLOGGER></span>
-			<span id="service_action_start_bridge_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_START_BRIDGE></span>
-			<span id="service_action_stop_bridge_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_STOP_BRIDGE></span>
-			<span id="service_action_restart_bridge_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_RESTART_BRIDGE></span>
-			<span id="service_action_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_WAIT></span>
-			<span id="service_action_slow_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_SLOW></span>
-			<span id="service_action_success_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_SUCCESS></span>
-			<span id="service_action_warning_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_WARNING></span>
-			<span id="service_action_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_FAILED></span>
+			<span id="service_action_start_vzlogger_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_START_VZLOGGER></span>
+			<span id="service_action_stop_vzlogger_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_STOP_VZLOGGER></span>
+			<span id="service_action_restart_vzlogger_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_RESTART_VZLOGGER></span>
+			<span id="service_action_start_bridge_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_START_BRIDGE></span>
+			<span id="service_action_stop_bridge_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_STOP_BRIDGE></span>
+			<span id="service_action_restart_bridge_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_RESTART_BRIDGE></span>
+			<span id="service_action_wait_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_WAIT></span>
+			<span id="service_action_slow_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_SLOW></span>
+			<span id="service_action_success_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_SUCCESS></span>
+			<span id="service_action_warning_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_WARNING></span>
+			<span id="service_action_failed_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_FAILED></span>
 		</div>
 	</div>
 	<div id="configuration_action_overlay" class="obis-search-overlay" role="dialog" aria-modal="true" aria-labelledby="configuration_action_title" aria-describedby="configuration_action_message" aria-hidden="true" tabindex="-1">
@@ -798,28 +802,29 @@
 			<div id="configuration_action_elapsed" class="ir-scan-countdown" aria-live="polite" hidden></div>
 			<pre id="configuration_action_details" class="service-action-details" hidden></pre>
 			<div id="configuration_action_countdown" class="ir-scan-countdown" aria-live="polite" hidden></div>
-			<div class="obis-search-actions"><button id="configuration_action_close" type="button" data-role="button" data-inline="true" data-mini="true" onclick="close_configuration_action_overlay();" hidden><TMPL_VAR NAME=T::VZLOGGER.SERVICE_ACTION_CLOSE></button></div>
-			<span id="configuration_action_validate_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_VALIDATE></span>
-			<span id="configuration_action_debug_log_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_LOG></span>
-			<span id="configuration_action_apply_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_APPLY></span>
-			<span id="configuration_action_validate_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_VALIDATE_WAIT></span>
-			<span id="configuration_action_debug_log_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_LOG_WAIT></span>
-			<span id="configuration_action_apply_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_APPLY_WAIT></span>
-			<span id="configuration_action_success_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_SUCCESS></span>
-			<span id="configuration_action_failed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_FAILED></span>
-			<span id="configuration_action_autoclose_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_AUTOCLOSE></span>
-			<span id="configuration_action_elapsed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_ELAPSED></span>
-			<span id="configuration_action_timeout_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_TIMEOUT></span>
-			<span id="configuration_action_debug_tab_title_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_TAB_TITLE></span>
-			<span id="configuration_action_debug_tab_wait_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_TAB_WAIT></span>
-			<span id="configuration_action_debug_elapsed_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_ELAPSED></span>
-			<span id="configuration_action_debug_timeout_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_TIMEOUT></span>
-			<span id="configuration_action_debug_popup_blocked_text" hidden><TMPL_VAR NAME=T::VZLOGGER.CONFIG_ACTION_DEBUG_POPUP_BLOCKED></span>
+			<div class="obis-search-actions"><button id="configuration_action_close" type="button" data-role="button" data-inline="true" data-mini="true" onclick="close_configuration_action_overlay();" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_CLOSE></button></div>
+			<span id="configuration_action_validate_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_VALIDATE></span>
+			<span id="configuration_action_debug_log_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_DEBUG_LOG></span>
+			<span id="configuration_action_apply_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_APPLY></span>
+			<span id="configuration_action_validate_wait_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_VALIDATE_WAIT></span>
+			<span id="configuration_action_debug_log_wait_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_DEBUG_LOG_WAIT></span>
+			<span id="configuration_action_apply_wait_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_APPLY_WAIT></span>
+			<span id="configuration_action_success_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_SUCCESS></span>
+			<span id="configuration_action_failed_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_FAILED></span>
+			<span id="configuration_action_autoclose_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_AUTOCLOSE></span>
+			<span id="configuration_action_elapsed_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_ELAPSED></span>
+			<span id="configuration_action_timeout_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_TIMEOUT></span>
+			<span id="configuration_action_debug_tab_title_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_DEBUG_TAB_TITLE></span>
+			<span id="configuration_action_debug_tab_wait_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_DEBUG_TAB_WAIT></span>
+			<span id="configuration_action_debug_elapsed_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_DEBUG_ELAPSED></span>
+			<span id="configuration_action_debug_timeout_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_DEBUG_TIMEOUT></span>
+			<span id="configuration_action_debug_popup_blocked_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_DEBUG_POPUP_BLOCKED></span>
 		</div>
 	</div>
-	<span id="remove_meter_confirm_text" hidden><TMPL_VAR NAME=T::VZLOGGER.REMOVE_METER_CONFIRM></span>
+	<span id="remove_meter_confirm_text" hidden><TMPL_VAR NAME=VZLOGGER.REMOVE_METER_CONFIRM></span>
 
 	<script>
+		var ui_language = "<TMPL_VAR NAME=COMMON.LANGUAGE_CODE>";
 		var obis_job_id = "";
 		var obis_job_serial = "";
 		var obis_poll_timer = null;
@@ -838,7 +843,7 @@
 		var debug_log_tab = null;
 
 		function service_ajax_url(action) {
-			return "./index.cgi?ajax=1&ajaxaction=" + encodeURIComponent(action) + "&_=" + Date.now();
+			return "./index.cgi?ajax=1&ajaxaction=" + encodeURIComponent(action) + "&lang=" + encodeURIComponent(ui_language) + "&_=" + Date.now();
 		}
 
 		function show_service_success() {
@@ -981,6 +986,7 @@
 			var data = new FormData();
 			data.append("ajax", "1");
 			data.append("ajaxaction", "service-action");
+			data.append("lang", ui_language);
 			data.append("service_action", action);
 			if (/-vzlogger$/.test(action)) {
 				data.append("implementation", $("#implementation").val());
@@ -1132,8 +1138,8 @@
 			var elapsedText = obis_text("configuration_action_debug_elapsed_text");
 			var failedText = obis_text("configuration_action_failed_text");
 			var timeoutText = obis_text("configuration_action_debug_timeout_text");
-			var endpoint = new URL("./index.cgi?ajax=1&ajaxaction=debug-log&_=" + Date.now(), window.location.href).href;
-			var script = '(function(){var elapsed=0;var elapsedNode=document.getElementById("elapsed");var spinner=document.getElementById("spinner");var message=document.getElementById("message");var details=document.getElementById("details");var timer=setInterval(function(){elapsed++;elapsedNode.textContent=' + JSON.stringify(elapsedText) + '.replace("{seconds}",elapsed);},1000);var controller=window.AbortController?new AbortController():null;var browserTimeout=setTimeout(function(){if(controller)controller.abort();},52000);var data=new FormData();data.append("ajax","1");data.append("ajaxaction","debug-log");fetch(' + JSON.stringify(endpoint) + ',{method:"POST",body:data,credentials:"same-origin",cache:"no-store",signal:controller?controller.signal:undefined}).then(function(result){if(!result.ok)throw new Error("HTTP "+result.status);return result.json();}).then(function(response){if(!response.ok||!response.log_url)throw new Error(response.message||' + JSON.stringify(failedText) + ');try{if(window.opener)window.opener.debug_log_tab=null;}catch(ignore){}window.location.replace(response.log_url);}).catch(function(error){spinner.style.display="none";message.textContent=(error.name==="AbortError"?' + JSON.stringify(timeoutText) + ':' + JSON.stringify(failedText) + ');details.textContent=error.name==="AbortError"?"":(error.message||"");details.hidden=!details.textContent;}).then(function(){clearInterval(timer);clearTimeout(browserTimeout);});})();';
+			var endpoint = new URL("./index.cgi?ajax=1&ajaxaction=debug-log&lang=" + encodeURIComponent(ui_language) + "&_=" + Date.now(), window.location.href).href;
+			var script = '(function(){var elapsed=0;var elapsedNode=document.getElementById("elapsed");var spinner=document.getElementById("spinner");var message=document.getElementById("message");var details=document.getElementById("details");var timer=setInterval(function(){elapsed++;elapsedNode.textContent=' + JSON.stringify(elapsedText) + '.replace("{seconds}",elapsed);},1000);var controller=window.AbortController?new AbortController():null;var browserTimeout=setTimeout(function(){if(controller)controller.abort();},52000);var data=new FormData();data.append("ajax","1");data.append("ajaxaction","debug-log");data.append("lang",' + JSON.stringify(ui_language) + ');fetch(' + JSON.stringify(endpoint) + ',{method:"POST",body:data,credentials:"same-origin",cache:"no-store",signal:controller?controller.signal:undefined}).then(function(result){if(!result.ok)throw new Error("HTTP "+result.status);return result.json();}).then(function(response){if(!response.ok||!response.log_url)throw new Error(response.message||' + JSON.stringify(failedText) + ');try{if(window.opener)window.opener.debug_log_tab=null;}catch(ignore){}window.location.replace(response.log_url);}).catch(function(error){spinner.style.display="none";message.textContent=(error.name==="AbortError"?' + JSON.stringify(timeoutText) + ':' + JSON.stringify(failedText) + ');details.textContent=error.name==="AbortError"?"":(error.message||"");details.hidden=!details.textContent;}).then(function(){clearInterval(timer);clearTimeout(browserTimeout);});})();';
 			tab.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + title + '</title><style>body{margin:0;background:#f3f5f7;color:#222;font:16px/1.5 system-ui,sans-serif;display:grid;min-height:100vh;place-items:center}.box{width:min(42rem,calc(100% - 3rem));text-align:center;padding:2rem}.spinner{width:42px;height:42px;margin:0 auto 1rem;border:4px solid #ccd3da;border-top-color:#2b6dad;border-radius:50%;animation:s .8s linear infinite}pre{padding:1rem;background:#fff;border:1px solid #ccd3da;text-align:left;white-space:pre-wrap}@keyframes s{to{transform:rotate(360deg)}}</style></head><body><main class="box"><div id="spinner" class="spinner"></div><h1>' + title + '</h1><p id="message">' + wait + '</p><p id="elapsed"></p><pre id="details" hidden></pre></main><script>' + script + '<\/script></body></html>');
 			tab.document.close();
 			return tab;
@@ -1186,6 +1192,7 @@
 			var data = new FormData(form);
 			data.set("ajax", "1");
 			data.set("ajaxaction", "form-action");
+			data.set("lang", ui_language);
 			data.set("submitaction", action);
 			var controller = window.AbortController ? new AbortController() : null;
 			var request_timeout = window.setTimeout(function () {
@@ -1374,6 +1381,7 @@
 			var data = new FormData();
 			data.append("ajax", "1");
 			data.append("ajaxaction", "ir-scan");
+			data.append("lang", ui_language);
 			document.querySelectorAll(".meter-remove-marker:not(:disabled)").forEach(function (marker) {
 				data.append("staged_removed", marker.value);
 			});
@@ -1419,7 +1427,7 @@
 		}
 
 		function obis_ajax_url(action) {
-			return "./index.cgi?ajax=1&ajaxaction=" + encodeURIComponent(action) + "&_=" + Date.now();
+			return "./index.cgi?ajax=1&ajaxaction=" + encodeURIComponent(action) + "&lang=" + encodeURIComponent(ui_language) + "&_=" + Date.now();
 		}
 
 		var channel_definitions = (function () {
@@ -1435,36 +1443,36 @@
 			catch (error) { return { entries: [], rules: [] }; }
 		})();
 		var channel_labels = {
-			active: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_ACTIVE ESCAPE=JS>", details: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_DETAILS ESCAPE=JS>",
-			display: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_DISPLAY_NAME ESCAPE=JS>", storage: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_STORAGE ESCAPE=JS>", storageClear: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_STORAGE_CLEAR ESCAPE=JS>",
-			aggregation: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_AGGREGATION ESCAPE=JS>", duplicates: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_DUPLICATES ESCAPE=JS>",
-			output: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_OUTPUT ESCAPE=JS>", outputKey: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_OUTPUT_KEY ESCAPE=JS>", outputKeyFormat: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_OUTPUT_KEY_FORMAT ESCAPE=JS>",
-			originFound: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_ORIGIN_FOUND ESCAPE=JS>", originManual: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_ORIGIN_MANUAL ESCAPE=JS>",
-			identifier: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_IDENTIFIER ESCAPE=JS>", api: "API", unknown: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_UNKNOWN ESCAPE=JS>",
-			channelNumber: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_NUMBER ESCAPE=JS>", channelUnassigned: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_NUMBER_UNASSIGNED ESCAPE=JS>",
-			channelNumberHelp: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_NUMBER_HELP ESCAPE=JS>", channelUnassignedHelp: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_NUMBER_UNASSIGNED_HELP ESCAPE=JS>",
-			remove: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_REMOVE ESCAPE=JS>", removeHelp: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_REMOVE_HELP ESCAPE=JS>", removeConfirm: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_REMOVE_CONFIRM ESCAPE=JS>",
-			manualPrompt: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_MANUAL_PROMPT ESCAPE=JS>", storageOms: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_STORAGE_OMS ESCAPE=JS>",
-			apiOptions: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_OPTIONS ESCAPE=JS>", registrationName: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_MSG_NAME ESCAPE=JS>"
+			active: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_ACTIVE ESCAPE=JS>", details: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_DETAILS ESCAPE=JS>",
+			display: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_DISPLAY_NAME ESCAPE=JS>", storage: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_STORAGE ESCAPE=JS>", storageClear: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_STORAGE_CLEAR ESCAPE=JS>",
+			aggregation: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_AGGREGATION ESCAPE=JS>", duplicates: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_DUPLICATES ESCAPE=JS>",
+			output: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_OUTPUT ESCAPE=JS>", outputKey: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_OUTPUT_KEY ESCAPE=JS>", outputKeyFormat: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_OUTPUT_KEY_FORMAT ESCAPE=JS>",
+			originFound: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_ORIGIN_FOUND ESCAPE=JS>", originManual: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_ORIGIN_MANUAL ESCAPE=JS>",
+			identifier: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_IDENTIFIER ESCAPE=JS>", api: "API", unknown: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_UNKNOWN ESCAPE=JS>",
+			channelNumber: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_NUMBER ESCAPE=JS>", channelUnassigned: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_NUMBER_UNASSIGNED ESCAPE=JS>",
+			channelNumberHelp: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_NUMBER_HELP ESCAPE=JS>", channelUnassignedHelp: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_NUMBER_UNASSIGNED_HELP ESCAPE=JS>",
+			remove: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_REMOVE ESCAPE=JS>", removeHelp: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_REMOVE_HELP ESCAPE=JS>", removeConfirm: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_REMOVE_CONFIRM ESCAPE=JS>",
+			manualPrompt: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_MANUAL_PROMPT ESCAPE=JS>", storageOms: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_STORAGE_OMS ESCAPE=JS>",
+			apiOptions: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_OPTIONS ESCAPE=JS>", registrationName: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_MSG_NAME ESCAPE=JS>"
 		};
 		var channel_help = {
-			identifier: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_IDENTIFIER_HELP ESCAPE=JS>", storage: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_STORAGE_HELP ESCAPE=JS>",
-			display: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_DISPLAY_NAME_HELP ESCAPE=JS>", api: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_HELP ESCAPE=JS>",
-			aggregation: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_AGGREGATION_HELP ESCAPE=JS>", duplicates: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_DUPLICATES_HELP ESCAPE=JS>",
-			output: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_OUTPUT_HELP ESCAPE=JS>", outputKey: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_OUTPUT_KEY_HELP ESCAPE=JS>"
+			identifier: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_IDENTIFIER_HELP ESCAPE=JS>", storage: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_STORAGE_HELP ESCAPE=JS>",
+			display: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_DISPLAY_NAME_HELP ESCAPE=JS>", api: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_HELP ESCAPE=JS>",
+			aggregation: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_AGGREGATION_HELP ESCAPE=JS>", duplicates: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_DUPLICATES_HELP ESCAPE=JS>",
+			output: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_OUTPUT_HELP ESCAPE=JS>", outputKey: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_OUTPUT_KEY_HELP ESCAPE=JS>"
 		};
 		var api_field_help = {
-			middleware: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_MIDDLEWARE_HELP ESCAPE=JS>", timeout: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_TIMEOUT_HELP ESCAPE=JS>",
-			version: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_VERSION_HELP ESCAPE=JS>", host: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_HOST_HELP ESCAPE=JS>",
-			database: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_DATABASE_HELP ESCAPE=JS>", organization: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_ORGANIZATION_HELP ESCAPE=JS>",
-			measurement_name: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_MEASUREMENT_HELP ESCAPE=JS>", tags: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_TAGS_HELP ESCAPE=JS>",
-			token: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_TOKEN_HELP ESCAPE=JS>", username: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_USERNAME_HELP ESCAPE=JS>",
-			password: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_PASSWORD_HELP ESCAPE=JS>", max_batch_inserts: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_BATCH_HELP ESCAPE=JS>",
-			max_buffer_size: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_BUFFER_HELP ESCAPE=JS>", send_uuid: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_SEND_UUID_HELP ESCAPE=JS>",
-			ssl_verifypeer: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_TLS_HELP ESCAPE=JS>", secretKey: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_SECRET_HELP ESCAPE=JS>",
-			device: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_DEVICE_HELP ESCAPE=JS>", type: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_TYPE_HELP ESCAPE=JS>",
-			interval: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_INTERVAL_HELP ESCAPE=JS>", scaler: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_SCALER_HELP ESCAPE=JS>",
-			name: "<TMPL_VAR NAME=T::VZLOGGER.CHANNEL_API_REGISTRATION_NAME_HELP ESCAPE=JS>"
+			middleware: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_MIDDLEWARE_HELP ESCAPE=JS>", timeout: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_TIMEOUT_HELP ESCAPE=JS>",
+			version: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_VERSION_HELP ESCAPE=JS>", host: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_HOST_HELP ESCAPE=JS>",
+			database: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_DATABASE_HELP ESCAPE=JS>", organization: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_ORGANIZATION_HELP ESCAPE=JS>",
+			measurement_name: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_MEASUREMENT_HELP ESCAPE=JS>", tags: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_TAGS_HELP ESCAPE=JS>",
+			token: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_TOKEN_HELP ESCAPE=JS>", username: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_USERNAME_HELP ESCAPE=JS>",
+			password: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_PASSWORD_HELP ESCAPE=JS>", max_batch_inserts: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_BATCH_HELP ESCAPE=JS>",
+			max_buffer_size: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_BUFFER_HELP ESCAPE=JS>", send_uuid: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_SEND_UUID_HELP ESCAPE=JS>",
+			ssl_verifypeer: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_TLS_HELP ESCAPE=JS>", secretKey: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_SECRET_HELP ESCAPE=JS>",
+			device: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_DEVICE_HELP ESCAPE=JS>", type: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_TYPE_HELP ESCAPE=JS>",
+			interval: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_INTERVAL_HELP ESCAPE=JS>", scaler: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_SCALER_HELP ESCAPE=JS>",
+			name: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_REGISTRATION_NAME_HELP ESCAPE=JS>"
 		};
 
 		function html_text(value) {
@@ -1574,6 +1582,7 @@
 			var data = new FormData(form);
 			data.append("ajax", "1");
 			data.append("ajaxaction", "obis-start");
+			data.append("lang", ui_language);
 			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
 				.then(function (response) { return response.json(); })
 				.then(function (status) {
@@ -1644,6 +1653,7 @@
 			var data = new FormData();
 			data.append("ajax", "1");
 			data.append("ajaxaction", "obis-cancel");
+			data.append("lang", ui_language);
 			data.append("job_id", obis_job_id);
 			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
 				.then(function (response) { return response.json(); })
@@ -1844,6 +1854,7 @@
 			var data = new FormData();
 			data.append("ajax", "1");
 			data.append("ajaxaction", "expert-mode");
+			data.append("lang", ui_language);
 			data.append("enabled", value == "1" ? "1" : "0");
 			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
 				.then(function (response) { return response.json(); })
@@ -1892,6 +1903,7 @@
 			var data = new FormData();
 			data.append("ajax", "1");
 			data.append("ajaxaction", "expert-reset");
+			data.append("lang", ui_language);
 			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
 				.then(function (response) { return response.json(); })
 				.then(function (response) {

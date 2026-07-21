@@ -4,7 +4,10 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
+- Consolidate German and English UI translations into the native LoxBerry `templates/lang/language_<language>.ini` resources, separate shared, vzLogger, and Legacy phrases, remove the duplicate legacy language files and loaders, and normalize branding, technical terminology, grammar, and Legacy wording in both languages.
+- Localize the standalone vzLogger live-data and configuration pages, browser-side action and validation messages, Legacy choice labels, and generic meter-template names while deliberately keeping established technical terms, CLI output, logs, machine identifiers, and external diagnostics language-independent.
 - Load shared validation/runtime modules from LoxBerry's installed plugin `bin` directory when opening the Legacy page, avoid rewriting `smartmeter.cfg` on read-only page loads, and normalize executable test-device uploads to LF so Apache can run CGI shebangs deployed from Windows.
+- Keep the Expert Mode label and switch within the viewport by stacking the control below the configuration heading on mobile screens.
 - Hide the Expert Mode reset-from-current-config action during the initial page render whenever Expert Mode is disabled, including after jQuery Mobile enhances the button markup.
 - Preserve `loxberry` ownership for private generated configuration artifacts when install/upgrade hooks run Apply as root, and repair root-owned artifacts created by earlier lifecycle runs.
 - Make vzLogger Save/Apply transactional: serialize configuration and service actions, generate and validate in a protected staging directory, roll back incomplete promotions, and preserve the last valid runtime files on failure.

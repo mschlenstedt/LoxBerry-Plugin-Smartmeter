@@ -38,8 +38,8 @@ use strict;
 umask(0027);
 use lib $lbpbindir;
 use lib "$FindBin::Bin/../../bin";
-use SmartMeterVZLoggerChannels qw(parse_obis compose_obis normalize_obis default_output_key stable_uuid read_json write_json_atomic load_catalog lookup_obis new_document migrate_legacy_meter validate_document);
-use SmartMeterVZLoggerExpert qw(read_text write_text_atomic validate_expert_text format_expert_validation build_expert_mapping update_expert_log_settings expert_configs_equal);
+use SmartMeterVZLoggerChannels qw(parse_obis compose_obis normalize_obis default_output_key stable_uuid read_json write_json_atomic load_catalog lookup_obis new_document migrate_legacy_meter validate_document localize_validation_errors);
+use SmartMeterVZLoggerExpert qw(read_text write_text_atomic validate_expert_text format_expert_validation localize_expert_validation build_expert_mapping update_expert_log_settings expert_configs_equal);
 use SmartMeterVZLoggerRuntime qw(acquire_config_lock promote_files_atomic);
 use SmartMeterVZLoggerConfig qw(protocol_for_meter normalized_meter_mode serial_mode);
 
@@ -66,6 +66,26 @@ my $initial_request = scalar(keys %{$q}) == 0;
 
 # Language Phrases
 my %L;
+
+require LoxBerry::Web;
+$template = HTML::Template->new(
+	filename => "$lbptemplatedir/settings.html",
+	global_vars => 1,
+	loop_context_vars => 1,
+	die_on_bad_params => 0,
+);
+%L = LoxBerry::System::readlanguage($template, "language.ini");
+
+sub ui_text
+{
+	my ($text, %values) = @_;
+	$text = "" if (!defined($text));
+	foreach my $name (keys %values) {
+		my $value = defined($values{$name}) ? $values{$name} : "";
+		$text =~ s/\{\Q$name\E\}/$value/g;
+	}
+	return $text;
+}
 
 # Globals 
 #my %pids;
@@ -109,35 +129,35 @@ if( $q->{ajax} ) {
 			load_service_ajax_config();
 			$response = service_status_response();
 		} elsif ($action eq "service-action") {
-			die "Service actions require POST." if (($ENV{REQUEST_METHOD} || "") ne "POST");
+			die $L{'VZLOGGER.UI_SERVICE_ACTION_POST'} if (($ENV{REQUEST_METHOD} || "") ne "POST");
 			load_service_ajax_config();
 			$response = run_service_ajax_action($q->{service_action});
 		} elsif ($action eq "form-action") {
-			die "Configuration actions require POST." if (($ENV{REQUEST_METHOD} || "") ne "POST");
+			die $L{'VZLOGGER.UI_CONFIG_ACTION_POST'} if (($ENV{REQUEST_METHOD} || "") ne "POST");
 			$response = run_form_ajax_action($q->{submitaction});
 		} elsif ($action eq "debug-log") {
-			die "Debug-log creation requires POST." if (($ENV{REQUEST_METHOD} || "") ne "POST");
+			die $L{'VZLOGGER.UI_DEBUG_LOG_POST'} if (($ENV{REQUEST_METHOD} || "") ne "POST");
 			$response = run_debug_log_ajax();
 		} elsif ($action eq "ir-scan") {
-			die "I/R head discovery requires POST." if (($ENV{REQUEST_METHOD} || "") ne "POST");
+			die $L{'VZLOGGER.UI_IR_SCAN_POST'} if (($ENV{REQUEST_METHOD} || "") ne "POST");
 			load_service_ajax_config();
 			$response = scan_ir_heads_ajax();
 		} elsif ($action eq "expert-mode") {
-			die "Expert mode changes require POST." if (($ENV{REQUEST_METHOD} || "") ne "POST");
+			die $L{'VZLOGGER.UI_EXPERT_MODE_POST'} if (($ENV{REQUEST_METHOD} || "") ne "POST");
 			load_service_ajax_config();
 			$response = set_expert_mode_ajax($q->{enabled});
 		} elsif ($action eq "expert-reset") {
-			die "Expert configuration reset requires POST." if (($ENV{REQUEST_METHOD} || "") ne "POST");
+			die $L{'VZLOGGER.UI_EXPERT_RESET_POST'} if (($ENV{REQUEST_METHOD} || "") ne "POST");
 			load_service_ajax_config();
 			$response = reset_expert_configuration_ajax();
 		} else {
-			$response->{message} = "Unknown AJAX action.";
+			$response->{message} = $L{'VZLOGGER.UI_UNKNOWN_AJAX'};
 		}
 	};
 	if ($@) {
 		my $error = $@;
 		$error =~ s/[\r\n]+/ /g;
-		$response = { ok => JSON::PP::false, state => "failed", message => $error || "AJAX request failed." };
+		$response = { ok => JSON::PP::false, state => "failed", message => $error || $L{'VZLOGGER.UI_AJAX_FAILED'} };
 	}
 	ajax_header();
 	print JSON::PP->new->utf8->canonical->encode($response);
@@ -149,19 +169,7 @@ if( $q->{ajax} ) {
 
 } else {
 	
-	require LoxBerry::Web;
-	
-	# Init Template
-	$template = HTML::Template->new(
-	    filename => "$lbptemplatedir/settings.html",
-	    global_vars => 1,
-	    loop_context_vars => 1,
-	    die_on_bad_params => 0,
-	);
-	%L = LoxBerry::System::readlanguage($template, "language.ini");
-	&load_plugin_language($template);
-	
-        # Default is the active implementation. Explicit tab clicks pass form=...
+	# Default is the active implementation. Explicit tab clicks pass form=...
 	$q->{form} = "vzlogger" if !$q->{form};
 
 	if ($q->{form} eq "vzlogger") { &form_vzlogger() }
@@ -324,13 +332,14 @@ sub form_vzlogger
 	$template->param("VZLOGGER_EXPERT_SOURCE_PRESENT" => -e expert_config_file() ? 1 : 0);
 	add_service_template_params();
 	$template->param("VZLOGGER_CONFIG" => "$lbpconfigdir/vzlogger.conf");
-	$template->param("VZLOGGER_CONFIG_URL" => "./vzlogger_config.cgi");
+	my $ui_language = $L{'COMMON.LANGUAGE_CODE'} || "en";
+	$template->param("VZLOGGER_CONFIG_URL" => "./vzlogger_config.cgi?lang=$ui_language");
 	my $visible_config_exists = $expert_mode ? -e expert_config_file() : -e "$lbpconfigdir/vzlogger.conf";
 	$template->param("VZLOGGER_CONFIG_DISABLED" => ($visible_config_exists ? "" : "ui-disabled"));
 	my $runtime_config = read_json("$lbpconfigdir/vzlogger.conf") || {};
 	$template->param("EXPERT_MQTT_ENABLED" => (ref($runtime_config->{mqtt}) eq "HASH" && $runtime_config->{mqtt}->{enabled}) ? 1 : 0);
 	$template->param("VZLOGGER_LIVEURL" => "http://$ENV{HTTP_HOST}:$local_port/");
-	$template->param("VZLOGGER_RENDERED_URL" => "./vzlogger_live.cgi");
+	$template->param("VZLOGGER_RENDERED_URL" => "./vzlogger_live.cgi?lang=$ui_language");
 	$template->param("METER_TEMPLATES_JSON" => JSON::PP->new->utf8->canonical->encode(load_meter_templates()));
 	$template->param("CHANNEL_DEFINITIONS_JSON" => JSON::PP->new->utf8->canonical->encode($channel_document || new_document()));
 	$template->param("CHANNEL_INDICES_JSON" => JSON::PP->new->utf8->canonical->encode(runtime_channel_indices()));
@@ -448,7 +457,7 @@ sub service_summary
 	my ($service) = @_;
 	my $state = service_state($service);
 	my $pid = service_pid($service);
-	my $installed = service_installed($service) ? "installed" : "not installed";
+	my $installed = service_installed($service) ? $L{'VZLOGGER.UI_INSTALLED'} : $L{'VZLOGGER.UI_NOT_INSTALLED'};
 	return "$state | PID: " . ($pid || "-") . " | Service: $service | $installed";
 }
 
@@ -537,7 +546,7 @@ sub service_status_data
 		pid => $pid,
 		installed => $installed ? JSON::PP::true : JSON::PP::false,
 		running => $running ? JSON::PP::true : JSON::PP::false,
-		status_text => "$state | PID: " . ($pid || "-") . " | Service: $service | " . ($installed ? "installed" : "not installed"),
+		status_text => "$state | PID: " . ($pid || "-") . " | Service: $service | " . ($installed ? $L{'VZLOGGER.UI_INSTALLED'} : $L{'VZLOGGER.UI_NOT_INSTALLED'}),
 		status_class => service_status_class($state, $expected_active),
 		config_valid => $startable ? JSON::PP::true : JSON::PP::false,
 		can_start => $startable ? JSON::PP::true : JSON::PP::false,
@@ -553,25 +562,25 @@ sub run_service_ajax_action
 		start-vzlogger stop-vzlogger restart-vzlogger
 		start-bridge stop-bridge restart-bridge
 	);
-	die "Unknown service action." if (!$allowed{$action || ""});
+	die $L{'VZLOGGER.UI_UNKNOWN_SERVICE_ACTION'} if (!$allowed{$action || ""});
 	my $starting = $action =~ /\A(?:start|restart)-/;
 	my $bridge_action = $action =~ /-bridge\z/;
 	my $requested_implementation = clean_config_value($q->{implementation}, qr/\A(?:none|vzlogger)\z/, "");
 	my $config = generated_config_status();
 	my $expert = expert_draft_status();
-	die "The saved expert configuration is invalid. Correct it before starting or restarting a service."
+	die $L{'VZLOGGER.UI_EXPERT_INVALID_START'}
 		if ($starting && expert_mode_enabled() && !$expert->{valid});
-	die "The saved expert configuration has not been applied. Use Save and apply first."
+	die $L{'VZLOGGER.UI_EXPERT_NOT_APPLIED'}
 		if ($starting && expert_mode_enabled() && !expert_configuration_applied());
 	if ($action =~ /-vzlogger\z/) {
-		die "Enable vzLogger before starting the service." if ($starting && $requested_implementation ne "vzlogger");
+		die $L{'VZLOGGER.UI_ENABLE_VZLOGGER'} if ($starting && $requested_implementation ne "vzlogger");
 	} else {
 		my $requested_read = clean_config_value($q->{read}, qr/\A[01]\z/, "");
-		die "Enable vzLogger and the SmartMeter bridge before starting the service." if ($starting && ($requested_implementation ne "vzlogger" || $requested_read ne "1"));
+		die $L{'VZLOGGER.UI_ENABLE_BRIDGE'} if ($starting && ($requested_implementation ne "vzlogger" || $requested_read ne "1"));
 	}
-	die "The generated vzLogger configuration is missing or invalid. Use Save and apply first." if ($starting && !$config->{valid});
-	die "Enable and apply MQTT before starting the SmartMeter bridge." if ($starting && $bridge_action && !effective_vzlogger_mqtt_enabled());
-	die "MQTT is disabled in the generated vzLogger configuration. Use Save and apply first." if ($starting && $bridge_action && !$config->{mqtt_enabled});
+	die $L{'VZLOGGER.UI_GENERATED_CONFIG_INVALID'} if ($starting && !$config->{valid});
+	die $L{'VZLOGGER.UI_ENABLE_MQTT_BRIDGE'} if ($starting && $bridge_action && !effective_vzlogger_mqtt_enabled());
+	die $L{'VZLOGGER.UI_MQTT_DISABLED_CONFIG'} if ($starting && $bridge_action && !$config->{mqtt_enabled});
 
 	save_service_log_settings($action);
 
@@ -582,7 +591,7 @@ sub run_service_ajax_action
 	my $running = $response->{services}->{$service_name}->{running} ? 1 : 0;
 	if ($exit == 0 && $running != $expected_running) {
 		$exit = 1;
-		$output .= "\nService action completed without reaching the requested final state.\n";
+		$output .= "\n" . $L{'VZLOGGER.UI_FINAL_STATE_FAILED'} . "\n";
 		write_control_log("$action-state-check", "Requested running=$expected_running, observed running=$running.\n");
 	}
 	my $warning = $output =~ /\bwarning\b/i ? 1 : 0;
@@ -599,8 +608,8 @@ sub run_form_ajax_action
 {
 	my ($action) = @_;
 	my %allowed = map { $_ => 1 } qw(validate apply);
-	die "Unknown configuration action." if (!$allowed{$action || ""});
-	die "The required timeout command is not available; the configuration action was not started." if (!command_exists("timeout"));
+	die $L{'VZLOGGER.UI_UNKNOWN_CONFIG_ACTION'} if (!$allowed{$action || ""});
+	die $L{'VZLOGGER.UI_TIMEOUT_COMMAND_MISSING'} if (!command_exists("timeout"));
 	local $configuration_action_deadline = time + 60;
 	local $configuration_action_timed_out = 0;
 	load_service_ajax_config();
@@ -628,7 +637,7 @@ sub run_form_ajax_action
 		$response->{ok} = ($status->{valid} && $exit == 0) ? JSON::PP::true : JSON::PP::false;
 		$response->{action} = "apply";
 		$response->{message} = $output;
-		$response->{config_url} = "./vzlogger_config.cgi";
+		$response->{config_url} = "./vzlogger_config.cgi?lang=" . ($L{'COMMON.LANGUAGE_CODE'} || "en");
 		$response->{channel_indices} = runtime_channel_indices();
 		write_apply_log($output, \$output);
 		return $response;
@@ -656,26 +665,26 @@ sub run_form_ajax_action
 	my $bridge_expected = $vzlogger_expected && $response->{applied}->{mqtt_enabled} && $response->{applied}->{bridge_enabled};
 	if ($vzlogger_expected && !$response->{services}->{vzlogger}->{running}) {
 		$operation_ok = 0;
-		$output .= "\nApply did not leave the vzLogger service running.\n";
+		$output .= "\n" . $L{'VZLOGGER.UI_APPLY_VZLOGGER_NOT_RUNNING'} . "\n";
 	}
 	if ($bridge_expected && !$response->{services}->{bridge}->{running}) {
 		$operation_ok = 0;
-		$output .= "\nApply did not leave the SmartMeter bridge running.\n";
+		$output .= "\n" . $L{'VZLOGGER.UI_APPLY_BRIDGE_NOT_RUNNING'} . "\n";
 	}
 	if (!$vzlogger_expected && $response->{services}->{vzlogger}->{running}) {
 		$operation_ok = 0;
-		$output .= "\nApply did not stop the vzLogger service.\n";
+		$output .= "\n" . $L{'VZLOGGER.UI_APPLY_VZLOGGER_NOT_STOPPED'} . "\n";
 	}
 	if (!$bridge_expected && $response->{services}->{bridge}->{running}) {
 		$operation_ok = 0;
-		$output .= "\nApply did not stop the SmartMeter bridge.\n";
+		$output .= "\n" . $L{'VZLOGGER.UI_APPLY_BRIDGE_NOT_STOPPED'} . "\n";
 	}
 	write_apply_log($output, \$output);
 	$response->{ok} = $operation_ok ? JSON::PP::true : JSON::PP::false;
 	$response->{action} = $action;
 	$response->{message} = $output;
 	$response->{timed_out} = $configuration_action_timed_out ? JSON::PP::true : JSON::PP::false;
-	$response->{config_url} = "./vzlogger_config.cgi";
+	$response->{config_url} = "./vzlogger_config.cgi?lang=" . ($L{'COMMON.LANGUAGE_CODE'} || "en");
 	$response->{channel_indices} = runtime_channel_indices();
 	return $response;
 }
@@ -685,16 +694,16 @@ sub run_draft_validation_ajax
 	my $live_config_dir = $lbpconfigdir;
 	my $draft_dir = tempdir("smartmeter-vzlogger-validation-XXXXXX", TMPDIR => 1, CLEANUP => 1);
 	my $draft_config = "$draft_dir/smartmeter.cfg";
-	copy("$live_config_dir/smartmeter.cfg", $draft_config) or die "Could not prepare temporary configuration: $!";
+	copy("$live_config_dir/smartmeter.cfg", $draft_config) or die ui_text($L{'VZLOGGER.UI_DRAFT_PREPARE_FAILED'}, error => $!);
 	foreach my $source (glob("$live_config_dir/vzlogger_meter_*.jsonc")) {
 		my ($name) = $source =~ m{([^/\\]+)\z};
-		copy($source, "$draft_dir/$name") or die "Could not prepare temporary custom meter configuration: $!";
+		copy($source, "$draft_dir/$name") or die ui_text($L{'VZLOGGER.UI_DRAFT_CUSTOM_PREPARE_FAILED'}, error => $!);
 	}
 
 	my ($output, $exit);
 	{
 		local $lbpconfigdir = $draft_dir;
-		$plugin_cfg = Config::Simple->new($draft_config) or die "Could not read temporary configuration";
+		$plugin_cfg = Config::Simple->new($draft_config) or die $L{'VZLOGGER.UI_DRAFT_READ_FAILED'};
 		ensure_vzlogger_defaults();
 		my @heads = detect_heads();
 		ensure_head_defaults(@heads);
@@ -743,12 +752,12 @@ sub run_debug_log_ajax
 	return {
 		ok => JSON::PP::false,
 		state => "failed",
-		message => "The required timeout command is not available; debug-log creation was not started.",
+		message => $L{'VZLOGGER.UI_DEBUG_TIMEOUT_COMMAND_MISSING'},
 	} if (!command_exists("timeout"));
 	$output = `timeout --signal=TERM --kill-after=5 45 "$^X" "$script" debug-log 2>&1`;
 	$exit = $? >> 8;
-	$output .= "\nDebug-log creation exceeded the 45-second limit and was stopped.\n" if ($exit == 124 || $exit == 137);
-	$output ||= "No output.";
+	$output .= "\n" . $L{'VZLOGGER.UI_DEBUG_TIMEOUT'} . "\n" if ($exit == 124 || $exit == 137);
+	$output ||= $L{'VZLOGGER.UI_NO_OUTPUT'};
 	my $response = {
 		ok => $exit == 0 ? JSON::PP::true : JSON::PP::false,
 		state => $exit == 0 ? "completed" : "failed",
@@ -769,16 +778,16 @@ sub run_perl_file_result
 	my $remaining = defined($configuration_action_deadline) ? int($configuration_action_deadline - time) : 60;
 	if ($remaining <= 0) {
 		$configuration_action_timed_out = 1;
-		return ("Configuration action exceeded the 60-second limit and was stopped.\n", 124);
+		return ($L{'VZLOGGER.UI_CONFIG_TIMEOUT'} . "\n", 124);
 	}
 	my $argument_text = join(" ", map { my $value = $_; $value =~ s/"/\\"/g; qq{"$value"} } @arguments);
 	my $output = `timeout --signal=TERM --kill-after=5s ${remaining}s "$^X" "$script" $argument_text 2>&1`;
 	my $exit = $? >> 8;
 	if ($exit == 124 || $exit == 137) {
 		$configuration_action_timed_out = 1;
-		$output .= "\nConfiguration action exceeded the 60-second limit and was stopped.\n";
+		$output .= "\n" . $L{'VZLOGGER.UI_CONFIG_TIMEOUT'} . "\n";
 	}
-	$output ||= "No output.";
+	$output ||= $L{'VZLOGGER.UI_NO_OUTPUT'};
 	return ($output, $exit);
 }
 
@@ -787,19 +796,19 @@ sub save_service_log_settings
 	my ($action) = @_;
 	my $starting = $action =~ /\A(?:start|restart)-/;
 	if ($action =~ /-vzlogger\z/) {
-		die "Invalid vzLogger debug setting." if (!defined($q->{vzlogger_service_debug}) || $q->{vzlogger_service_debug} !~ /\A[01]\z/);
-		die "Invalid vzLogger log level." if (!defined($q->{vzlogger_loglevel}) || $q->{vzlogger_loglevel} !~ /\A(?:0|1|3|5|10|15)\z/);
+		die $L{'VZLOGGER.UI_INVALID_DEBUG_SETTING'} if (!defined($q->{vzlogger_service_debug}) || $q->{vzlogger_service_debug} !~ /\A[01]\z/);
+		die $L{'VZLOGGER.UI_INVALID_LOG_LEVEL'} if (!defined($q->{vzlogger_loglevel}) || $q->{vzlogger_loglevel} !~ /\A(?:0|1|3|5|10|15)\z/);
 		if ($starting) {
-			die "Invalid vzLogger activation setting." if (!defined($q->{implementation}) || $q->{implementation} ne "vzlogger");
+			die $L{'VZLOGGER.UI_INVALID_ACTIVATION'} if (!defined($q->{implementation}) || $q->{implementation} ne "vzlogger");
 			$plugin_cfg->param("MAIN.IMPLEMENTATION", $q->{implementation});
 		}
 		$plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG", $q->{vzlogger_service_debug});
 		$plugin_cfg->param("VZLOGGER.LOGLEVEL", $q->{vzlogger_loglevel});
 	} else {
-		die "Invalid bridge debug setting." if (!defined($q->{vzlogger_debug}) || $q->{vzlogger_debug} !~ /\A[01]\z/);
+		die $L{'VZLOGGER.UI_INVALID_BRIDGE_DEBUG'} if (!defined($q->{vzlogger_debug}) || $q->{vzlogger_debug} !~ /\A[01]\z/);
 		if ($starting) {
-			die "Invalid vzLogger activation setting." if (!defined($q->{implementation}) || $q->{implementation} ne "vzlogger");
-			die "Invalid bridge activation setting." if (!defined($q->{read}) || $q->{read} ne "1");
+			die $L{'VZLOGGER.UI_INVALID_ACTIVATION'} if (!defined($q->{implementation}) || $q->{implementation} ne "vzlogger");
+			die $L{'VZLOGGER.UI_INVALID_BRIDGE_ACTIVATION'} if (!defined($q->{read}) || $q->{read} ne "1");
 			$plugin_cfg->param("MAIN.IMPLEMENTATION", $q->{implementation});
 			$plugin_cfg->param("MAIN.READ", $q->{read});
 		}
@@ -838,24 +847,6 @@ sub command_exists
 	return $path ? 1 : 0;
 }
 
-sub load_plugin_language
-{
-	my ($template) = @_;
-	my $lang = "en";
-	my $general_cfg = Config::Simple->new("$lbhomedir/config/system/general.cfg");
-	$lang = $general_cfg->param("BASE.LANG") if ($general_cfg && $general_cfg->param("BASE.LANG"));
-	$lang = $q->{lang} if ($q->{lang});
-	$lang =~ tr/a-z//cd;
-	$lang = substr($lang, 0, 2) || "en";
-
-	my %phrases;
-	Config::Simple->import_from("$lbptemplatedir/en/language.txt", \%phrases) if (-e "$lbptemplatedir/en/language.txt");
-	Config::Simple->import_from("$lbptemplatedir/$lang/language.txt", \%phrases) if ($lang ne "en" && -e "$lbptemplatedir/$lang/language.txt");
-	foreach my $name (keys %phrases) {
-		$template->param("T::$name" => $phrases{$name});
-	}
-}
-
 sub load_meter_templates
 {
 	return $meter_templates_cache if ($meter_templates_cache);
@@ -876,6 +867,8 @@ sub load_meter_templates
 		foreach my $field (qw(initial_baudrate read_baudrate read_timeout)) {
 			die "Invalid $field in meter template '$id'" if (!defined($entry->{$field}) || $entry->{$field} !~ /\A\d+\z/);
 		}
+		my $language = $L{'COMMON.LANGUAGE_CODE'} || "en";
+		$entry->{label} = $entry->{"label_$language"} || $entry->{label_en} || $entry->{label};
 	}
 	$meter_templates_cache = $templates;
 	return $meter_templates_cache;
@@ -940,7 +933,7 @@ sub expert_draft_status
 	return {
 		present => defined($text) ? 1 : 0,
 		valid => $result->{valid} ? 1 : 0,
-		message => format_expert_validation($result),
+		message => format_expert_validation(localize_expert_validation($result, \%L)),
 		result => $result,
 	};
 }
@@ -948,14 +941,14 @@ sub expert_draft_status
 sub set_expert_mode_ajax
 {
 	my ($enabled) = @_;
-	die "Invalid expert mode value." if (!defined($enabled) || $enabled !~ /\A[01]\z/);
+	die $L{'VZLOGGER.UI_INVALID_EXPERT_MODE'} if (!defined($enabled) || $enabled !~ /\A[01]\z/);
 	my $was_enabled = expert_mode_enabled();
 	if ($enabled eq "1" && !$was_enabled && !-e expert_config_file()) {
 		my $runtime_file = "$lbpconfigdir/vzlogger.conf";
 		my $runtime = read_text($runtime_file);
-		die "Generate a vzLogger configuration before enabling Expert Mode." if (!defined($runtime));
-		die "The current vzLogger configuration is too large for the Expert Mode editor." if (length($runtime) > 1024 * 1024);
-		die "Could not initialize the expert configuration." if (!write_text_atomic(expert_config_file(), $runtime));
+		die $L{'VZLOGGER.UI_EXPERT_REQUIRES_CONFIG'} if (!defined($runtime));
+		die $L{'VZLOGGER.UI_EXPERT_TOO_LARGE'} if (length($runtime) > 1024 * 1024);
+		die $L{'VZLOGGER.UI_EXPERT_INIT_FAILED'} if (!write_text_atomic(expert_config_file(), $runtime));
 	}
 	$plugin_cfg->param("VZLOGGER.EXPERTMODE", $enabled);
 	$plugin_cfg->save;
@@ -970,18 +963,18 @@ sub set_expert_mode_ajax
 		expert_applied => expert_configuration_applied() ? JSON::PP::true : JSON::PP::false,
 		mqtt_enabled => $mqtt_enabled ? JSON::PP::true : JSON::PP::false,
 		validation_message => $status->{message},
-		message => $enabled eq "1" ? "Expert Mode enabled." : "Expert Mode disabled. The runtime configuration and saved expert draft were retained.",
+		message => $enabled eq "1" ? $L{'VZLOGGER.UI_EXPERT_ENABLED'} : $L{'VZLOGGER.UI_EXPERT_DISABLED'},
 	};
 }
 
 sub reset_expert_configuration_ajax
 {
-	die "Expert Mode is not active." if (!expert_mode_enabled());
+	die $L{'VZLOGGER.UI_EXPERT_INACTIVE'} if (!expert_mode_enabled());
 	my $runtime_file = "$lbpconfigdir/vzlogger.conf";
 	my $runtime = read_text($runtime_file);
-	die "The current vzLogger configuration does not exist." if (!defined($runtime));
-	die "The current vzLogger configuration is too large for the Expert Mode editor." if (length($runtime) > 1024 * 1024);
-	die "Could not reset the expert configuration." if (!write_text_atomic(expert_config_file(), $runtime));
+	die $L{'VZLOGGER.UI_RUNTIME_CONFIG_MISSING'} if (!defined($runtime));
+	die $L{'VZLOGGER.UI_EXPERT_TOO_LARGE'} if (length($runtime) > 1024 * 1024);
+	die $L{'VZLOGGER.UI_EXPERT_RESET_FAILED'} if (!write_text_atomic(expert_config_file(), $runtime));
 	my $status = expert_draft_status();
 	my $expert_config = $status->{result}->{config};
 	my $mqtt_enabled = ref($expert_config) eq "HASH" &&
@@ -993,7 +986,7 @@ sub reset_expert_configuration_ajax
 		expert_applied => expert_configuration_applied() ? JSON::PP::true : JSON::PP::false,
 		mqtt_enabled => $mqtt_enabled ? JSON::PP::true : JSON::PP::false,
 		validation_message => $status->{message},
-		message => "Expert configuration initialized from the current vzlogger.conf.",
+		message => $L{'VZLOGGER.UI_EXPERT_RESET_DONE'},
 	};
 }
 
@@ -1014,7 +1007,7 @@ sub promote_expert_configuration
 	my $existing = read_json($mapping_file) || {};
 	my ($mapping, $mapping_warnings) = build_expert_mapping($status->{result}->{config}, $existing);
 	push @{$status->{result}->{warnings}}, @$mapping_warnings;
-	$status->{message} = format_expert_validation($status->{result});
+	$status->{message} = format_expert_validation(localize_expert_validation($status->{result}, \%L));
 	my $runtime_file = "$lbpconfigdir/vzlogger.conf";
 	my $stage = tempdir(".vzlogger-expert-stage-XXXXXX", DIR => $lbpconfigdir, CLEANUP => 1);
 	my $stage_runtime = "$stage/vzlogger.conf";
@@ -1026,7 +1019,7 @@ sub promote_expert_configuration
 		: (0, "Could not stage expert mapping.");
 	if (!$runtime_ok || !$mapping_ok || !$promoted) {
 		$status->{valid} = 0;
-		$status->{message} .= "<FAIL> Could not promote the expert configuration atomically: $promotion_error\n";
+		$status->{message} .= "<FAIL> " . ui_text($L{'VZLOGGER.UI_EXPERT_PROMOTE_FAILED'}, error => $promotion_error) . "\n";
 	}
 	return $status;
 }
@@ -1055,8 +1048,8 @@ sub save_expert_allowed_form
 		$debug ? $level : 0,
 		$debug ? "$lbhomedir/log/plugins/$lbpplugindir/vzlogger.log" : "/dev/null",
 	);
-	return format_expert_validation($result) . "Could not update expert log settings.\n" if (!defined($updated));
-	return "Could not save expert log settings.\n" if (!write_text_atomic(expert_config_file(), $updated));
+	return format_expert_validation(localize_expert_validation($result, \%L)) . $L{'VZLOGGER.UI_EXPERT_LOG_UPDATE_FAILED'} . "\n" if (!defined($updated));
+	return $L{'VZLOGGER.UI_EXPERT_LOG_SAVE_FAILED'} . "\n" if (!write_text_atomic(expert_config_file(), $updated));
 	return "Updated Expert Mode service and bridge settings.\n";
 }
 
@@ -1442,7 +1435,7 @@ sub validate_submitted_vzlogger_form
 			push @errors, "$serial: mbus_debug must be 0 or 1" if (defined($debug) && $debug !~ /\A[01]\z/);
 		}
 	}
-	die "Invalid submitted vzLogger configuration:\n - " . join("\n - ", @errors) . "\n" if (@errors);
+	die $L{'VZLOGGER.UI_INVALID_SUBMITTED_CONFIG'} . "\n - " . join("\n - ", @errors) . "\n" if (@errors);
 }
 
 sub submitted_channel_document
@@ -1451,17 +1444,18 @@ sub submitted_channel_document
 	return undef if (!defined($q->{channel_definitions_json}) || $q->{channel_definitions_json} eq "");
 	die "Channel definitions exceed 512 KiB.\n" if (length($q->{channel_definitions_json}) > 524288);
 	my $document = eval { JSON::PP->new->utf8->decode($q->{channel_definitions_json}) };
-	die "Invalid channel definitions JSON.\n" if ($@ || ref($document) ne "HASH");
+	die $L{'VZLOGGER.UI_INVALID_CHANNEL_JSON'} . "\n" if ($@ || ref($document) ne "HASH");
 	my %allowed = map { my $s = $_; $s =~ s%/dev/serial/smartmeter/%%g; $s => 1 } @heads;
 	foreach my $serial (keys %{$document->{meters} || {}}) {
-		die "Unknown meter in channel definitions: $serial.\n" if (!$allowed{$serial});
+		die ui_text($L{'VZLOGGER.UI_UNKNOWN_CHANNEL_METER'}, serial => $serial) . "\n" if (!$allowed{$serial});
 		my $mode = normalized_meter_mode($plugin_cfg->param("$serial.METER"), $plugin_cfg->param("$serial.PROTOCOL"));
 		foreach my $channel (@{$document->{meters}->{$serial} || []}) {
 			$channel->{storage} = undef if ($mode eq "oms" || !defined($channel->{storage}) || $channel->{storage} eq "" || $channel->{storage} eq "255");
 		}
 	}
 	my @errors = validate_document($document);
-	die "Invalid channel definitions:\n - " . join("\n - ", @errors) . "\n" if (@errors);
+	@errors = @{localize_validation_errors(\@errors, \%L)};
+	die $L{'VZLOGGER.UI_INVALID_CHANNELS'} . "\n - " . join("\n - ", @errors) . "\n" if (@errors);
 	return $document;
 }
 
@@ -1549,8 +1543,8 @@ sub remove_meter_artifacts
 		delete $definitions->{meters}->{$serial};
 		eval { write_json_atomic($definitions_file, $definitions); 1 } or push @errors, "$definitions_file: $@";
 	}
-	my $output = "Removed meter configuration for $serial.\n";
-	$output .= "Could not remove meter artifact $_\n" foreach @errors;
+	my $output = ui_text($L{'VZLOGGER.UI_METER_REMOVED'}, serial => $serial) . "\n";
+	$output .= ui_text($L{'VZLOGGER.UI_METER_ARTIFACT_REMOVE_FAILED'}, file => $_) . "\n" foreach @errors;
 	return $output;
 }
 
@@ -1585,20 +1579,20 @@ sub read_obis_channels
 {
 	my ($target_serial, @heads) = @_;
 	$target_serial = clean_config_value($target_serial, qr/\A[A-Za-z0-9_.:-]+\z/, "");
-	return "No I/R head selected for OBIS channel discovery.\n" if (!$target_serial);
+	return $L{'VZLOGGER.UI_NO_IR_HEAD'} . "\n" if (!$target_serial);
 
 	my %known_heads = map {
 		my $serial = $_;
 		$serial =~ s%/dev/serial/smartmeter/%%g;
 		$serial => 1;
 	} @heads;
-	return "Unknown I/R head '$target_serial'.\n" if (!$known_heads{$target_serial});
+	return ui_text($L{'VZLOGGER.UI_UNKNOWN_IR_HEAD'}, serial => $target_serial) . "\n" if (!$known_heads{$target_serial});
 
 	my $was_active = service_state("vzlogger") eq "active";
 	my $output = "Read OBIS channels for $target_serial.\n";
 
 	if (!command_exists("vzlogger")) {
-		$output .= "vzlogger binary not found. Install vzlogger before reading OBIS channels.\n";
+		$output .= $L{'VZLOGGER.UI_VZLOGGER_NOT_FOUND'} . "\n";
 	} else {
 		my ($test_config, $test_log, $config_error) = write_vzlogger_obis_test_config($target_serial);
 		if ($config_error) {
@@ -1628,16 +1622,16 @@ sub start_obis_discovery_background
 {
 	my ($target_serial, @heads) = @_;
 	$target_serial = clean_config_value($target_serial, qr/\A[A-Za-z0-9_.:-]+\z/, "");
-	return obis_error_status("No I/R head selected for OBIS channel discovery.") if (!$target_serial);
+	return obis_error_status($L{'VZLOGGER.UI_NO_IR_HEAD'}) if (!$target_serial);
 
 	my %known_heads = map {
 		my $serial = $_;
 		$serial =~ s%/dev/serial/smartmeter/%%g;
 		$serial => 1;
 	} @heads;
-	return obis_error_status("Unknown I/R head '$target_serial'.") if (!$known_heads{$target_serial});
-	return obis_error_status("vzlogger binary not found. Install vzlogger before reading OBIS channels.") if (!command_exists("vzlogger"));
-	return obis_error_status("timeout command not found; OBIS discovery was not started.") if (!command_exists("timeout"));
+	return obis_error_status(ui_text($L{'VZLOGGER.UI_UNKNOWN_IR_HEAD'}, serial => $target_serial)) if (!$known_heads{$target_serial});
+	return obis_error_status($L{'VZLOGGER.UI_VZLOGGER_NOT_FOUND'}) if (!command_exists("vzlogger"));
+	return obis_error_status($L{'VZLOGGER.UI_OBIS_TIMEOUT_MISSING'}) if (!command_exists("timeout"));
 
 	my $current = read_obis_discovery_status_file();
 	if ($current->{state} && $current->{state} =~ /\A(?:starting|running|cancelling)\z/ && obis_discovery_watchdog_is_active()) {
@@ -1665,7 +1659,7 @@ sub start_obis_discovery_background
 	if ($launch_output !~ /\Astarted:/) {
 		$status->{ok} = JSON::PP::false;
 		$status->{state} = "failed";
-		$status->{message} = $launch_output || "Could not start OBIS discovery.";
+		$status->{message} = $launch_output || $L{'VZLOGGER.UI_OBIS_START_FAILED'};
 		$status->{finished_at} = time();
 		write_obis_discovery_status_file($status);
 	}
@@ -1675,7 +1669,7 @@ sub start_obis_discovery_background
 sub obis_error_status
 {
 	my ($message) = @_;
-	$message ||= "OBIS discovery failed.";
+	$message ||= $L{'VZLOGGER.UI_OBIS_FAILED'};
 	$message =~ s/[\r\n]+\z//;
 	return { ok => JSON::PP::false, state => "failed", message => $message };
 }
@@ -1750,14 +1744,14 @@ sub cancel_obis_discovery
 	my ($job_id) = @_;
 	$job_id = clean_config_value($job_id, qr/\A[0-9-]+\z/, "");
 	my $status = read_obis_discovery_status_file();
-	return obis_error_status("No matching OBIS discovery is active.") if (!$job_id || ($status->{job_id} || "") ne $job_id);
-	return obis_error_status("The OBIS discovery is no longer active.") if (($status->{state} || "") !~ /\A(?:starting|running|cancelling)\z/);
+	return obis_error_status($L{'VZLOGGER.UI_OBIS_NOT_ACTIVE'}) if (!$job_id || ($status->{job_id} || "") ne $job_id);
+	return obis_error_status($L{'VZLOGGER.UI_OBIS_NO_LONGER_ACTIVE'}) if (($status->{state} || "") !~ /\A(?:starting|running|cancelling)\z/);
 
 	my $cancel_file = obis_discovery_cancel_file();
 	make_path(obis_discovery_runtime_dir()) if (!-d obis_discovery_runtime_dir());
 	my $fh;
 	if (!open($fh, ">", $cancel_file)) {
-		return obis_error_status("Could not request cancellation: $!");
+		return obis_error_status(ui_text($L{'VZLOGGER.UI_OBIS_CANCEL_FAILED'}, error => $!));
 	}
 	print $fh $job_id;
 	close($fh);
@@ -1804,12 +1798,12 @@ sub write_vzlogger_obis_test_config
 	my ($serial) = @_;
 	my $meter = $plugin_cfg->param("$serial.METER") || "0";
 	my $protocol = normalized_meter_mode($meter, $plugin_cfg->param("$serial.PROTOCOL"));
-	return ("", "", "No protocol is configured for $serial.\n") if ($protocol eq "0");
-	return ("", "", "OBIS discovery is not available for custom JSON meters.\n") if ($protocol eq "user");
-	return ("", "", "The installed vzLogger does not support OMS.\n") if ($protocol eq "oms" && !vzlogger_supports_protocol("oms"));
+	return ("", "", ui_text($L{'VZLOGGER.UI_NO_PROTOCOL'}, serial => $serial) . "\n") if ($protocol eq "0");
+	return ("", "", $L{'VZLOGGER.UI_OBIS_CUSTOM_UNAVAILABLE'} . "\n") if ($protocol eq "user");
+	return ("", "", $L{'VZLOGGER.UI_OMS_UNSUPPORTED'} . "\n") if ($protocol eq "oms" && !vzlogger_supports_protocol("oms"));
 
 	my $device = $plugin_cfg->param("$serial.DEVICE") || "/dev/serial/smartmeter/$serial";
-	return ("", "", "No serial device is configured for $serial.\n") if (!$device);
+	return ("", "", ui_text($L{'VZLOGGER.UI_NO_SERIAL_DEVICE'}, serial => $serial) . "\n") if (!$device);
 
 	my $meter_config = {
 		enabled => JSON::PP::true,
@@ -1868,7 +1862,7 @@ sub write_vzlogger_obis_test_config
 
 	make_path("$lbhomedir/log/plugins/$lbpplugindir") if (!-d "$lbhomedir/log/plugins/$lbpplugindir");
 	make_path($lbpconfigdir) if (!-d $lbpconfigdir);
-	open(my $fh, ">", $config_file) or return ("", "", "Could not write vzLogger discovery config $config_file: $!\n");
+	open(my $fh, ">", $config_file) or return ("", "", ui_text($L{'VZLOGGER.UI_DISCOVERY_CONFIG_WRITE_FAILED'}, file => $config_file, error => $!) . "\n");
 	print $fh JSON::PP->new->utf8->pretty->canonical->encode($config);
 	close($fh);
 
@@ -1882,17 +1876,17 @@ sub run_vzlogger_obis_test
 	my $runtime_dir = "/var/run/shm/$lbpplugindir";
 	my $watchdog_pid_file = "$runtime_dir/vzlogger_obis_watchdog.pid";
 	unlink($console_log) if (-e $console_log);
-	return "timeout command not found; OBIS discovery was not started.\n" if (!command_exists("timeout"));
+	return $L{'VZLOGGER.UI_OBIS_TIMEOUT_MISSING'} . "\n" if (!command_exists("timeout"));
 	if (-e $watchdog_pid_file && open(my $existing_fh, "<", $watchdog_pid_file)) {
 		my $existing_pid = <$existing_fh>;
 		close($existing_fh);
 		chomp($existing_pid) if (defined($existing_pid));
-		return "Another vzLogger OBIS discovery run is already active.\n" if (obis_watchdog_running($existing_pid));
+		return $L{'VZLOGGER.UI_OBIS_ALREADY_RUNNING'} . "\n" if (obis_watchdog_running($existing_pid));
 		unlink($watchdog_pid_file);
 	}
 
 	my $pid = fork();
-	return "Could not fork vzlogger discovery run: $!\n" if (!defined($pid));
+	return ui_text($L{'VZLOGGER.UI_OBIS_FORK_FAILED'}, error => $!) . "\n" if (!defined($pid));
 	if ($pid == 0) {
 		setsid() or exit 127;
 		$0 = "$lbpplugindir-vzlogger-obis-watchdog";
@@ -1992,9 +1986,9 @@ sub run_vzlogger_obis_test
 			} @channels;
 			my $state = $cancelled ? "cancelled" : @channels ? "completed" : "failed";
 			my $message = $cancelled ? "OBIS discovery was cancelled." :
-				@channels ? "Detected " . scalar(@channels) . " OBIS channel(s)." :
-				"No OBIS channels were detected. Check the vzLogger discovery log and meter settings.";
-			my $warning = $restore_failed ? "OBIS channels were detected, but the regular vzLogger service could not be restored." : "";
+				@channels ? ui_text($L{'VZLOGGER.UI_OBIS_DETECTED'}, count => scalar(@channels)) :
+				$L{'VZLOGGER.UI_OBIS_NONE'};
+			my $warning = $restore_failed ? $L{'VZLOGGER.UI_OBIS_RESTORE_FAILED'} : "";
 			my $details = "";
 			if (-e $console_log && open(my $detail_fh, "<", $console_log)) {
 				$details = do { local $/; <$detail_fh> };
@@ -2224,20 +2218,20 @@ sub validate_user_meter_source
 	my $meter = eval { JSON::PP->new->utf8->relaxed(1)->decode($source) };
 	if ($@) {
 		my $error = format_json_error($source, $@);
-		return (undef, $error || "Invalid JSONC", "");
+		return (undef, $error || $L{'VZLOGGER.UI_JSONC_INVALID'}, "");
 	}
-	return (undef, "The JSONC source must contain one meter object", "") if (ref($meter) ne "HASH");
-	return (undef, "Root sections such as meters, mqtt, local, push or retry are not allowed", "") if (grep { exists($meter->{$_}) } qw(meters mqtt local push retry verbosity log));
-	return (undef, "The meter object requires a non-empty protocol string", "") if (!defined($meter->{protocol}) || ref($meter->{protocol}) || $meter->{protocol} eq "");
+	return (undef, $L{'VZLOGGER.UI_JSONC_OBJECT_REQUIRED'}, "") if (ref($meter) ne "HASH");
+	return (undef, $L{'VZLOGGER.UI_JSONC_ROOT_FORBIDDEN'}, "") if (grep { exists($meter->{$_}) } qw(meters mqtt local push retry verbosity log));
+	return (undef, $L{'VZLOGGER.UI_JSONC_PROTOCOL_REQUIRED'}, "") if (!defined($meter->{protocol}) || ref($meter->{protocol}) || $meter->{protocol} eq "");
 	if (exists($meter->{channels})) {
-		return (undef, "channels must be an array", "") if (ref($meter->{channels}) ne "ARRAY");
+		return (undef, $L{'VZLOGGER.UI_JSONC_CHANNELS_ARRAY'}, "") if (ref($meter->{channels}) ne "ARRAY");
 		foreach my $channel (@{$meter->{channels}}) {
-			return (undef, "Every channels entry must be an object", "") if (ref($channel) ne "HASH");
+			return (undef, $L{'VZLOGGER.UI_JSONC_CHANNEL_OBJECT'}, "") if (ref($channel) ne "HASH");
 		}
 	}
 	my $warning = "";
 	if (defined($meter->{device}) && !ref($meter->{device}) && $meter->{device} =~ m{\A/} && !-e $meter->{device}) {
-		$warning = "Configured device '$meter->{device}' does not exist.";
+		$warning = ui_text($L{'VZLOGGER.UI_CONFIGURED_DEVICE_MISSING'}, device => $meter->{device});
 	}
 	return ($meter, "", $warning);
 }
@@ -2245,7 +2239,7 @@ sub validate_user_meter_source
 sub format_json_error
 {
 	my ($source, $error) = @_;
-	$error ||= "Invalid JSONC";
+	$error ||= $L{'VZLOGGER.UI_JSONC_INVALID'};
 	$error =~ s/\s+at\s+\S+\s+line\s+\d+\.?\s*\z//;
 	if ($error =~ /character offset\s+(\d+)/i) {
 		my $offset = $1;
@@ -2388,7 +2382,7 @@ sub build_head_rows
 		$warning_text = ($L{'VZLOGGER.METER_WARNING_DEVICE'} || "Configured device is unavailable") . ": " . $device_warning if (!$json_error && $device_warning);
 		my $warning_kind = $json_error ? "user" : $device_warning ? "user" : $oms_warning ? "oms" : "";
 		my %protocol_labels = (
-			"0" => ($L{'FORMTABLEROWS.PLEASESELECT'} || "Please select"),
+			"0" => ($L{'COMMON.PLEASE_SELECT'} || "Please select"),
 			sml => "SML",
 			d0 => "D0",
 			oms => "OMS",
@@ -2796,7 +2790,7 @@ sub run_control_result
 	my $remaining = defined($configuration_action_deadline) ? int($configuration_action_deadline - time) : 0;
 	if (defined($configuration_action_deadline) && $remaining <= 0) {
 		$configuration_action_timed_out = 1;
-		return ("Configuration action exceeded the 60-second limit and was stopped.\n", 124);
+		return ($L{'VZLOGGER.UI_CONFIG_TIMEOUT'} . "\n", 124);
 	}
 	my $output = defined($configuration_action_deadline)
 		? `timeout --signal=TERM --kill-after=5s ${remaining}s "$^X" "$script" "$action" 2>&1`
@@ -2804,9 +2798,9 @@ sub run_control_result
 	my $exit = $? >> 8;
 	if (defined($configuration_action_deadline) && ($exit == 124 || $exit == 137)) {
 		$configuration_action_timed_out = 1;
-		$output .= "\nConfiguration action exceeded the 60-second limit and was stopped.\n";
+		$output .= "\n" . $L{'VZLOGGER.UI_CONFIG_TIMEOUT'} . "\n";
 	}
-	$output ||= "No output.";
+	$output ||= $L{'VZLOGGER.UI_NO_OUTPUT'};
 	write_control_log($action, $output);
 	return ($output, $exit);
 }
@@ -2969,7 +2963,7 @@ sub form_print
 {
 	
 	# Template
-	my $title = $L{'COMMON.LABEL_PLUGINTITLE'} || "Smartmeter v2";
+	my $title = $L{'COMMON.PLUGIN_TITLE'} || "Smartmeter v2";
 	LoxBerry::Web::lbheader("$title V$version", "https://www.loxwiki.eu/x/mA-L", "");
 	print $template->output();
 	LoxBerry::Web::lbfooter();

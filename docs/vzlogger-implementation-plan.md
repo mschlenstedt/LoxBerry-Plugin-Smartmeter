@@ -202,10 +202,8 @@ Implemented files:
 
 - `webfrontend/htmlauth/index.cgi`
 - `templates/settings.html`
-- `templates/de/language.txt`
-- `templates/en/language.txt`
-- `templates/multi/de/language.txt`
-- `templates/multi/en/language.txt`
+- `templates/lang/language_de.ini`
+- `templates/lang/language_en.ini`
 
 ## 7. Service Control And Apply Flow
 

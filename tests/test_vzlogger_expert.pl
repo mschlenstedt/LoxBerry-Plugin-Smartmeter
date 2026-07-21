@@ -6,7 +6,7 @@ use FindBin;
 use JSON::PP;
 use Test::More;
 use lib "$FindBin::Bin/../bin";
-use SmartMeterVZLoggerExpert qw(validate_expert_text build_expert_mapping update_expert_log_settings expert_configs_equal);
+use SmartMeterVZLoggerExpert qw(validate_expert_text format_expert_validation localize_expert_validation build_expert_mapping update_expert_log_settings expert_configs_equal);
 
 my $uuid = "11111111-2222-3333-4444-555555555555";
 my $config = {
@@ -28,6 +28,12 @@ like(join("\n", @{$valid->{warnings}}), qr/upstream_extension/, "unknown root ke
 my $invalid = validate_expert_text('{"meters": [}');
 ok(!$invalid->{valid}, "invalid JSON is retained as an invalid draft");
 like($invalid->{errors}->[0], qr/not valid JSON/, "JSON error is reported without content");
+like(format_expert_validation($invalid), qr/The expert configuration is not valid JSON/, "default technical validation output remains English");
+my $localized_invalid = localize_expert_validation($invalid, {
+	'VZLOGGER.EXPERT_VALID_JSON' => 'Die Expert-Konfiguration ist kein gültiges JSON: {error}',
+	'VZLOGGER.EXPERT_VALID_OK' => 'Prüfung erfolgreich.',
+});
+like(format_expert_validation($localized_invalid), qr/Die Expert-Konfiguration ist kein gültiges JSON/, "UI validation output can be localized independently");
 ok(expert_configs_equal($text, JSON::PP->new->utf8->canonical->encode($config)), "semantic comparison ignores JSON formatting");
 my $changed_text = JSON::PP->new->utf8->canonical->encode({ %$config, retry => 31 });
 ok(!expert_configs_equal($text, $changed_text), "semantic comparison detects changed configuration values");
