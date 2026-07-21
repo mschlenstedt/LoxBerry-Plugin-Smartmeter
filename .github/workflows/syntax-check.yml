@@ -47,7 +47,7 @@ jobs:
           found=0
           while IFS= read -r -d '' file; do
             found=1
-            perl -I .github/ci/perl-lib -c "$file"
+            perl -I .github/ci/perl-lib -I bin -c "$file"
           done < <(find . -type f \( -name '*.pl' -o -name '*.pm' -o -name '*.cgi' \) -print0)
 
           if [ "$found" -eq 0 ]; then
