@@ -23,6 +23,11 @@ This repository contains the LoxBerry SmartMeter v2 plugin. Keep changes small, 
 
 - After Perl script changes on Windows, run `tools/check-perl-syntax.ps1 <file>` so the checked-in LoxBerry stubs in `.github/ci/perl-lib` are on `@INC`. Use `perl -c` directly only on a LoxBerry system with the real LoxBerry Perl modules available. For PHP files, run `php -l`.
 - For install or upgrade behavior, validate against the relevant install log rather than relying only on static review.
+- For implementation tasks that affect installed plugin behavior, deploy only the changed runtime files to the configured disposable LoxBerry test target after local checks, then verify syntax, configuration, and relevant service state on the target. Follow `docs/test-device-workflow.md`.
+- Do not write to the test target for analysis-only or review-only tasks unless the user explicitly requests it.
+- Never store or print test-device passwords or private keys. Use a local SSH configuration or PuTTY saved-session name.
+- Resolve the test target through `tools/TestDeviceSettings.ps1`; developers configure it outside the repository with `tools/configure-test-device.ps1`.
+- Preserve remote user configuration and runtime data. Back up affected remote files, preserve their modes, and restore the initial configuration and service state after destructive tests.
 - Before committing, check `git status --short` and avoid reverting unrelated local changes.
 
 ## Release Work
