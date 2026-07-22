@@ -5,7 +5,21 @@ use warnings;
 use Exporter qw(import);
 use JSON::PP;
 
-our @EXPORT_OK = qw(parse_reading channel_mapping identifier_mapping clean_scalar_payload);
+our @EXPORT_OK = qw(parse_reading channel_mapping identifier_mapping clean_scalar_payload normalize_mapping_keys);
+
+sub normalize_mapping_keys
+{
+	my ($mapping) = @_;
+	return ({}, "") if (ref($mapping) ne "HASH");
+	my %normalized;
+	foreach my $uuid (keys %$mapping) {
+		my $canonical = lc($uuid);
+		return (undef, "Duplicate channel mapping UUID after case normalization: $uuid")
+			if (exists($normalized{$canonical}));
+		$normalized{$canonical} = $mapping->{$uuid};
+	}
+	return (\%normalized, "");
+}
 
 sub parse_reading
 {
@@ -19,6 +33,7 @@ sub parse_reading
 		$value = defined($json->{value}) ? $json->{value} : $json->{data};
 		$timestamp = $json->{timestamp} if (defined($json->{timestamp}));
 	}
+	$uuid = lc($uuid) if ($uuid);
 	$uuid = $uuid_by_channel->{$uuid} if ($uuid && !exists($mapping->{$uuid}) && $uuid_by_channel->{$uuid});
 	$uuid = $uuid_by_channel->{$1} if (!$uuid && $topic =~ m{/([^/]+)/raw\z} && $uuid_by_channel->{$1});
 	if (!$uuid) {
@@ -46,7 +61,7 @@ sub channel_mapping
 		next if (ref($entry) ne "HASH");
 		my $channel = $entry->{channel} || "";
 		$channel = "chn$entry->{channel_index}" if (!$channel && defined($entry->{channel_index}) && $entry->{channel_index} =~ /\A\d+\z/);
-		$channels{$channel} = lc($uuid) if ($channel =~ /\Achn\d+\z/);
+		$channels{$channel} = $uuid if ($channel =~ /\Achn\d+\z/);
 	}
 	return %channels;
 }
@@ -59,7 +74,7 @@ sub identifier_mapping
 		my $entry = $mapping->{$uuid};
 		next if (ref($entry) ne "HASH" || !$entry->{identifier} || $entry->{identifier_ambiguous});
 		if (exists($identifiers{$entry->{identifier}})) { $ambiguous{$entry->{identifier}} = 1; }
-		else { $identifiers{$entry->{identifier}} = lc($uuid); }
+		else { $identifiers{$entry->{identifier}} = $uuid; }
 	}
 	delete $identifiers{$_} foreach keys %ambiguous;
 	return %identifiers;

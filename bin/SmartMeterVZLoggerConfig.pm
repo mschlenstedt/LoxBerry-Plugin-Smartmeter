@@ -5,7 +5,24 @@ use warnings;
 use Exporter qw(import);
 use JSON::PP;
 
-our @EXPORT_OK = qw(validate_legacy_general read_mqtt_settings clean_number clean_qos sanitize_topic protocol_for_meter normalized_meter_mode serial_mode);
+our @EXPORT_OK = qw(validate_legacy_general read_mqtt_settings clean_number clean_qos sanitize_topic protocol_for_meter normalized_meter_mode serial_mode implementation_mode set_implementation_mode);
+
+sub implementation_mode
+{
+	my ($plugin_cfg) = @_;
+	return "legacy" if (!$plugin_cfg);
+	my $mode = $plugin_cfg->param("MAIN.IMPLEMENTATION") || "";
+	return $mode if ($mode =~ /\A(?:none|legacy|vzlogger)\z/);
+	return (($plugin_cfg->param("MAIN.READ") || "0") eq "1") ? "legacy" : "vzlogger";
+}
+
+sub set_implementation_mode
+{
+	my ($plugin_cfg, $mode) = @_;
+	die "Invalid SmartMeter implementation mode.\n" if (!$plugin_cfg || !defined($mode) || $mode !~ /\A(?:legacy|vzlogger|none)\z/);
+	$plugin_cfg->param("MAIN.IMPLEMENTATION", $mode);
+	return $mode;
+}
 
 sub protocol_for_meter
 {
@@ -81,8 +98,9 @@ sub clean_number
 
 sub clean_qos
 {
-	my ($value) = @_;
-	return defined($value) && !ref($value) && $value =~ /\A[012]\z/ ? int($value) : 0;
+	my ($value, $default) = @_;
+	$default = 0 if (!defined($default) || ref($default) || $default !~ /\A[012]\z/);
+	return defined($value) && !ref($value) && $value =~ /\A[012]\z/ ? int($value) : int($default);
 }
 
 sub sanitize_topic

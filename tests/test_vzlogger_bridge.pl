@@ -5,7 +5,7 @@ use warnings;
 use FindBin;
 use Test::More;
 use lib "$FindBin::Bin/../bin";
-use SmartMeterVZLoggerBridge qw(parse_reading channel_mapping identifier_mapping clean_scalar_payload);
+use SmartMeterVZLoggerBridge qw(parse_reading channel_mapping identifier_mapping clean_scalar_payload normalize_mapping_keys);
 
 my $uuid = "11111111-2222-3333-4444-555555555555";
 my $second = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
@@ -29,5 +29,18 @@ is($reading->{value}, 42, "JSON value is parsed");
 ok(!parse_reading("smartmeter/vzlogger/chn9/raw", "12", $mapping, \%channels, sub { push @debug, @_ }), "unknown channel is ignored");
 like(join("\n", @debug), qr/no uuid/i, "ignored message explains mapping failure");
 is(clean_scalar_payload('"1-0:1.8.0"'), "1-0:1.8.0", "JSON string payload is unwrapped");
+
+my ($uppercase_mapping, $normalization_error) = normalize_mapping_keys({
+	uc($uuid) => { serial => "reader", name => "Import", channel => "chn0" },
+});
+is($normalization_error, "", "uppercase mapping UUID is accepted");
+my %uppercase_channels = channel_mapping($uppercase_mapping);
+$reading = parse_reading("smartmeter/vzlogger/chn0/raw", "42", $uppercase_mapping, \%uppercase_channels);
+is($reading->{uuid}, $uuid, "uppercase mapping UUID is canonicalized for chnN readings");
+my ($duplicate_mapping, $duplicate_error) = normalize_mapping_keys({
+	$second => {}, uc($second) => {},
+});
+ok(!$duplicate_mapping, "case-insensitive duplicate mapping is rejected");
+like($duplicate_error, qr/Duplicate channel mapping UUID/, "duplicate mapping error is actionable");
 
 done_testing();

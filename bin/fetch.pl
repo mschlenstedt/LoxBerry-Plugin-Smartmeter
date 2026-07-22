@@ -25,9 +25,12 @@ use Cwd 'abs_path';
 use IO::Socket; # For sending UDP packages
 use Getopt::Long;
 use LoxBerry::System;
+use FindBin;
+use lib $FindBin::Bin;
+use SmartMeterVZLoggerConfig qw(implementation_mode);
+use SmartMeterLegacyRuntime qw(acquire_legacy_fetch_lock vzlogger_service_running);
 umask(0027);
 use File::Path qw(make_path);
-use Fcntl qw(:flock);
 #use warnings;
 #use strict;
 no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
@@ -70,7 +73,7 @@ my  $udpstring;
 my  @lines;
 my  $i;
 my  $verbose;
-my  $force;
+my  $manual;
 
 ##########################################################################
 # Read Settings
@@ -99,12 +102,12 @@ $udpport        = $plugin_cfg->param("MAIN.UDPPORT");
 $sendudp        = $plugin_cfg->param("MAIN.SENDUDP");
 $sendmqtt       = $plugin_cfg->param("MAIN.SENDMQTT");
 $mqtttopic      = $plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter";
-$implementation = $plugin_cfg->param("MAIN.IMPLEMENTATION") || "legacy";
+$implementation = implementation_mode($plugin_cfg);
 $cron		= $plugin_cfg->param("MAIN.CRON");
 
 # Commandline options
 GetOptions (    "verbose"          => \$verbose,
-                "force"            => \$force,
+                "manual"           => \$manual,
 );
 
 if ($verbose) {
@@ -120,8 +123,8 @@ if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
 	symlink($runtime_dir, "$installfolder/log/plugins/$psubfolder/shm");
 }
 
-open(my $lock_fh, ">", "$runtime_dir/fetch.lock") or die "Could not open fetch lock: $!";
-if (!flock($lock_fh, LOCK_EX | LOCK_NB)) {
+my ($lock_fh, $lock_error) = acquire_legacy_fetch_lock($runtime_dir);
+if (!$lock_fh) {
 	&LOG("Another meter polling run is already active. Giving up.", "WARN");
 	exit;
 }
@@ -132,12 +135,17 @@ if (-e "$runtime_dir/fetch.log") {
 }
 
 # Check if we should read automatically
-if ( $implementation ne "legacy" && !$force ) {
+if ( $implementation ne "legacy" ) {
 	&LOG ("Legacy meter polling is disabled because Legacy mode is not active.", "INFO");
 	exit;
 }
 
-if ( !$plugin_cfg->param("MAIN.READ") && !$force ) {
+if ( vzlogger_service_running() ) {
+	&LOG ("Legacy meter polling is disabled while the vzLogger service is running.", "WARN");
+	exit;
+}
+
+if ( !$plugin_cfg->param("MAIN.READ") && !$manual ) {
 	&LOG ("Reading serial devices is currently deactivated. Giving up.", "FAIL");
 	exit;
 }
@@ -285,7 +293,7 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 	}
 
 }
-if ($plugin_cfg->param("MAIN.CRON") eq "M" && !$force) {
+if ($plugin_cfg->param("MAIN.CRON") eq "M" && !$manual) {
 	&LOG("$serial: Cronjob is MINIMUM - RERUN", "OK");	
 	sleep(5);
 	goto RERUN;

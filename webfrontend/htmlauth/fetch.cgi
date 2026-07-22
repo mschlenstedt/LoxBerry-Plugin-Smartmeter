@@ -25,9 +25,14 @@ use Config::Simple;
 use File::HomeDir;
 use Cwd 'abs_path';
 use File::Path qw(make_path);
+use FindBin;
+use LoxBerry::System;
+use lib $lbpbindir;
+use lib "$FindBin::Bin/../../bin";
+use SmartMeterVZLoggerConfig qw(implementation_mode);
+use SmartMeterLegacyRuntime qw(vzlogger_service_running);
 use warnings;
 use strict;
-no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
 
 ##########################################################################
 # Variables
@@ -35,22 +40,15 @@ no strict "refs"; # we need it for template system and for contructs like ${"ska
 my  $cgi = new CGI;
 my  $cfg;
 my  $plugin_cfg;
-my  $lang;
 my  $installfolder;
-my  $version;
 my  $home = File::HomeDir->my_home;
 my  $psubfolder;
-my  $pname;
-my  $serial;
 my  $logfile;
 my  $pid;
 
 ##########################################################################
 # Read Settings
 ##########################################################################
-
-# Version of this script
-$version = "0.2";
 
 # Figure out in which subfolder we are installed
 $psubfolder = abs_path($0);
@@ -59,7 +57,7 @@ $psubfolder =~ s/(.*)\/(.*)\/(.*)$/$2/g;
 # Read general config
 $cfg	 	= new Config::Simple("$home/config/system/general.cfg") or die $cfg->error();
 $installfolder	= $cfg->param("BASE.INSTALLFOLDER");
-$lang		= $cfg->param("BASE.LANG");
+$plugin_cfg = Config::Simple->new("$installfolder/config/plugins/$psubfolder/smartmeter.cfg") or die "Could not read SmartMeter configuration";
 
 ##########################################################################
 # Main program
@@ -80,6 +78,16 @@ unlink($logfile) if (-e $logfile);
 open(my $log_fh, ">", $logfile) or die "Could not create $logfile: $!";
 close($log_fh);
 
+if (implementation_mode($plugin_cfg) ne "legacy" || vzlogger_service_running()) {
+	open(my $disabled_fh, ">", $logfile) or die "Could not write $logfile: $!";
+	print $disabled_fh implementation_mode($plugin_cfg) ne "legacy"
+		? "Legacy meter polling is disabled because Legacy mode is not active.\n"
+		: "Legacy meter polling is disabled while the vzLogger service is running.\n";
+	close($disabled_fh);
+	print redirect(-url=>"/admin/system/tools/logfile.cgi?logfile=plugins/$psubfolder/shm/fetch_manually.log&header=html&format=template");
+	exit;
+}
+
 # Redirect to Logviewer
 print redirect(-url=>"/admin/system/tools/logfile.cgi?logfile=plugins/$psubfolder/shm/fetch_manually.log&header=html&format=template");
 
@@ -98,7 +106,7 @@ if ($pid == 0) {
   open STDERR, ">/dev/null";
 
   # Trigger fetch
-  system($^X, "$installfolder/bin/plugins/$psubfolder/fetch.pl", "--verbose", "--force");
+  system($^X, "$installfolder/bin/plugins/$psubfolder/fetch.pl", "--verbose", "--manual");
 }
 
 exit;

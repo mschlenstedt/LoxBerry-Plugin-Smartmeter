@@ -114,6 +114,7 @@
 <TMPL_IF VALIDATION_ERROR><div class="ui-body ui-body-a ui-corner-all" style="border-color:#b00020;color:#b00020;margin:1em 0;"><TMPL_VAR VALIDATION_ERROR ESCAPE=HTML></div></TMPL_IF>
 
 <table border=0 width="100%" cellpadding="10">
+<tbody>
 <tr>
 	<td width="20%">
 	<label id="labelimplementation"><TMPL_VAR NAME=COMMON.IMPLEMENTATION_MODE></label>
@@ -132,6 +133,8 @@
 	<font size="-1"><TMPL_VAR NAME=COMMON.IMPLEMENTATION_MODE_HELP></font>
 	</td>
 </tr>
+</tbody>
+<tbody id="legacy-dependent-content">
 <tr>
 	<td colspan=4>
 		<div style="background-color: rgba(255, 255, 200, 0.4); border-radius: 6px; border: 1px solid black; padding:10px; margin:0 auto 10px auto; max-width: 920px; text-align:center;">
@@ -141,7 +144,7 @@
 			<a id="btnrescan" data-icon="refresh" data-role="button" data-inline="true" data-mini="true" href="javascript:location.reload(true)"><TMPL_VAR NAME=LEGACY.BUTTON_RESCAN></a>
 			<a id="btnfetch" data-icon="star" data-role="button" data-inline="true" data-mini="true" href="./fetch.cgi" target="_blank"><TMPL_VAR NAME=LEGACY.BUTTON_FETCH></a>
 			<a id="btnshowlog" data-icon="search" data-role="button" data-inline="true" data-mini="true" href="./logfiles.cgi" target="_blank"><TMPL_VAR NAME=LEGACY.BUTTON_SHOWLOGFILE></a>
-			<a id="btnlog" data-icon="delete" data-role="button" data-inline="true" data-mini="true" href="./index_legacy.cgi?clearcache=1"><TMPL_VAR NAME=LEGACY.BUTTON_CLEARCACHE></a>
+			<button id="btnlog" type="submit" form="legacy_cache_form" data-icon="delete" data-role="button" data-inline="true" data-mini="true"><TMPL_VAR NAME=LEGACY.BUTTON_CLEARCACHE></button>
 		</center>
 	</td>
 </tr>
@@ -373,6 +376,7 @@
 	}
 
 	function refresh_<TMPL_VAR NAME=SERIAL>_manual_fields(enabled) {
+		enabled = enabled && legacy_ui_enabled();
 		$.each(<TMPL_VAR NAME=SERIAL>_manual_fields, function(_, field) {
 			var control = $( "#<TMPL_VAR NAME=SERIAL>_" + field );
 			$( "#label<TMPL_VAR NAME=SERIAL>_" + field ).toggleClass("ui-disabled", !enabled);
@@ -609,6 +613,7 @@
 	<div id="form-error-message" class="form-error-message"></div>
 	</td>
 </tr>
+</tbody>
 
 </table>
 
@@ -626,6 +631,9 @@
 </p>
 
 </form>
+<form method="post" data-ajax="false" id="legacy_cache_form" action="./index_legacy.cgi">
+	<input type="hidden" name="action" value="clearcache">
+</form>
 
 <script>
 	// Error messages
@@ -638,6 +646,11 @@
 
 	var saved_implementation = "<TMPL_VAR NAME=IMPLEMENTATION>";
 	var initial_implementation_value = "<TMPL_VAR NAME=IMPLEMENTATION_SWITCH_VALUE>";
+	var vzlogger_service_active = <TMPL_IF VZLOGGER_SERVICE_ACTIVE>true<TMPL_ELSE>false</TMPL_IF>;
+	var legacy_dependent_controls = $("#legacy-dependent-content").find("input, select, textarea, button");
+	legacy_dependent_controls.each(function() {
+		$(this).data("legacy-base-disabled", $(this).prop("disabled"));
+	});
 	$("#implementation").val(initial_implementation_value);
 	update_legacy_activation_state();
 
@@ -664,39 +677,88 @@
 		$("#implementation_changed").val(changed ? "1" : "0");
 		$("#implementation_unsaved").prop("hidden", !changed);
 		set_implementation_tab_states(saved_implementation);
+		refresh_legacy_dependent_state();
 	}
 
+	function legacy_ui_enabled() {
+		return $("#implementation").val() == "legacy";
+	}
+
+	function refresh_legacy_dependent_state() {
+		var enabled = legacy_ui_enabled();
+		legacy_dependent_controls.each(function() {
+			var control = $(this);
+			control.prop("disabled", !enabled || !!control.data("legacy-base-disabled"));
+			if (control.is("select")) {
+				try { control.selectmenu("refresh", true); } catch (ignore) {}
+			}
+		});
+		$("#legacy-dependent-content").toggleClass("ui-disabled", !enabled).attr("aria-disabled", enabled ? "false" : "true");
+		$("#btnrescan, #btnshowlog").each(function() {
+			var link = $(this);
+			link.toggleClass("ui-disabled", !enabled).attr("aria-disabled", enabled ? "false" : "true");
+			if (!enabled) link.attr("tabindex", "-1"); else link.removeAttr("tabindex");
+		});
+		var fetch_enabled = enabled && saved_implementation == "legacy" && !vzlogger_service_active;
+		$("#btnfetch").toggleClass("ui-disabled", !fetch_enabled).attr("aria-disabled", fetch_enabled ? "false" : "true");
+		if (!fetch_enabled) $("#btnfetch").attr("tabindex", "-1"); else $("#btnfetch").removeAttr("tabindex");
+		$("#btnlog").prop("disabled", !enabled || saved_implementation != "legacy");
+		if (enabled) {
+			disable_cron();
+			disable_udp();
+			disable_mqtt();
+			<TMPL_LOOP ROWS>disable_<TMPL_VAR NAME=SERIAL>_meter();
+			</TMPL_LOOP>
+		}
+	}
+
+	$("#btnrescan, #btnfetch, #btnshowlog").on("click", function(event) {
+		if (!legacy_ui_enabled()) {
+			event.preventDefault();
+			event.stopImmediatePropagation();
+		}
+	});
+
 	function disable_cron() {
-		if ( $( "#read" ).val() == "0" ) {
+		var enabled = legacy_ui_enabled() && $( "#read" ).val() == "1";
+		if (!enabled) {
 			$( "#cron" ).addClass('ui-disabled');
+			$( "#cron" ).prop("disabled", true);
 			$( "#cron" ).selectmenu();
 			$( "#cron" ).selectmenu('refresh', true);
 		}
-		if ( $( "#read" ).val() == "1" ) {
+		if (enabled) {
 			$( "#cron" ).removeClass('ui-disabled');
+			$( "#cron" ).prop("disabled", false);
 			$( "#cron" ).selectmenu();
 			$( "#cron" ).selectmenu('refresh', true);
 		}
 	}
 
 	function disable_udp() {
-		if ( $( "#sendudp" ).val() == "0" ) {
+		var enabled = legacy_ui_enabled() && $( "#sendudp" ).val() == "1";
+		if (!enabled) {
 			$( "#udpport" ).addClass('ui-disabled');
+			$( "#udpport" ).prop("disabled", true);
 			$( "#labeludpport" ).addClass('ui-disabled');
 		}
-		if ( $( "#sendudp" ).val() == "1" ) {
+		if (enabled) {
 			$( "#udpport" ).removeClass('ui-disabled');
+			$( "#udpport" ).prop("disabled", false);
 			$( "#labeludpport" ).removeClass('ui-disabled');
 		}
 	}
 
 	function disable_mqtt() {
-		if ( $( "#sendmqtt" ).val() == "0" ) {
+		var enabled = legacy_ui_enabled() && $( "#sendmqtt" ).val() == "1";
+		if (!enabled) {
 			$( "#mqtttopic" ).addClass('ui-disabled');
+			$( "#mqtttopic" ).prop("disabled", true);
 			$( "#labelmqtttopic" ).addClass('ui-disabled');
 		}
-		if ( $( "#sendmqtt" ).val() == "1" ) {
+		if (enabled) {
 			$( "#mqtttopic" ).removeClass('ui-disabled');
+			$( "#mqtttopic" ).prop("disabled", false);
 			$( "#labelmqtttopic" ).removeClass('ui-disabled');
 		}
 	}

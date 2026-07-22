@@ -8,7 +8,7 @@ use File::Basename qw(dirname);
 use File::Copy qw(copy);
 use File::Path qw(make_path);
 
-our @EXPORT_OK = qw(acquire_config_lock promote_files_atomic set_private_file_mode);
+our @EXPORT_OK = qw(acquire_config_lock promote_files_atomic);
 
 sub acquire_config_lock
 {
@@ -22,14 +22,6 @@ sub acquire_config_lock
 	return (undef, "Another SmartMeter configuration or service action is already running.")
 		if (!flock($fh, LOCK_EX | LOCK_NB));
 	return ($fh, "");
-}
-
-sub set_private_file_mode
-{
-	my ($file, $mode) = @_;
-	return 1 if (!defined($file) || !-e $file);
-	$mode = 0600 if (!defined($mode));
-	return chmod($mode, $file) ? 1 : 0;
 }
 
 sub promote_files_atomic

@@ -14,7 +14,8 @@ use FindBin;
 use lib $FindBin::Bin;
 use SmartMeterVZLoggerExpert qw(read_text write_text_atomic update_expert_log_settings format_expert_validation);
 use SmartMeterVZLoggerRuntime qw(acquire_config_lock promote_files_atomic);
-use SmartMeterVZLoggerConfig qw(clean_number sanitize_topic);
+use SmartMeterVZLoggerConfig qw(clean_number clean_qos sanitize_topic implementation_mode);
+use SmartMeterLegacyRuntime qw(acquire_legacy_fetch_lock);
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
@@ -142,7 +143,7 @@ if ($action eq "disable-vzlogger") {
 }
 
 if ($action eq "status") {
-	print "implementation: " . implementation_mode() . "\n";
+	print "implementation: " . implementation_mode(Config::Simple->new($plugin_config_file)) . "\n";
 	print "vzlogger binary: " . (command_exists("vzlogger") ? "available" : "missing") . "\n";
 	print "vzlogger package: " . package_state("vzlogger") . "\n";
 	print "Volkszaehler apt source: " . (-e "/etc/apt/sources.list.d/volkszaehler-volkszaehler-org-project.list" ? "configured" : "missing") . "\n";
@@ -458,6 +459,15 @@ sub stop_bridge
 
 sub restart_vzlogger
 {
+	my $legacy_lock;
+	if (!$ENV{SMARTMETER_LEGACY_LOCK_HELD}) {
+		my $legacy_error;
+		($legacy_lock, $legacy_error) = acquire_legacy_fetch_lock($runtime_dir);
+		if (!$legacy_lock) {
+			print "$legacy_error Cannot restart vzLogger until Legacy polling has finished.\n";
+			return 1;
+		}
+	}
 	stop_orphaned_obis_discovery_processes();
 	if (!command_exists("systemctl")) {
 		print "systemctl not available. Generated config only.\n";
@@ -512,6 +522,15 @@ sub prepare_vzlogger_log_file
 
 sub start_vzlogger
 {
+	my $legacy_lock;
+	if (!$ENV{SMARTMETER_LEGACY_LOCK_HELD}) {
+		my $legacy_error;
+		($legacy_lock, $legacy_error) = acquire_legacy_fetch_lock($runtime_dir);
+		if (!$legacy_lock) {
+			print "$legacy_error Cannot start vzLogger until Legacy polling has finished.\n";
+			return 1;
+		}
+	}
 	stop_orphaned_obis_discovery_processes();
 	if (!command_exists("systemctl")) {
 		print "systemctl not available.\n";
@@ -687,18 +706,9 @@ sub vzlogger_debug_enabled
 	return ($cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0") eq "1";
 }
 
-sub implementation_mode
-{
-	my $cfg = Config::Simple->new($plugin_config_file);
-	return "legacy" if (!$cfg);
-	my $mode = $cfg->param("MAIN.IMPLEMENTATION") || "";
-	return $mode if ($mode =~ /\A(?:none|legacy|vzlogger)\z/);
-	return read_enabled() ? "legacy" : "vzlogger";
-}
-
 sub vzlogger_mode_enabled
 {
-	return implementation_mode() eq "vzlogger";
+	return implementation_mode(Config::Simple->new($plugin_config_file)) eq "vzlogger";
 }
 
 sub bridge_enabled
@@ -1075,13 +1085,6 @@ sub read_mqtt_settings
 		$settings{keepalive} = clean_number($cfg->param("VZLOGGER.MQTTKEEPALIVE"), 30);
 	}
 	return \%settings;
-}
-
-sub clean_qos
-{
-	my ($value, $default) = @_;
-	return int($value) if (defined($value) && $value =~ /\A[01]\z/);
-	return $default;
 }
 
 sub timestamp

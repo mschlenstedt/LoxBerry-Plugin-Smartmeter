@@ -36,7 +36,6 @@ jobs:
             libfile-homedir-perl \
             libhtml-template-perl \
             libjson-perl \
-            libstring-escape-perl \
             php-cli
 
       - name: Check Perl syntax
@@ -69,6 +68,14 @@ jobs:
             echo "No PHP files found."
           fi
 
+      - name: Check lifecycle shell syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in preinstall.sh postinstall.sh preupgrade.sh postupgrade.sh postroot.sh uninstall.sh; do
+            [ ! -f "$file" ] || sh -n "$file"
+          done
+
       - name: Run vzLogger configuration tests
         shell: bash
         run: |
@@ -83,6 +90,7 @@ jobs:
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_custom_channels.pl
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_config_validation.pl
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_bridge.pl
+          perl -I .github/ci/perl-lib -I bin tests/test_legacy_runtime.pl
 
       - name: Test test-device file normalization
         shell: pwsh

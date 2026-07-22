@@ -23,6 +23,7 @@ ARGV5=$5 # Fifth argument is Base folder of LoxBerry
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/vzlogger_validate.pl
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/vzlogger_control.pl
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/vzlogger_mqtt_bridge.pl
+/bin/chmod +x $ARGV5/bin/plugins/$ARGV3/smartmeter_legacy_runtime.pl
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/install_vzlogger_bridge_service.sh
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/install_vzlogger_service_override.sh
 /bin/chmod +x $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/vzlogger_live.cgi

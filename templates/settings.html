@@ -94,6 +94,8 @@
 	@media (max-width: 800px) { .obis-channel-summary,.obis-channel-grid,.obis-api-fields { grid-template-columns: 1fr; } }
 	.activation-unsaved { display: block; color: #8a5a00; font-size: 85%; margin-top: .2em; }
 	.activation-unsaved[hidden] { display: none; }
+	.obis-runtime-action-reason { display: block; color: #8a5a00; font-size: 85%; margin: .25em 0; }
+	.obis-runtime-action-reason[hidden] { display: none; }
 	.meter-template-note { display: block; color: #8a5a00; font-size: 85%; margin-top: .2em; }
 	.meter-template-note[hidden] { display: none; }
 	.implementation-tabs { width: 100%; }
@@ -395,7 +397,7 @@
 		<table border="0">
 		<tr>
 			<td class="service-label"><label for="implementation"><TMPL_VAR NAME=COMMON.IMPLEMENTATION_MODE></label></td>
-			<td class="service-controls"><select id="implementation" name="implementation" data-role="flipswitch" onChange="update_vzlogger_controls();"><option value="none"><TMPL_VAR NAME=COMMON.OFF></option><option value="vzlogger"><TMPL_VAR NAME=COMMON.ON></option></select><span id="implementation_unsaved" class="activation-unsaved" hidden><TMPL_VAR NAME=COMMON.ACTIVATION_UNSAVED></span></td>
+			<td class="service-controls"><select id="implementation" name="implementation" data-role="flipswitch" onChange="update_vzlogger_controls();"><option value="none"><TMPL_VAR NAME=COMMON.OFF></option><option value="vzlogger"><TMPL_VAR NAME=COMMON.ON></option></select><span id="implementation_unsaved" class="activation-unsaved" hidden><TMPL_VAR NAME=VZLOGGER.ACTIVATION_UNSAVED_RUNTIME></span></td>
 			<td class="service-spacer">&nbsp;</td>
 			<td class="service-help"><TMPL_VAR NAME=COMMON.IMPLEMENTATION_MODE_HELP></td>
 		</tr>
@@ -426,7 +428,7 @@
 		<table border="0">
 		<tr>
 			<td class="service-label"><label for="read"><TMPL_VAR NAME=VZLOGGER.READ_METERS></label></td>
-			<td class="service-controls"><select onChange="update_bridge_controls();" id="read" name="read" data-role="flipswitch" disabled><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select><span id="bridge_activation_unsaved" class="activation-unsaved" hidden><TMPL_VAR NAME=COMMON.ACTIVATION_UNSAVED></span></td>
+			<td class="service-controls"><select onChange="update_bridge_controls();" id="read" name="read" data-role="flipswitch" disabled><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select><span id="bridge_activation_unsaved" class="activation-unsaved" hidden><TMPL_VAR NAME=VZLOGGER.ACTIVATION_UNSAVED_RUNTIME></span></td>
 			<td class="service-spacer">&nbsp;</td>
 			<td class="service-help"><TMPL_VAR NAME=VZLOGGER.READ_METERS_HELP></td>
 		</tr>
@@ -659,7 +661,7 @@
 
 			<tr class="meter-user-settings"><td><label for="<TMPL_VAR NAME=SERIAL>_userjson"><TMPL_VAR NAME=VZLOGGER.METER_USER_JSON></label></td><td><textarea class="meter-json-editor" id="<TMPL_VAR NAME=SERIAL>_userjson" name="<TMPL_VAR NAME=SERIAL>_userjson" maxlength="65536"><TMPL_VAR NAME=USER_JSON ESCAPE=HTML></textarea><div class="meter-doc-links"><a href="https://wiki.volkszaehler.org/software/controller/vzlogger/vzlogger_conf_parameter" target="_blank" rel="noopener"><TMPL_VAR NAME=VZLOGGER.METER_USER_JSON_DOCS></a> · <a href="https://github.com/volkszaehler/vzlogger/tree/master/etc" target="_blank" rel="noopener"><TMPL_VAR NAME=VZLOGGER.METER_USER_JSON_EXAMPLES></a></div></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_USER_JSON_HELP></td></tr>
 
-			<tr class="meter-obis-settings"><td colspan="4"><div class="obis-channel-toolbar"><span class="obis-channel-toolbar-title"><TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS></span><button class="obis-discovery" type="button" onclick="start_obis_discovery('<TMPL_VAR NAME=SERIAL>');" title="<TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search" <TMPL_VAR NAME=OBIS_DISABLED>><TMPL_VAR NAME=VZLOGGER.READ_OBIS_CHANNELS></button><button type="button" onclick="add_manual_obis_channel('<TMPL_VAR NAME=SERIAL>');" data-role="button" data-inline="true" data-mini="true" data-icon="plus"><TMPL_VAR NAME=VZLOGGER.CHANNEL_ADD></button></div><span class="obis-channel-help"><TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS_HELP></span><p id="<TMPL_VAR NAME=SERIAL>_obis_empty"><TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS_EMPTY></p><div id="<TMPL_VAR NAME=SERIAL>_obis_channels" class="obis-editor" data-protocol="<TMPL_VAR NAME=METER ESCAPE=HTML>"></div></td></tr>
+			<tr class="meter-obis-settings"><td colspan="4"><div class="obis-channel-toolbar"><span class="obis-channel-toolbar-title"><TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS></span><button class="obis-discovery" type="button" onclick="start_obis_discovery('<TMPL_VAR NAME=SERIAL>');" title="<TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS_HELP>" aria-describedby="<TMPL_VAR NAME=SERIAL>_obis_runtime_reason" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search" <TMPL_VAR NAME=OBIS_DISABLED>><TMPL_VAR NAME=VZLOGGER.READ_OBIS_CHANNELS></button><button type="button" onclick="add_manual_obis_channel('<TMPL_VAR NAME=SERIAL>');" data-role="button" data-inline="true" data-mini="true" data-icon="plus"><TMPL_VAR NAME=VZLOGGER.CHANNEL_ADD></button></div><span id="<TMPL_VAR NAME=SERIAL>_obis_runtime_reason" class="obis-runtime-action-reason" role="status" hidden><TMPL_VAR NAME=VZLOGGER.OBIS_SAVE_ACTIVATION_HELP></span><span class="obis-channel-help"><TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS_HELP></span><p id="<TMPL_VAR NAME=SERIAL>_obis_empty"><TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS_EMPTY></p><div id="<TMPL_VAR NAME=SERIAL>_obis_channels" class="obis-editor" data-protocol="<TMPL_VAR NAME=METER ESCAPE=HTML>"></div></td></tr>
 			<tr class="meter-remove-row"><td colspan="4"><input class="meter-remove-marker" type="hidden" name="remove_meter" value="<TMPL_VAR NAME=SERIAL>" disabled><button class="meter-remove-button" type="button" onclick="stage_meter_removal('<TMPL_VAR NAME=SERIAL>');" data-role="button" data-inline="true" data-mini="true" data-icon="delete"><TMPL_VAR NAME=VZLOGGER.REMOVE_METER></button><span class="meter-remove-help"><TMPL_VAR NAME=VZLOGGER.REMOVE_METER_HELP></span></td></tr>
 			</table>
 		</div>
@@ -889,6 +891,7 @@
 		function render_service_snapshot(response) {
 			if (!response || !response.services) return;
 			last_service_snapshot = response;
+			if (response.config) expert_runtime_applied = !!response.config.expert_applied;
 			render_service_status("vzlogger", response.services.vzlogger);
 			render_service_status("bridge", response.services.bridge);
 			update_all_control_states();
@@ -1175,7 +1178,7 @@
 
 		function run_configuration_action(action) {
 			if (configuration_action_running || service_action_running) return;
-			if (action == "apply" && !expert_mode_active && expert_source_present && !window.confirm(obis_text("expert_mode_overwrite_confirm_text"))) return;
+			if (action == "apply" && !expert_mode_active && expert_runtime_applied && !window.confirm(obis_text("expert_mode_overwrite_confirm_text"))) return;
 			if (action == "debug-log") {
 				if (!open_debug_progress_tab()) window.alert(obis_text("configuration_action_debug_popup_blocked_text"));
 				return;
@@ -1207,7 +1210,7 @@
 					ok = !!response.ok;
 					message = response.message || (ok ? obis_text("configuration_action_success_text") : obis_text("configuration_action_failed_text"));
 					if (response.timed_out) message = obis_text("configuration_action_timeout_text") + (response.message ? "\n\n" + response.message : "");
-					if (action == "apply") {
+					if (action == "apply" && response.ok) {
 						mark_configuration_form_saved(response);
 						if (response.ok && response.channel_indices) {
 							runtime_channel_indices = response.channel_indices;
@@ -1699,6 +1702,7 @@
 		var initial_read_value = "<TMPL_VAR READ>";
 		var expert_mode_active = "<TMPL_VAR VZLOGGER_EXPERT_MODE_VALUE>" == "1";
 		var expert_source_present = "<TMPL_VAR VZLOGGER_EXPERT_SOURCE_PRESENT>" == "1";
+		var expert_runtime_applied = "<TMPL_VAR VZLOGGER_EXPERT_APPLIED>" == "1";
 		var expert_mqtt_enabled = "<TMPL_VAR EXPERT_MQTT_ENABLED>" == "1";
 		$("#read").val(initial_read_value);
 		$("#implementation").val(initial_implementation_value);
@@ -1774,14 +1778,16 @@
 			var services = last_service_snapshot.services;
 			var config = last_service_snapshot.config || {};
 			var applied = last_service_snapshot.applied || {};
+			var saved_vzlogger = !!applied.vzlogger_enabled;
+			var saved_bridge = saved_vzlogger && !!applied.bridge_enabled;
 			var busy_reason = service_reason("busy");
 			var expert_invalid = !!config.expert_mode && !config.expert_valid;
 			var expert_unapplied = !!config.expert_mode && !config.expert_applied;
-			var vz_reason = !ui.vzlogger ? service_reason("activation") : (expert_invalid || expert_unapplied || !config.valid) ? service_reason("config") : "";
-			var bridge_reason = !ui.bridge ? service_reason("activation") : (expert_invalid || expert_unapplied || !config.valid) ? service_reason("config") :
+			var vz_reason = !saved_vzlogger ? service_reason("activation") : (expert_invalid || expert_unapplied || !config.valid) ? service_reason("config") : "";
+			var bridge_reason = !saved_bridge ? service_reason("activation") : (expert_invalid || expert_unapplied || !config.valid) ? service_reason("config") :
 				(!applied.mqtt_enabled || !config.mqtt_enabled ? service_reason("mqtt") : "");
-			var vz_enabled = ui.vzlogger && !!config.valid && !expert_invalid && !expert_unapplied && !service_action_running;
-			var bridge_enabled = ui.bridge && !!config.valid && !expert_invalid && !expert_unapplied && !!applied.mqtt_enabled && !!config.mqtt_enabled && !service_action_running;
+			var vz_enabled = saved_vzlogger && ui.vzlogger && !!config.valid && !expert_invalid && !expert_unapplied && !service_action_running;
+			var bridge_enabled = saved_bridge && ui.bridge && !!config.valid && !expert_invalid && !expert_unapplied && !!applied.mqtt_enabled && !!config.mqtt_enabled && !service_action_running;
 			set_control_disabled("#save_apply_button", expert_invalid || configuration_action_running || service_action_running);
 			if (expert_invalid && config.expert_message) {
 				var feedback = document.getElementById("service_action_feedback");
@@ -1862,6 +1868,7 @@
 					if (!response.ok) throw new Error(response.message || obis_text("expert_mode_enable_failed_text"));
 					expert_mode_active = !!response.expert_mode;
 					expert_source_present = expert_source_present || expert_mode_active;
+					expert_runtime_applied = !!response.expert_applied;
 					expert_mqtt_enabled = !!response.mqtt_enabled;
 					control.val(expert_mode_active ? "1" : "0").prop("disabled", false).removeClass("ui-disabled");
 					try { control.flipswitch("refresh"); } catch (ignore) {}
@@ -2050,6 +2057,7 @@
 			var mode = $("#" + serial + "_meter").val();
 			var standard_meter = ["sml", "d0", "oms"].indexOf(mode) >= 0;
 			var global_disabled = $("#implementation").val() != "vzlogger";
+			var runtime_action_disabled = saved_implementation != "vzlogger";
 			var meter_disabled = standard_meter && $("#" + serial + "_enabled").val() == "0";
 			var name_control = $("#" + serial + "_name");
 			var enabled_control = $("#" + serial + "_enabled");
@@ -2073,7 +2081,8 @@
 				$(this).toggleClass("setting-disabled", global_disabled || (meter_disabled && !keep_active));
 			});
 			var oms_unsupported = mode == "oms" && panel.attr("data-oms-supported") != "1";
-			set_control_disabled(panel.find(".obis-discovery"), global_disabled || meter_disabled || oms_unsupported);
+			set_control_disabled(panel.find(".obis-discovery"), global_disabled || runtime_action_disabled || meter_disabled || oms_unsupported);
+			panel.find(".obis-runtime-action-reason").prop("hidden", !runtime_action_disabled).toggle(runtime_action_disabled);
 		}
 
 		function stage_meter_removal(serial) {

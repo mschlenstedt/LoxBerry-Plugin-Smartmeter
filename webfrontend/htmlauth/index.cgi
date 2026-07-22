@@ -31,7 +31,6 @@ use JSON::PP;
 use LoxBerry::System;
 #use LoxBerry::Web;
 use LoxBerry::JSON; # Available with LoxBerry 2.0
-use LoxBerry::Log;
 use POSIX qw(:sys_wait_h setsid);
 use warnings;
 use strict;
@@ -41,13 +40,13 @@ use lib "$FindBin::Bin/../../bin";
 use SmartMeterVZLoggerChannels qw(parse_obis compose_obis normalize_obis default_output_key stable_uuid read_json write_json_atomic load_catalog lookup_obis new_document migrate_legacy_meter validate_document localize_validation_errors);
 use SmartMeterVZLoggerExpert qw(read_text write_text_atomic validate_expert_text format_expert_validation localize_expert_validation build_expert_mapping update_expert_log_settings expert_configs_equal);
 use SmartMeterVZLoggerRuntime qw(acquire_config_lock promote_files_atomic);
-use SmartMeterVZLoggerConfig qw(protocol_for_meter normalized_meter_mode serial_mode);
+use SmartMeterVZLoggerConfig qw(protocol_for_meter normalized_meter_mode serial_mode clean_qos set_implementation_mode);
+use SmartMeterLegacyRuntime qw(initialize_legacy_heads acquire_legacy_fetch_lock synchronize_legacy_runtime remove_legacy_cronjobs);
 
 ##########################################################################
 # Variables
 ##########################################################################
 
-my $log;
 my $meter_templates_cache;
 my $saved_meter_protocols_cache;
 my $channel_document;
@@ -113,6 +112,7 @@ if( $q->{ajax} ) {
 			my $config_file = "$lbpconfigdir/smartmeter.cfg";
 			$plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file";
 			ensure_vzlogger_defaults();
+			die $L{'VZLOGGER.UI_SAVE_VZLOGGER_FIRST'} if (implementation_mode() ne "vzlogger");
 			my @heads = detect_heads();
 			ensure_head_defaults(@heads);
 			# Apply the submitted fields only to the in-memory Config::Simple object.
@@ -233,6 +233,9 @@ sub form_vzlogger
 			$template->param("VZLOGGER_MESSAGE", $debug->{message});
 		} else {
 		my $implementation_before_save = implementation_mode();
+		my $replace_expert_runtime = !expert_mode_enabled() && expert_configuration_applied();
+		my $legacy_transition_lock = guard_vzlogger_activation($implementation_before_save);
+		local $ENV{SMARTMETER_LEGACY_LOCK_HELD} = "1" if ($legacy_transition_lock);
 		my $save_output = "";
 		if ($action =~ /\A(?:start|stop|restart)-(?:vzlogger|bridge)\z/) {
 			save_service_log_settings($action);
@@ -256,7 +259,7 @@ sub form_vzlogger
 		} else {
 			my $activating_vzlogger = $control_action eq "apply" &&
 				$implementation_before_save ne "vzlogger" && implementation_mode() eq "vzlogger";
-			$output .= ($control_action eq "apply") ? apply_selected_implementation($activating_vzlogger) : run_control($control_action);
+			$output .= ($control_action eq "apply") ? apply_selected_implementation($activating_vzlogger, $implementation_before_save, $replace_expert_runtime) : run_control($control_action);
 		}
 		if ($control_action eq "debug-log" && $output =~ m{Created debug log: \Q$lbhomedir\E/log/plugins/\Q$lbpplugindir\E/([^/\s]+)}) {
 			print $cgi->redirect(-url => log_redirect_url("plugins/$lbpplugindir/$1"));
@@ -330,6 +333,7 @@ sub form_vzlogger
 	$template->param("VZLOGGER_EXPERT_MODE" => $expert_mode);
 	$template->param("VZLOGGER_EXPERT_MODE_VALUE" => $expert_mode ? 1 : 0);
 	$template->param("VZLOGGER_EXPERT_SOURCE_PRESENT" => -e expert_config_file() ? 1 : 0);
+	$template->param("VZLOGGER_EXPERT_APPLIED" => expert_configuration_applied() ? 1 : 0);
 	add_service_template_params();
 	$template->param("VZLOGGER_CONFIG" => "$lbpconfigdir/vzlogger.conf");
 	my $ui_language = $L{'COMMON.LANGUAGE_CODE'} || "en";
@@ -565,6 +569,9 @@ sub run_service_ajax_action
 	die $L{'VZLOGGER.UI_UNKNOWN_SERVICE_ACTION'} if (!$allowed{$action || ""});
 	my $starting = $action =~ /\A(?:start|restart)-/;
 	my $bridge_action = $action =~ /-bridge\z/;
+	die $L{'VZLOGGER.UI_SAVE_VZLOGGER_FIRST'} if ($starting && implementation_mode() ne "vzlogger");
+	die $L{'VZLOGGER.UI_SAVE_BRIDGE_FIRST'}
+		if ($starting && $bridge_action && ($plugin_cfg->param("MAIN.READ") || "0") ne "1");
 	my $requested_implementation = clean_config_value($q->{implementation}, qr/\A(?:none|vzlogger)\z/, "");
 	my $config = generated_config_status();
 	my $expert = expert_draft_status();
@@ -648,11 +655,14 @@ sub run_form_ajax_action
 	ensure_head_defaults(@heads);
 	ensure_legacy_meter_state(@heads);
 	my $implementation_before_save = implementation_mode();
+	my $replace_expert_runtime = !expert_mode_enabled() && expert_configuration_applied();
+	my $legacy_transition_lock = guard_vzlogger_activation($implementation_before_save);
+	local $ENV{SMARTMETER_LEGACY_LOCK_HELD} = "1" if ($legacy_transition_lock);
 	my $output = save_vzlogger_form(@heads);
 	my $exit = 0;
 
 	my $activating_vzlogger = $implementation_before_save ne "vzlogger" && implementation_mode() eq "vzlogger";
-	my ($apply_output, $apply_exit) = apply_selected_implementation_result($activating_vzlogger);
+	my ($apply_output, $apply_exit) = apply_selected_implementation_result($activating_vzlogger, $implementation_before_save, $replace_expert_runtime);
 	$output .= $apply_output;
 	$exit = $apply_exit;
 	# Reload persisted values before producing the service snapshot.
@@ -800,7 +810,6 @@ sub save_service_log_settings
 		die $L{'VZLOGGER.UI_INVALID_LOG_LEVEL'} if (!defined($q->{vzlogger_loglevel}) || $q->{vzlogger_loglevel} !~ /\A(?:0|1|3|5|10|15)\z/);
 		if ($starting) {
 			die $L{'VZLOGGER.UI_INVALID_ACTIVATION'} if (!defined($q->{implementation}) || $q->{implementation} ne "vzlogger");
-			$plugin_cfg->param("MAIN.IMPLEMENTATION", $q->{implementation});
 		}
 		$plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG", $q->{vzlogger_service_debug});
 		$plugin_cfg->param("VZLOGGER.LOGLEVEL", $q->{vzlogger_loglevel});
@@ -809,13 +818,10 @@ sub save_service_log_settings
 		if ($starting) {
 			die $L{'VZLOGGER.UI_INVALID_ACTIVATION'} if (!defined($q->{implementation}) || $q->{implementation} ne "vzlogger");
 			die $L{'VZLOGGER.UI_INVALID_BRIDGE_ACTIVATION'} if (!defined($q->{read}) || $q->{read} ne "1");
-			$plugin_cfg->param("MAIN.IMPLEMENTATION", $q->{implementation});
-			$plugin_cfg->param("MAIN.READ", $q->{read});
 		}
 		$plugin_cfg->param("VZLOGGER.DEBUG", $q->{vzlogger_debug});
 	}
 	$plugin_cfg->save;
-	remove_legacy_cronjobs() if ($starting);
 }
 
 sub generated_config_status
@@ -885,7 +891,7 @@ sub ensure_vzlogger_defaults
 		$changed = 1;
 	};
 	$set_default->("MAIN.READ", "0", 0);
-	$set_default->("MAIN.IMPLEMENTATION", infer_implementation_mode(), 1);
+	$set_default->("MAIN.IMPLEMENTATION", implementation_mode(), 1);
 	$set_default->("MAIN.CRON", "5", 1);
 	$set_default->("MAIN.SENDUDP", "0", 0);
 	$set_default->("MAIN.UDPPORT", "7000", 1);
@@ -1030,7 +1036,7 @@ sub save_expert_allowed_form
 	if (($q->{implementation_changed} || "") eq "1") {
 		$implementation = clean_config_value($q->{implementation}, qr/\A(?:none|vzlogger)\z/, $implementation);
 	}
-	$plugin_cfg->param("MAIN.IMPLEMENTATION", $implementation);
+	set_implementation_mode($plugin_cfg, $implementation);
 	$plugin_cfg->param("MAIN.READ", clean_config_value($q->{read}, qr/\A[01]\z/, $plugin_cfg->param("MAIN.READ") || "0"));
 	$plugin_cfg->param("MAIN.SENDUDP", clean_config_value($q->{sendudp}, qr/\A[01]\z/, $plugin_cfg->param("MAIN.SENDUDP") || "0"));
 	$plugin_cfg->param("MAIN.UDPPORT", clean_config_value($q->{udpport}, qr/\A\d+\z/, $plugin_cfg->param("MAIN.UDPPORT") || "7000"));
@@ -1196,19 +1202,7 @@ sub ensure_head_defaults
 sub ensure_legacy_meter_state
 {
 	my (@heads) = @_;
-	my @fields = qw(METER PROTOCOL STARTBAUDRATE BAUDRATE TIMEOUT DELAY HANDSHAKE DATABITS STOPBITS PARITY CRC);
-	my $changed = 0;
-	foreach my $device (@heads) {
-		my $serial = $device;
-		$serial =~ s%/dev/serial/smartmeter/%%g;
-		next if (defined($plugin_cfg->param("$serial.LEGACY_METER")));
-		foreach my $field (@fields) {
-			my $value = $plugin_cfg->param("$serial.$field");
-			$value = $field eq "METER" ? "0" : "" if (!defined($value));
-			$plugin_cfg->param("$serial.LEGACY_$field", $value);
-		}
-		$changed = 1;
-	}
+	my $changed = initialize_legacy_heads($plugin_cfg, @heads);
 	$plugin_cfg->save if ($changed);
 }
 
@@ -1234,7 +1228,7 @@ sub save_vzlogger_form
 	if (($q->{implementation_changed} || "") eq "1") {
 		$implementation = clean_config_value($q->{implementation}, qr/\A(?:none|vzlogger)\z/, $implementation);
 	}
-	$plugin_cfg->param("MAIN.IMPLEMENTATION", $implementation);
+	set_implementation_mode($plugin_cfg, $implementation);
 	$plugin_cfg->param("MAIN.READ", clean_config_value($q->{read}, qr/\A[01]\z/, defined($plugin_cfg->param("MAIN.READ")) ? $plugin_cfg->param("MAIN.READ") : "0"));
 	# Disabled form controls are not submitted. Preserve their saved values while
 	# meter reading is off instead of silently restoring defaults.
@@ -1578,6 +1572,7 @@ sub remove_meter_channel_mapping
 sub read_obis_channels
 {
 	my ($target_serial, @heads) = @_;
+	return $L{'VZLOGGER.UI_SAVE_VZLOGGER_FIRST'} . "\n" if (saved_implementation_mode() ne "vzlogger");
 	$target_serial = clean_config_value($target_serial, qr/\A[A-Za-z0-9_.:-]+\z/, "");
 	return $L{'VZLOGGER.UI_NO_IR_HEAD'} . "\n" if (!$target_serial);
 
@@ -1621,6 +1616,7 @@ sub read_obis_channels
 sub start_obis_discovery_background
 {
 	my ($target_serial, @heads) = @_;
+	return obis_error_status($L{'VZLOGGER.UI_SAVE_VZLOGGER_FIRST'}) if (saved_implementation_mode() ne "vzlogger");
 	$target_serial = clean_config_value($target_serial, qr/\A[A-Za-z0-9_.:-]+\z/, "");
 	return obis_error_status($L{'VZLOGGER.UI_NO_IR_HEAD'}) if (!$target_serial);
 
@@ -1774,23 +1770,48 @@ sub obis_discovery_cancel_requested
 
 sub apply_selected_implementation
 {
-	my ($activating_vzlogger) = @_;
-	my ($output) = apply_selected_implementation_result($activating_vzlogger);
+	my ($activating_vzlogger, $previous_implementation, $replace_expert_runtime) = @_;
+	my ($output) = apply_selected_implementation_result($activating_vzlogger, $previous_implementation, $replace_expert_runtime);
 	return $output;
 }
 
 sub apply_selected_implementation_result
 {
-	my ($activating_vzlogger) = @_;
+	my ($activating_vzlogger, $previous_implementation, $replace_expert_runtime) = @_;
 	if (implementation_mode() eq "legacy") {
 		my ($output, $exit) = run_control_result("disable-vzlogger");
-		$output .= apply_legacy_cron();
+		$output .= synchronize_legacy_runtime($lbhomedir, $lbpplugindir, $plugin_cfg);
 		return ($output, $exit);
 	}
 
-	remove_legacy_cronjobs();
+	remove_legacy_cronjobs($lbhomedir, $lbpplugindir);
 	return run_control_result("disable-vzlogger") if (implementation_mode() ne "vzlogger");
-	return run_control_result($activating_vzlogger ? "activate-vzlogger" : "apply");
+	# A dormant standard configuration is normally reactivated unchanged. If the
+	# current runtime still is the explicitly disabled Expert draft, regenerate it
+	# once from the retained standard settings before starting the service.
+	my $control_action = $activating_vzlogger && !$replace_expert_runtime ? "activate-vzlogger" : "apply";
+	my ($output, $exit) = run_control_result($control_action);
+	if ($activating_vzlogger && $exit != 0) {
+		$output .= rollback_failed_vzlogger_activation($previous_implementation);
+	}
+	return ($output, $exit);
+}
+
+sub rollback_failed_vzlogger_activation
+{
+	my ($previous_implementation) = @_;
+	$previous_implementation = "none" if (!defined($previous_implementation) || $previous_implementation !~ /\A(?:legacy|none)\z/);
+	set_implementation_mode($plugin_cfg, $previous_implementation);
+	$plugin_cfg->save;
+	my ($disable_output, $disable_exit) = run_control_result("disable-vzlogger");
+	my $output = "\nRestored implementation mode '$previous_implementation' after failed vzLogger activation.\n" . $disable_output;
+	if ($previous_implementation eq "legacy") {
+		$output .= synchronize_legacy_runtime($lbhomedir, $lbpplugindir, $plugin_cfg);
+	} else {
+		remove_legacy_cronjobs($lbhomedir, $lbpplugindir);
+	}
+	$output .= "Could not completely stop the partially activated vzLogger runtime during rollback.\n" if ($disable_exit != 0);
+	return $output;
 }
 
 sub write_vzlogger_obis_test_config
@@ -2300,53 +2321,23 @@ sub safe_filename
 
 sub implementation_mode
 {
-	my $mode = $plugin_cfg->param("MAIN.IMPLEMENTATION") || "";
-	return $mode if ($mode =~ /\A(?:none|legacy|vzlogger)\z/);
-	return infer_implementation_mode();
+	return SmartMeterVZLoggerConfig::implementation_mode($plugin_cfg);
 }
 
-sub infer_implementation_mode
+sub saved_implementation_mode
 {
-	return (($plugin_cfg->param("MAIN.READ") || "0") eq "1") ? "legacy" : "vzlogger";
+	my $saved = Config::Simple->new("$lbpconfigdir/smartmeter.cfg");
+	return $saved ? SmartMeterVZLoggerConfig::implementation_mode($saved) : "none";
 }
 
-sub apply_legacy_cron
+sub guard_vzlogger_activation
 {
-	remove_legacy_cronjobs();
-	return "Legacy meter polling is disabled. No cronjob restored.\n" if (($plugin_cfg->param("MAIN.READ") || "0") ne "1");
-
-	my $cron = $plugin_cfg->param("MAIN.CRON") || "5";
-	my %cron_map = (
-		M  => ["cron.reboot", "reboot_cron_runner.sh", "reboot"],
-		1  => ["cron.01min", "fetch.pl", "1 minute"],
-		3  => ["cron.03min", "fetch.pl", "3 minutes"],
-		5  => ["cron.05min", "fetch.pl", "5 minutes"],
-		10 => ["cron.10min", "fetch.pl", "10 minutes"],
-		15 => ["cron.15min", "fetch.pl", "15 minutes"],
-		30 => ["cron.30min", "fetch.pl", "30 minutes"],
-		60 => ["cron.hourly", "fetch.pl", "hourly"],
-	);
-	return "Unknown cron interval '$cron'. No legacy cronjob restored.\n" if (!$cron_map{$cron});
-
-	my ($cronfolder, $scriptname, $label) = @{$cron_map{$cron}};
-	create_legacy_cronjob($cronfolder, $scriptname);
-	return "Restored legacy meter polling cronjob: $label\n";
-}
-
-sub remove_legacy_cronjobs
-{
-	foreach my $cronfolder ("cron.01min", "cron.03min", "cron.05min", "cron.10min", "cron.15min", "cron.30min", "cron.hourly", "cron.reboot") {
-		unlink("$lbhomedir/system/cron/$cronfolder/$lbpplugindir");
-	}
-}
-
-sub create_legacy_cronjob
-{
-	my ($cronfolder, $scriptname) = @_;
-	my $source = "$lbpbindir/$scriptname";
-	my $target = "$lbhomedir/system/cron/$cronfolder/$lbpplugindir";
-	unlink($target);
-	symlink($source, $target);
+	my ($current) = @_;
+	my $requested = (($q->{implementation_changed} || "") eq "1") ? ($q->{implementation} || "") : $current;
+	return undef if ($current eq "vzlogger" || $requested ne "vzlogger");
+	my ($lock, $error) = acquire_legacy_fetch_lock("/var/run/shm/$lbpplugindir");
+	die "$error Cannot activate vzLogger until Legacy polling has finished.\n" if (!$lock);
+	return $lock;
 }
 
 sub build_head_rows
@@ -2907,13 +2898,6 @@ sub clean_log_level
 {
 	my ($value, $default) = @_;
 	return $value if (defined($value) && $value =~ /\A(?:0|1|3|5|10|15)\z/);
-	return $default;
-}
-
-sub clean_qos
-{
-	my ($value, $default) = @_;
-	return int($value) if (defined($value) && $value =~ /\A[01]\z/);
 	return $default;
 }
 

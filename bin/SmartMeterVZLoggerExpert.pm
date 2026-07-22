@@ -245,6 +245,7 @@ sub build_expert_mapping
 {
 	my ($config, $existing) = @_;
 	$existing = {} if (ref($existing) ne "HASH");
+	my %existing_by_uuid = map { lc($_) => $existing->{$_} } keys %$existing;
 	my (%mapping, @warnings);
 	my $index = 0;
 	my $meters = ref($config) eq "HASH" && ref($config->{meters}) eq "ARRAY" ? $config->{meters} : [];
@@ -252,9 +253,8 @@ sub build_expert_mapping
 		my $meter = $meters->[$meter_index];
 		my $channels = ref($meter) eq "HASH" && ref($meter->{channels}) eq "ARRAY" ? $meter->{channels} : [];
 		foreach my $channel (@$channels) {
-			my $uuid = ref($channel) eq "HASH" ? _text($channel->{uuid}) : "";
-			my $old = $uuid ne "" ? $existing->{$uuid} : undef;
-			$old = $existing->{lc($uuid)} if (ref($old) ne "HASH" && $uuid ne "");
+			my $uuid = ref($channel) eq "HASH" ? lc(_text($channel->{uuid})) : "";
+			my $old = $uuid ne "" ? $existing_by_uuid{$uuid} : undef;
 			if (ref($old) eq "HASH") {
 				my %entry = %$old;
 				$entry{identifier} = _text($channel->{identifier});

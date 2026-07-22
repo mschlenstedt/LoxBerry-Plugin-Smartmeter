@@ -11,9 +11,9 @@ use IO::Socket;
 use JSON::PP;
 use LoxBerry::System;
 use lib $FindBin::Bin;
-use SmartMeterVZLoggerChannels qw(output_order_mapping ordered_output_names);
-use SmartMeterVZLoggerBridge qw(parse_reading channel_mapping identifier_mapping clean_scalar_payload);
-use SmartMeterVZLoggerConfig qw(clean_number sanitize_topic);
+use SmartMeterVZLoggerChannels qw(output_order_mapping ordered_output_names read_json);
+use SmartMeterVZLoggerBridge qw(parse_reading channel_mapping identifier_mapping clean_scalar_payload normalize_mapping_keys);
+use SmartMeterVZLoggerConfig qw(clean_number clean_qos sanitize_topic);
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
@@ -57,7 +57,9 @@ $SIG{INT} = sub {
 };
 
 my $plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file: " . Config::Simple->error() . "\n";
-my $mapping = read_json($mapping_file) || {};
+my $loaded_mapping = read_json($mapping_file) || {};
+my ($mapping, $mapping_error) = normalize_mapping_keys($loaded_mapping);
+die "$mapping_error\n" if (!$mapping);
 my $expert_config = (($plugin_cfg->param("VZLOGGER.EXPERTMODE") || "0") eq "1") ? read_json($vzlogger_config_file) : undef;
 my $expert_mqtt = ref($expert_config) eq "HASH" && ref($expert_config->{mqtt}) eq "HASH" ? $expert_config->{mqtt} : undef;
 my $base_topic = sanitize_topic(ref($expert_mqtt) eq "HASH" ? ($expert_mqtt->{topic} || "smartmeter") : ($plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter"));
@@ -339,26 +341,6 @@ sub read_mqtt_settings
 	}
 
 	return \%settings;
-}
-
-sub clean_qos
-{
-	my ($value, $default) = @_;
-	return int($value) if (defined($value) && $value =~ /\A[01]\z/);
-	return $default;
-}
-
-
-sub read_json
-{
-	my ($file) = @_;
-	return undef if (!-e $file);
-	open(my $fh, "<", $file) or return undef;
-	local $/;
-	my $text = <$fh>;
-	close($fh);
-	my $data = eval { JSON::PP->new->utf8->decode($text) };
-	return $@ ? undef : $data;
 }
 
 sub bridge_running

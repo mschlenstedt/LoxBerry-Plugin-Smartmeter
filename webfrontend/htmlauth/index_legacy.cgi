@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+use strict;
+use warnings;
+
 # Copyright 2017 Michael Schlenstedt, michael@loxberry.de
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,25 +25,18 @@
 use CGI::Carp qw(fatalsToBrowser);
 use CGI qw/:standard/;
 use Config::Simple;
-use Config::Crontab;
-use LoxBerry::Log;
 use LoxBerry::System;
 use File::HomeDir;
-#use HTML::Entities;
-use String::Escape qw( unquotemeta );
 use Cwd 'abs_path';
 use HTML::Template;
 use File::Path qw(make_path);
 use FindBin;
 use JSON::PP;
-use LoxBerry::System;
 use lib $lbpbindir;
 use lib "$FindBin::Bin/../../bin";
-use SmartMeterVZLoggerConfig qw(validate_legacy_general);
+use SmartMeterVZLoggerConfig qw(validate_legacy_general implementation_mode set_implementation_mode);
 use SmartMeterVZLoggerRuntime qw(acquire_config_lock);
-#use warnings;
-#use strict;
-#no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
+use SmartMeterLegacyRuntime qw(initialize_legacy_heads acquire_legacy_fetch_lock remove_legacy_cronjobs synchronize_legacy_runtime clear_legacy_cache vzlogger_service_running);
 umask(0027);
 
 ##########################################################################
@@ -54,37 +50,15 @@ my  $installfolder;
 my  $version;
 my  $home = File::HomeDir->my_home;
 my  $psubfolder;
-my  $pname;
 my  %TPhrases;
-my  @heads;
-my  %head;
 my  @rows;
-my  %hash;
 my  $maintemplate;
-our $template_title;
-my  $phrase;
-my  $helplink;
-my  @help;
-my  $helptext;
+my  $template_title;
 my  $saveformdata;
 my  $clearcache;
-my  %plugin_config;
-my  $name;
-my  $device;
-my  $serial;
-my  $crontabtmp = "$lbplogdir/crontab.temp";
 my  $runtime_dir;
 my  $meter_templates_cache;
 my  $validation_error = "";
-my  @legacy_meter_fields = qw(METER PROTOCOL STARTBAUDRATE BAUDRATE TIMEOUT DELAY HANDSHAKE DATABITS STOPBITS PARITY CRC);
-
-##########################################################################
-# Read crontab
-##########################################################################
-
-my $crontab = new Config::Crontab;
-$crontab->system(1); ## Wichtig, damit der User im File berücksichtigt wird
-$crontab->read( -file => "$lbhomedir/system/cron/cron.d/$lbpplugindir" );
 
 
 ##########################################################################
@@ -98,13 +72,6 @@ $version = "unknown";
 $psubfolder = abs_path($0);
 $psubfolder =~ s/(.*)\/(.*)\/(.*)$/$2/g;
 
-# Start with HTML header
-#print $cgi->header(
-#	type	=>	'text/html',
-#	charset	=>	'utf-8',
-#); 
-print "Content-type: text/html\n\n";
-
 # Read general config
 $cfg	 	= new Config::Simple("$home/config/system/general.cfg") or die $cfg->error();
 $installfolder	= $cfg->param("BASE.INSTALLFOLDER");
@@ -113,7 +80,6 @@ $runtime_dir = "/var/run/shm/$psubfolder";
 
 # Read plugin config
 $plugin_cfg 	= new Config::Simple("$installfolder/config/plugins/$psubfolder/smartmeter.cfg") or die $plugin_cfg->error();
-$pname          = $plugin_cfg->param("MAIN.SCRIPTNAME");
 $plugin_cfg->param("MAIN.SENDMQTT", "0") if (!defined $plugin_cfg->param("MAIN.SENDMQTT"));
 $plugin_cfg->param("MAIN.MQTTTOPIC", "smartmeter") if (!$plugin_cfg->param("MAIN.MQTTTOPIC"));
 
@@ -144,58 +110,21 @@ while (my ($configname, $configvalue) = each %plugin_config_hash_for_heads) {
 }
 my @heads = sort keys %head_paths;
 
-# Save a config set if it not already exists
-my $defaults_changed = 0;
-foreach (@heads) {
-	$serial = $_;
-	$serial =~ s%/dev/serial/smartmeter/%%g;
-	if ( !$plugin_cfg->param("$serial.DEVICE") ) {
-		$plugin_cfg->param("$serial.NAME", "$serial");
-		$plugin_cfg->param("$serial.SERIAL", "$serial");
-		$plugin_cfg->param("$serial.DEVICE", "$_");
-		$plugin_cfg->param("$serial.METER", "0");
-		$plugin_cfg->param("$serial.PROTOCOL", "");
-		$plugin_cfg->param("$serial.STARTBAUDRATE", "");
-		$plugin_cfg->param("$serial.BAUDRATE", "");
-		$plugin_cfg->param("$serial.TIMEOUT", "");
-		$plugin_cfg->param("$serial.DELAY", "");
-		$plugin_cfg->param("$serial.HANDSHAKE", "");
-		$plugin_cfg->param("$serial.DATABITS", "");
-		$plugin_cfg->param("$serial.STOPBITS", "");
-		$plugin_cfg->param("$serial.PARITY", "");
-        $plugin_cfg->param("$serial.CRC", "");
-		$defaults_changed = 1;
-	}
-	if ( !defined($plugin_cfg->param("$serial.LEGACY_METER")) ) {
-		foreach my $field (@legacy_meter_fields) {
-			my $value = $plugin_cfg->param("$serial.$field");
-			$value = $field eq "METER" ? "0" : "" if (!defined($value));
-			$plugin_cfg->param("$serial.LEGACY_$field", $value);
-		}
-		$defaults_changed = 1;
-	}
+{
+	my ($initialization_lock, $lock_error) = acquire_config_lock($runtime_dir);
+	die "$lock_error\n" if (!$initialization_lock);
+	local $ENV{SMARTMETER_CONFIG_LOCK_HELD} = "1";
+	$plugin_cfg->save if (initialize_legacy_heads($plugin_cfg, @heads));
 }
-$plugin_cfg->save if ($defaults_changed);
 
 # Set parameters coming in - get over post
-if ( $cgi->url_param('lang') ) {
-	$lang = quotemeta( $cgi->url_param('lang') );
-}
-elsif ( $cgi->param('lang') ) {
-	$lang = quotemeta( $cgi->param('lang') );
-}
-if ( $cgi->url_param('saveformdata') ) {
-	$saveformdata = quotemeta( $cgi->url_param('saveformdata') );
-}
-elsif ( $cgi->param('saveformdata') ) {
-	$saveformdata = quotemeta( $cgi->param('saveformdata') );
-}
-if ( $cgi->url_param('clearcache') ) {
-	$clearcache = quotemeta( $cgi->url_param('clearcache') );
-}
-elsif ( $cgi->param('clearcache') ) {
-	$clearcache = quotemeta( $cgi->param('clearcache') );
-}
+my $requested_lang = $cgi->param('lang');
+$lang = $requested_lang if (defined($requested_lang));
+$lang =~ tr/a-z//cd;
+$lang = substr($lang, 0, 2) || "en";
+my $is_post = ($ENV{REQUEST_METHOD} || "GET") eq "POST";
+$saveformdata = $is_post && ($cgi->param('saveformdata') || "") eq "1";
+$clearcache = $is_post && ($cgi->param('action') || "") eq "clearcache";
 
 ##########################################################################
 # Initialize html templates
@@ -246,17 +175,33 @@ sub form
 
 	# Clear Cache
 	if ( $clearcache ) {
-		foreach my $cache_file (glob("$runtime_dir/*")) {
-			next if ($cache_file =~ /\/fetch\.lock\z/);
-			unlink($cache_file);
+		if (implementation_mode($plugin_cfg) ne "legacy") {
+			$validation_error = $TPhrases{"LEGACY.ACTION_REQUIRES_ACTIVE"} || "Legacy must be active for this action.";
+		} else {
+			my ($config_lock, $config_error) = acquire_config_lock($runtime_dir);
+			if (!$config_lock) {
+				$validation_error = $config_error;
+			} else {
+				my ($fetch_lock, $fetch_error) = acquire_legacy_fetch_lock($runtime_dir);
+				if (!$fetch_lock) {
+					$validation_error = $fetch_error;
+				} else {
+					my ($removed, $cache_error) = clear_legacy_cache($runtime_dir);
+					$validation_error = $cache_error if ($cache_error);
+				}
+			}
 		}
 	}
 
 	# If the form was saved, update config file
 	if ( $saveformdata ) {
-		my $implementation = &implementation_mode();
+		my $previous_implementation = implementation_mode($plugin_cfg);
+		my $implementation = $previous_implementation;
+		my $invalid_implementation = 0;
 		if ( ($cgi->param('implementation_changed') || "") eq "1" ) {
-			$implementation = scalar($cgi->param('implementation'));
+			my $submitted = scalar($cgi->param('implementation'));
+			if (defined($submitted) && $submitted =~ /\A(?:none|legacy)\z/) { $implementation = $submitted; }
+			else { $invalid_implementation = 1; }
 		}
 		my %meter_ids = map { $_->{id} => 1 } @{load_meter_templates()};
 		my @submitted_meters;
@@ -273,7 +218,7 @@ sub form
 				parity => scalar($cgi->param("$head_serial\_parity")),
 			};
 		}
-		my @validation_errors = validate_legacy_general({
+		my @validation_errors = $invalid_implementation ? ("IMPLEMENTATION") : $implementation eq "legacy" ? validate_legacy_general({
 			implementation => $implementation,
 			read => scalar($cgi->param('read')),
 			cron => defined($cgi->param('cron')) ? scalar($cgi->param('cron')) : $plugin_cfg->param("MAIN.CRON"),
@@ -282,78 +227,64 @@ sub form
 			sendmqtt => scalar($cgi->param('sendmqtt')),
 			mqtttopic => defined($cgi->param('mqtttopic')) ? scalar($cgi->param('mqtttopic')) : ($plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter"),
 			meters => \@submitted_meters,
-		}, \%meter_ids);
+		}, \%meter_ids) : ();
 		if (@validation_errors) {
 			$validation_error = ($TPhrases{"LEGACY.VALIDATION_ERROR"} || "Invalid values; nothing was saved:") . " " . join(", ", @validation_errors);
-		} else {
+		} elsif ($implementation ne "vzlogger") {
 			my ($lock, $lock_error) = acquire_config_lock($runtime_dir);
 			if (!$lock) {
 				$validation_error = $lock_error;
 			} else {
 				local $ENV{SMARTMETER_CONFIG_LOCK_HELD} = "1";
-		$plugin_cfg->param( "MAIN.IMPLEMENTATION", $implementation );
-		$plugin_cfg->param( "MAIN.READ", $cgi->param('read') );
-		$plugin_cfg->param( "MAIN.CRON", $cgi->param('cron') ) if (defined($cgi->param('cron')));
-		$plugin_cfg->param( "MAIN.SENDUDP", $cgi->param('sendudp') );
-		$plugin_cfg->param( "MAIN.UDPPORT", $cgi->param('udpport') ) if (defined($cgi->param('udpport')));
-		$plugin_cfg->param( "MAIN.SENDMQTT", $cgi->param('sendmqtt') );
-		$plugin_cfg->param( "MAIN.MQTTTOPIC", $cgi->param('mqtttopic') ) if (defined($cgi->param('mqtttopic')));
-		foreach (@heads) {
-			$serial = $_;
-			$serial =~ s%/dev/serial/smartmeter/%%g;
-			$plugin_cfg->param("$serial.NAME", $cgi->param("$serial\_name") );
-			$plugin_cfg->param("$serial.LEGACY_METER", &clean_config_value($cgi->param("$serial\_meter"), qr/\A[A-Za-z0-9_.:-]+\z/, "0") );
-			if ( $cgi->param("$serial\_meter") eq "manual" ) {
-				$plugin_cfg->param("$serial.LEGACY_PROTOCOL", &clean_config_value($cgi->param("$serial\_protocol"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
-				$plugin_cfg->param("$serial.LEGACY_STARTBAUDRATE", &clean_config_value($cgi->param("$serial\_startbaudrate"), qr/\A\d*\z/, "") );
-				$plugin_cfg->param("$serial.LEGACY_BAUDRATE", &clean_config_value($cgi->param("$serial\_baudrate"), qr/\A\d*\z/, "") );
-				$plugin_cfg->param("$serial.LEGACY_TIMEOUT", &clean_config_value($cgi->param("$serial\_timeout"), qr/\A\d*\z/, "") );
-				$plugin_cfg->param("$serial.LEGACY_DELAY", &clean_config_value($cgi->param("$serial\_delay"), qr/\A\d*\z/, "") );
-				$plugin_cfg->param("$serial.LEGACY_HANDSHAKE", &clean_config_value($cgi->param("$serial\_handshake"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
-				$plugin_cfg->param("$serial.LEGACY_DATABITS", &clean_config_value($cgi->param("$serial\_databits"), qr/\A\d*\z/, "") );
-				$plugin_cfg->param("$serial.LEGACY_STOPBITS", &clean_config_value($cgi->param("$serial\_stopbits"), qr/\A\d*\z/, "") );
-				$plugin_cfg->param("$serial.LEGACY_PARITY", &clean_config_value($cgi->param("$serial\_parity"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
-				$plugin_cfg->param("$serial.LEGACY_CRC", &clean_config_value($cgi->param("$serial\_crc"), qr/\A[A-Za-z0-9_.:-]*\z/, "") );
-			}
-		}
-		$plugin_cfg->save;
-
-		if ( $implementation eq "legacy" ) {
-			&apply_legacy_runtime;
-			&run_vzlogger_control("disable-vzlogger");
-		} else {
-			&remove_cronjobs;
-			&run_vzlogger_control("disable-vzlogger");
-		}
+				set_implementation_mode($plugin_cfg, $implementation);
+				if ($implementation eq "legacy") {
+					$plugin_cfg->param("MAIN.READ", scalar($cgi->param('read')));
+					$plugin_cfg->param("MAIN.CRON", scalar($cgi->param('cron'))) if (defined($cgi->param('cron')));
+					$plugin_cfg->param("MAIN.SENDUDP", scalar($cgi->param('sendudp')));
+					$plugin_cfg->param("MAIN.UDPPORT", scalar($cgi->param('udpport'))) if (defined($cgi->param('udpport')));
+					$plugin_cfg->param("MAIN.SENDMQTT", scalar($cgi->param('sendmqtt')));
+					$plugin_cfg->param("MAIN.MQTTTOPIC", scalar($cgi->param('mqtttopic'))) if (defined($cgi->param('mqtttopic')));
+					foreach my $device (@heads) {
+						my $serial = $device;
+						$serial =~ s%/dev/serial/smartmeter/%%g;
+						my $meter = scalar($cgi->param("${serial}_meter"));
+						$plugin_cfg->param("$serial.NAME", scalar($cgi->param("${serial}_name")));
+						$plugin_cfg->param("$serial.LEGACY_METER", clean_config_value($meter, qr/\A[A-Za-z0-9_.:-]+\z/, "0"));
+						if (defined($meter) && $meter eq "manual") {
+							foreach my $field (qw(protocol startbaudrate baudrate timeout delay handshake databits stopbits parity crc)) {
+								my $pattern = $field =~ /\A(?:startbaudrate|baudrate|timeout|delay|databits|stopbits)\z/ ? qr/\A\d*\z/ : qr/\A[A-Za-z0-9_.:-]*\z/;
+								$plugin_cfg->param("$serial.LEGACY_" . uc($field), clean_config_value(scalar($cgi->param("${serial}_$field")), $pattern, ""));
+							}
+						}
+					}
+				}
+				$plugin_cfg->save;
+				my ($control_output, $control_exit) = run_vzlogger_control("disable-vzlogger");
+				if ($control_exit != 0) {
+					set_implementation_mode($plugin_cfg, $previous_implementation);
+					$plugin_cfg->save;
+					my ($rollback_output, $rollback_exit) = restore_implementation_runtime($previous_implementation);
+					$validation_error = ($control_output || "Could not disable vzLogger.") . $rollback_output;
+					$validation_error .= " Runtime rollback was incomplete." if ($rollback_exit != 0);
+				} elsif ($implementation eq "legacy") {
+					my ($runtime_output, $runtime_ok) = synchronize_legacy_runtime($installfolder, $psubfolder, $plugin_cfg, start_minimal_now => 1);
+					if (!$runtime_ok) {
+						set_implementation_mode($plugin_cfg, $previous_implementation);
+						$plugin_cfg->save;
+						remove_legacy_cronjobs($installfolder, $psubfolder);
+						my ($rollback_output, $rollback_exit) = restore_implementation_runtime($previous_implementation);
+						$validation_error = $runtime_output . $rollback_output;
+						$validation_error .= " Runtime rollback was incomplete." if ($rollback_exit != 0);
+					}
+				} else {
+					remove_legacy_cronjobs($installfolder, $psubfolder);
+				}
 			}
 		}
 	}
-	
-	# Navbar
-	our %navbar;
-
-	$navbar{10}{Name} = "Test";
-	$navbar{10}{URL} = 'index.cgi?form=owfs';
-	$navbar{10}{active} = 1 if $q->{form} eq "owfs";
-	
-	$navbar{20}{Name} = "Test2";
-	$navbar{20}{URL} = 'index.cgi?form=devices';
-	$navbar{20}{active} = 1 if $q->{form} eq "devices";
-	
-	$navbar{30}{Name} = "$L{'COMMON.LABEL_MQTT'}";
-	$navbar{30}{URL} = 'index.cgi?form=mqtt';
-	$navbar{30}{active} = 1 if $q->{form} eq "mqtt";
-	
-	$navbar{98}{Name} = "$L{'COMMON.LABEL_LOG'}";
-	$navbar{98}{URL} = 'index.cgi?form=log';
-	$navbar{98}{active} = 1 if $q->{form} eq "log";
-
-	$navbar{99}{Name} = "$L{'COMMON.LABEL_CREDITS'}";
-	$navbar{99}{URL} = 'index.cgi?form=credits';
-	$navbar{99}{active} = 1 if $q->{form} eq "credits";
 
 	# Print Template header
-	&lbheader;
+	load_page_header();
 
 	# Read options and set them for template
 	$maintemplate->param( PSUBFOLDER	=> $psubfolder );
@@ -366,11 +297,12 @@ sub form
 	$maintemplate->param( SENDMQTT 		=> $plugin_cfg->param("MAIN.SENDMQTT") );
 	$maintemplate->param( MQTTTOPIC 		=> $plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter" );
 	$maintemplate->param( VALIDATION_ERROR => $validation_error );
-	my $implementation = &implementation_mode();
+	my $implementation = implementation_mode($plugin_cfg);
 	$maintemplate->param( IMPLEMENTATION 	=> $implementation );
 	$maintemplate->param( IMPLEMENTATION_SWITCH_VALUE => ($implementation eq "legacy" ? "legacy" : "none") );
 	$maintemplate->param( VZLOGGER_IMPLEMENTATION_ACTIVE => ($implementation eq "vzlogger") );
 	$maintemplate->param( LEGACY_IMPLEMENTATION_ACTIVE => ($implementation eq "legacy") );
+	$maintemplate->param( VZLOGGER_SERVICE_ACTIVE => vzlogger_service_running() );
 	my %parity_names = (n => "none", e => "even", o => "odd");
 	my $meter_template_options = [ map {
 		my $serial_mode = lc($_->{serial_mode} || "");
@@ -394,12 +326,11 @@ sub form
 	} @{load_meter_templates()} ];
 
   	# Read the config for all found heads
-	my $i = 0;
-	foreach (@heads) {
-		$serial = $_;
+	foreach my $device (@heads) {
+		my $serial = $device;
 		$serial =~ s%/dev/serial/smartmeter/%%g;
 		if ( $plugin_cfg->param("$serial.DEVICE") ) {
-			%{"hash".$i} = (
+			my %row = (
 			NAME 		=>	$plugin_cfg->param("$serial.NAME"),
 			SERIAL		=>	$plugin_cfg->param("$serial.SERIAL"),
 			DEVICE		=>	$plugin_cfg->param("$serial.DEVICE"),
@@ -416,8 +347,7 @@ sub form
 			CRC		    =>	$plugin_cfg->param("$serial.LEGACY_CRC"),
 			METER_TEMPLATES => $meter_template_options,
 			);
-			push (@rows, \%{"hash".$i});
-			$i++;
+			push(@rows, \%row);
 		} 
 	}
 	$maintemplate->param( ROWS => \@rows );
@@ -426,7 +356,7 @@ sub form
 	print $maintemplate->output;
 
 	# Parse page footer		
-	&lbfooter;
+	LoxBerry::Web::lbfooter();
 
 	exit;
 
@@ -454,96 +384,32 @@ sub load_meter_templates
 	return $meter_templates_cache;
 }
 
-sub remove_cronjobs
-{
-	foreach my $cronfolder ("cron.01min", "cron.03min", "cron.05min", "cron.10min", "cron.15min", "cron.30min", "cron.hourly", "cron.reboot") {
-		unlink ("$installfolder/system/cron/$cronfolder/$pname");
-	}
-}
-
-sub create_cronjob
-{
-	my ($cronfolder, $scriptname) = @_;
-	my $source = "$installfolder/bin/plugins/$psubfolder/$scriptname";
-	my $target = "$installfolder/system/cron/$cronfolder/$pname";
-
-	unlink ($target);
-	symlink ($source, $target);
-}
-
-sub apply_legacy_runtime
-{
-	if ( $plugin_cfg->param("MAIN.READ") eq "1" )
-	{
-		&remove_cronjobs;
-		if ($plugin_cfg->param("MAIN.CRON") eq "M")
-		{
-			# Check if Script already running?
-			my $logger_running = 0;
-			if (open(my $ps_fh, "-|", "ps", "aux")) {
-				$logger_running = scalar(grep{/sm_logger.pl/} <$ps_fh>);
-				close($ps_fh);
-			}
-			if (!$logger_running)
-			{
-				my $pid = fork();
-				if (defined $pid && $pid == 0) {
-					open STDIN, "</dev/null";
-					open STDOUT, ">/dev/null";
-					open STDERR, ">/dev/null";
-					exec($^X, "$installfolder/bin/plugins/$psubfolder/fetch.pl");
-					exit;
-				}
-			}
-			&create_cronjob("cron.reboot", "reboot_cron_runner.sh");
-		}
-		if ($plugin_cfg->param("MAIN.CRON") eq "1")
-		{
-			&create_cronjob("cron.01min", "fetch.pl");
-		}
-		if ($plugin_cfg->param("MAIN.CRON") eq "3")
-		{
-			&create_cronjob("cron.03min", "fetch.pl");
-		}
-		if ($plugin_cfg->param("MAIN.CRON") eq "5")
-		{
-			&create_cronjob("cron.05min", "fetch.pl");
-		}
-		if ($plugin_cfg->param("MAIN.CRON") eq "10")
-		{
-			&create_cronjob("cron.10min", "fetch.pl");
-		}
-		if ($plugin_cfg->param("MAIN.CRON") eq "15")
-		{
-			&create_cronjob("cron.15min", "fetch.pl");
-		}
-		if ($plugin_cfg->param("MAIN.CRON") eq "30")
-		{
-			&create_cronjob("cron.30min", "fetch.pl");
-		}
-		if ($plugin_cfg->param("MAIN.CRON") eq "60")
-		{
-			&create_cronjob("cron.hourly", "fetch.pl");
-		}
-	} else {
-		&remove_cronjobs;
-	}
-}
-
 sub run_vzlogger_control
 {
 	my ($action) = @_;
 	my $script = "$installfolder/bin/plugins/$psubfolder/vzlogger_control.pl";
-	return if (!-e $script);
+	return wantarray ? ("", 0) : "" if (!-e $script);
 	my $output = `$^X "$script" "$action" 2>&1`;
-	return $output;
+	my $exit = $? >> 8;
+	return wantarray ? ($output, $exit) : $output;
 }
 
-sub implementation_mode
+sub restore_implementation_runtime
 {
-	my $mode = $plugin_cfg->param("MAIN.IMPLEMENTATION") || "";
-	return $mode if ($mode =~ /\A(?:none|legacy|vzlogger)\z/);
-	return (($plugin_cfg->param("MAIN.READ") || "0") eq "1") ? "legacy" : "vzlogger";
+	my ($implementation) = @_;
+	if ($implementation eq "vzlogger") {
+		remove_legacy_cronjobs($installfolder, $psubfolder);
+		return run_vzlogger_control("activate-vzlogger");
+	}
+	my ($output, $exit) = run_vzlogger_control("disable-vzlogger");
+	if ($implementation eq "legacy") {
+		my ($runtime_output, $runtime_ok) = synchronize_legacy_runtime($installfolder, $psubfolder, $plugin_cfg);
+		$output .= $runtime_output;
+		$exit = 1 if (!$runtime_ok);
+	} else {
+		remove_legacy_cronjobs($installfolder, $psubfolder);
+	}
+	return ($output, $exit);
 }
 
 sub clean_config_value
@@ -558,40 +424,16 @@ sub clean_config_value
 # Page-Header-Sub
 #####################################################
 
-sub lbheader 
+sub load_page_header
 {
-	 # Create Help page
-  $helplink = "https://www.loxwiki.eu/x/mA-L";
-  open(F,"$installfolder/templates/plugins/$psubfolder/multi/help.html") || die "Missing template plugins/$psubfolder/$lang/help.html";
-    @help = <F>;
-    foreach (@help)
-    {
-      $_ =~ s/<!--\$psubfolder-->/$psubfolder/g;
-      s/[\n\r]/ /g;
-      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-      $helptext = $helptext . $_;
-    }
-  close(F);
-  open(F,"$installfolder/templates/system/$lang/header.html") || die "Missing template system/$lang/header.html";
-    while (<F>) 
-    {
-      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-      print $_;
-    }
-  close(F);
-}
-
-#####################################################
-# Footer
-#####################################################
-
-sub lbfooter 
-{
-  open(F,"$installfolder/templates/system/$lang/footer.html") || die "Missing template system/$lang/footer.html";
-    while (<F>) 
-    {
-      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-      print $_;
-    }
-  close(F);
+	require LoxBerry::Web;
+	my $help_file = "$installfolder/templates/plugins/$psubfolder/multi/help.html";
+	my $helptext = "";
+	if (open(my $help_fh, "<", $help_file)) {
+		local $/;
+		$helptext = <$help_fh> || "";
+		close($help_fh);
+		$helptext =~ s/<!--\$psubfolder-->/$psubfolder/g;
+	}
+	LoxBerry::Web::lbheader($template_title, "https://www.loxwiki.eu/x/mA-L", $helptext);
 }

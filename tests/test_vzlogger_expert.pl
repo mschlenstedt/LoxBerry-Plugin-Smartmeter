@@ -58,6 +58,11 @@ is($mapping->{$uuid}->{identifier}, "1-0:1.8.0", "mapping identifier refreshed")
 is($mapping->{$uuid}->{channel_index}, 0, "mapping index refreshed");
 is(scalar(@$warnings), 0, "known UUID produces no mapping warning");
 
+$valid->{config}->{meters}->[0]->{channels}->[0]->{uuid} = uc($uuid);
+($mapping, $warnings) = build_expert_mapping($valid->{config}, $existing);
+ok(exists($mapping->{$uuid}), "expert mapping canonicalizes uppercase UUID keys");
+$valid->{config}->{meters}->[0]->{channels}->[0]->{uuid} = $uuid;
+
 push @{$valid->{config}->{meters}->[0]->{channels}}, {
 	api => "null", uuid => "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", identifier => "1-0:2.8.0",
 };
@@ -72,6 +77,11 @@ close($index_fh);
 like($index_source, qr/\$enabled eq "1" && !\$was_enabled && !-e expert_config_file\(\)/, "mode activation initializes only a missing expert draft");
 unlike($index_source, qr/unlink\(expert_config_file\(\)\)/, "standard apply does not remove the expert draft");
 like($index_source, qr/ajaxaction.*expert-reset|\$action eq "expert-reset"/s, "explicit expert reset AJAX action is available");
+like(
+	$index_source,
+	qr/\$control_action = \$activating_vzlogger && !\$replace_expert_runtime \? "activate-vzlogger" : "apply"/,
+	"reactivation regenerates standard configuration when the disabled Expert draft is still active",
+);
 
 open(my $template_fh, "<", "$FindBin::Bin/../templates/settings.html") or die $!;
 my $template_source = <$template_fh>;
@@ -85,6 +95,16 @@ like(
 	$template_source,
 	qr/\$\("#reset_expert_config_container"\)\.prop\("hidden", !expert_mode_active\)\.toggle\(expert_mode_active\)/,
 	"expert mode rendering toggles the stable reset-action container",
+);
+like(
+	$template_source,
+	qr/action == "apply" && !expert_mode_active && expert_runtime_applied/,
+	"standard apply confirmation is limited to replacing an actually active Expert configuration",
+);
+unlike(
+	$template_source,
+	qr/action == "apply" && !expert_mode_active && expert_source_present/,
+	"retained dormant Expert drafts do not trigger repeated replacement confirmations",
 );
 
 done_testing();

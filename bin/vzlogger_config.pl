@@ -11,7 +11,7 @@ use LoxBerry::System;
 use lib $FindBin::Bin;
 use SmartMeterVZLoggerChannels qw(read_json write_json_atomic load_catalog lookup_obis new_document migrate_legacy_meter validate_document native_channel normalize_obis);
 use SmartMeterVZLoggerCustomChannels qw(assign_custom_channel_uuids);
-use SmartMeterVZLoggerConfig qw(read_mqtt_settings clean_number sanitize_topic protocol_for_meter normalized_meter_mode serial_mode);
+use SmartMeterVZLoggerConfig qw(read_mqtt_settings clean_number clean_qos sanitize_topic protocol_for_meter normalized_meter_mode serial_mode implementation_mode);
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
@@ -44,7 +44,7 @@ my $local_index = clean_boolean($plugin_cfg->param("VZLOGGER.LOCALINDEX"), 1);
 my $local_timeout = clean_number($plugin_cfg->param("VZLOGGER.LOCALTIMEOUT"), 30);
 my $local_buffer = clean_integer($plugin_cfg->param("VZLOGGER.LOCALBUFFER"), -1);
 my $retry = clean_number($plugin_cfg->param("VZLOGGER.RETRY"), 30);
-my $vzlogger_mode = ($plugin_cfg->param("MAIN.IMPLEMENTATION") || "") eq "vzlogger";
+my $vzlogger_mode = implementation_mode($plugin_cfg) eq "vzlogger";
 
 my @meters;
 my %channel_mapping;
@@ -477,13 +477,6 @@ sub clean_integer
 }
 
 sub clean_boolean
-{
-	my ($value, $default) = @_;
-	return int($value) if (defined($value) && $value =~ /\A[01]\z/);
-	return $default;
-}
-
-sub clean_qos
 {
 	my ($value, $default) = @_;
 	return int($value) if (defined($value) && $value =~ /\A[01]\z/);
