@@ -6,6 +6,8 @@ use Config::Simple;
 use IO::Socket::INET;
 use JSON::PP;
 use LoxBerry::System;
+use lib $lbpbindir;
+use SmartMeterVZLoggerChannels qw(load_catalog lookup_obis);
 
 require LoxBerry::Web;
 
@@ -19,10 +21,11 @@ my %L = LoxBerry::System::readlanguage($template, "language.ini");
 my $cfg = Config::Simple->new("$lbpconfigdir/smartmeter.cfg");
 my $port = $cfg ? ($cfg->param("VZLOGGER.LOCALPORT") || 18080) : 18080;
 my $mapping_file = "$lbpconfigdir/vzlogger_channels.json";
-my $metadata_version = metadata_version($mapping_file, "$lbpconfigdir/smartmeter.cfg");
+my $catalog = load_catalog("$lbptemplatedir/obis_catalog.json");
+my $metadata_version = metadata_version($mapping_file, "$lbpconfigdir/smartmeter.cfg", "$lbptemplatedir/obis_catalog.json");
 if ($cgi->param("meta")) {
 	print $cgi->header(-type => "application/json", -charset => "utf-8", -expires => "now");
-	print JSON::PP->new->utf8->canonical->encode(read_channel_metadata($mapping_file, $cfg, $metadata_version));
+	print JSON::PP->new->utf8->canonical->encode(read_channel_metadata($mapping_file, $cfg, $metadata_version, $catalog));
 	exit 0;
 }
 if ($cgi->param("json")) {
@@ -48,7 +51,7 @@ sub metadata_version {
 }
 
 sub read_channel_metadata {
-	my ($file, $plugin_cfg, $version) = @_;
+	my ($file, $plugin_cfg, $version, $obis_catalog) = @_;
 	my %channels;
 	if (-e $file && open(my $fh, "<", $file)) {
 		local $/;
@@ -60,6 +63,7 @@ sub read_channel_metadata {
 				my $entry = $mapping->{$uuid};
 				next if (ref($entry) ne "HASH");
 				my $serial = $entry->{serial} || "unknown";
+				my $catalog_entry = lookup_obis($obis_catalog, $entry->{identifier} || "", "en");
 				$channels{lc($uuid)} = {
 					serial => $serial,
 					head_name => $plugin_cfg ? ($plugin_cfg->param("$serial.NAME") || $serial) : $serial,
@@ -68,6 +72,7 @@ sub read_channel_metadata {
 					catalog_name_de => $entry->{catalog_name_de} || "",
 					catalog_name_en => $entry->{catalog_name_en} || "",
 					unit => $entry->{unit} || "",
+					category => $catalog_entry->{category} || $entry->{category} || "unknown",
 					display_factor => defined($entry->{display_factor}) ? 0 + $entry->{display_factor} : 1,
 					identifier => $entry->{identifier} || "",
 					channel => $entry->{channel} || "",

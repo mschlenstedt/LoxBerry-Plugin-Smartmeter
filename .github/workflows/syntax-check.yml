@@ -38,6 +38,11 @@ jobs:
             libjson-perl \
             php-cli
 
+      - name: Set up Node.js for browser-model tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Check Perl syntax
         shell: bash
         run: |
@@ -95,3 +100,9 @@ jobs:
       - name: Test test-device file normalization
         shell: pwsh
         run: ./tests/test_deploy_line_endings.ps1
+
+      - name: Test vzLogger live chart model
+        run: node tests/test_vzlogger_live.js
+
+      - name: Verify vendored Chart.js
+        run: sha256sum --check webfrontend/htmlauth/vendor/chart.js/chart.umd.min.js.sha256

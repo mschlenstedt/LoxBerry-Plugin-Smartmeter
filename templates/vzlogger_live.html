@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><TMPL_VAR NAME=VZLOGGER.LIVE_TITLE></title>
 <style>
-:root{color-scheme:light;--border:#c8cdd2;--muted:#5f6872;--head:#eef1f3;--channel:#f7f8f9;--error:#a32020}
-*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;color:#202428;background:#fff}main{width:min(1100px,100%);margin:0 auto;padding:1.25rem}h1{font-size:1.55rem;margin:0 0 .35rem;letter-spacing:0}h2{font-size:1.15rem;margin:1.6rem 0 .55rem;padding-bottom:.4rem;border-bottom:2px solid #454b50;letter-spacing:0}.serial{display:block;margin-top:.2rem;color:var(--muted);font-size:.82rem;font-weight:normal}.status{min-height:1.4rem;margin-bottom:1rem;color:var(--muted);font-size:.9rem}.error{color:var(--error)}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{border:1px solid var(--border);padding:.48rem .6rem;text-align:left;vertical-align:top;overflow-wrap:anywhere}thead th{background:var(--head);font-size:.85rem}.channel-heading th{background:var(--channel);padding:.62rem}.channel-title{font-size:.98rem;font-weight:700}.channel-meta{display:block;margin-top:.18rem;color:var(--muted);font-size:.78rem;font-weight:normal}.time{width:48%}.raw-time{color:var(--muted);font-variant-numeric:tabular-nums}.value{font-variant-numeric:tabular-nums}.empty{padding:.8rem;border:1px solid var(--border);color:var(--muted)}
-@media(max-width:620px){main{padding:.85rem}h1{font-size:1.3rem}.time{width:58%}th,td{padding:.42rem;font-size:.86rem}}
+:root{color-scheme:light;--border:#c8cdd2;--muted:#5f6872;--head:#eef1f3;--channel:#f7f8f9;--error:#a32020;--accent:#1769aa;--panel:#f8fafb}
+*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;color:#202428;background:#fff}main{width:min(1100px,100%);margin:0 auto;padding:1.25rem}h1{font-size:1.55rem;margin:0 0 .35rem;letter-spacing:0}h2{font-size:1.15rem;margin:1.6rem 0 .55rem;padding-bottom:.4rem;border-bottom:2px solid #454b50;letter-spacing:0}h3{font-size:1rem;margin:.2rem 0 .65rem}.serial{display:block;margin-top:.2rem;color:var(--muted);font-size:.82rem;font-weight:normal}.status{min-height:1.4rem;margin-bottom:1rem;color:var(--muted);font-size:.9rem}.error{color:var(--error)}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{border:1px solid var(--border);padding:.48rem .6rem;text-align:left;vertical-align:top;overflow-wrap:anywhere}thead th{background:var(--head);font-size:.85rem}.channel-heading th{background:var(--channel);padding:.62rem}.channel-title{font-size:.98rem;font-weight:700}.channel-meta{display:block;margin-top:.18rem;color:var(--muted);font-size:.78rem;font-weight:normal}.time{width:48%}.raw-time{color:var(--muted);font-variant-numeric:tabular-nums}.value{font-variant-numeric:tabular-nums}.empty{padding:.8rem;border:1px solid var(--border);color:var(--muted)}
+.chart-section{margin-top:2rem;padding-top:.25rem}.summary-reader{margin:.75rem 0 1rem}.summary-reader h3 small{display:block;color:var(--muted);font-size:.78rem;font-weight:normal;margin-top:.15rem}.summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.65rem}.summary-card{min-width:0;padding:.7rem;border:1px solid var(--border);border-radius:.35rem;background:var(--panel)}.summary-card span{display:block;color:var(--muted);font-size:.8rem;margin-bottom:.25rem}.summary-card strong{display:block;overflow-wrap:anywhere;font-size:.96rem;font-variant-numeric:tabular-nums}.summary-card strong small{display:block;color:var(--muted);font-size:.76rem;font-weight:normal;margin-top:.15rem}.chart-wrap{position:relative;height:420px;max-width:100%;margin-top:1rem}.chart-settings{margin-top:1rem;border:1px solid var(--border);border-radius:.35rem;background:var(--panel)}.chart-settings summary{cursor:pointer;min-height:40px;padding:.65rem;font-weight:700}.chart-settings-body{padding:0 .75rem .75rem}.chart-options{display:flex;flex-wrap:wrap;gap:.75rem 1.4rem;align-items:flex-start;margin-bottom:.8rem}.chart-option{display:flex;flex-direction:column;gap:.25rem;min-width:min(100%,15rem)}.chart-option label{font-weight:700}.chart-option select,.chart-option button{min-height:40px;max-width:100%;font:inherit}.background-option{display:flex;gap:.55rem;align-items:flex-start;max-width:50rem}.background-option input{width:1.2rem;height:1.2rem;flex:0 0 auto}.help{display:block;color:var(--muted);font-size:.8rem;line-height:1.35;margin:.3rem 0 .8rem}.chart-settings fieldset{border:1px solid var(--border);margin:.7rem 0;padding:.6rem;min-width:0}.chart-settings legend{font-weight:700;padding:0 .25rem}.channel-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.35rem .8rem}.channel-choices label{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:.4rem;min-height:40px;padding:.35rem}.channel-choices input{width:1.15rem;height:1.15rem}.channel-choices span{overflow-wrap:anywhere}.channel-choices small{color:var(--muted)}
+@media(max-width:620px){main{padding:.85rem}h1{font-size:1.3rem}.time{width:58%}th,td{padding:.42rem;font-size:.86rem}.summary-grid{grid-template-columns:1fr}.channel-choices{grid-template-columns:1fr}.chart-wrap{height:320px}.chart-options{display:block}.chart-option{margin-bottom:.75rem}.chart-option select,.chart-option button{width:100%}}
 </style>
 </head>
 <body>
@@ -24,21 +25,48 @@
  data-value="<TMPL_VAR NAME=VZLOGGER.LIVE_VALUE ESCAPE=HTML>"
  data-channel="<TMPL_VAR NAME=VZLOGGER.LIVE_CHANNEL ESCAPE=HTML>"
  data-no-reading="<TMPL_VAR NAME=VZLOGGER.LIVE_NO_READING ESCAPE=HTML>"
- data-last-update="<TMPL_VAR NAME=VZLOGGER.LIVE_LAST_UPDATE ESCAPE=HTML>"></div>
-<main><h1><TMPL_VAR NAME=VZLOGGER.LIVE_TITLE></h1><div id="status" class="status"><TMPL_VAR NAME=VZLOGGER.LIVE_LOADING></div><div id="state"></div></main>
-<script>
-const i18n=document.getElementById('i18n').dataset;
-const locale=i18n.locale==='de'?'de-DE':'en-US';
-const languageQuery='&lang='+encodeURIComponent(i18n.locale);
-let metadataVersion='';let metadata={channels:{}};
-function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function readableName(value){return String(value||i18n.unnamed).replace(/_/g,' ');}
-function displayValue(value,meta){const numeric=Number(value);const factor=Number(meta.display_factor??1);const unit=String(meta.unit||'');if(!Number.isFinite(numeric)||!Number.isFinite(factor))return esc(value)+(unit?' '+esc(unit):'');const scaled=numeric*factor;const formatted=new Intl.NumberFormat(locale,{maximumFractionDigits:6,useGrouping:false}).format(scaled);const title=factor!==1?' title="'+esc(i18n.rawValue)+': '+esc(value)+'"':'';return '<span'+title+'>'+esc(formatted)+(unit?' '+esc(unit):'')+'</span>';}
-function channelUuid(channel){return String(channel.uuid||channel.id||'').toLowerCase();}
-function channelNumber(meta,index){return Number.isInteger(meta.channel_index)?meta.channel_index:index;}
-function timestampText(value){const numeric=Number(value);if(!Number.isFinite(numeric))return esc(value);const milliseconds=Math.abs(numeric)<100000000000?numeric*1000:numeric;const date=new Date(milliseconds);const readable=Number.isNaN(date.getTime())?i18n.invalidTime:date.toLocaleString(locale,{dateStyle:'medium',timeStyle:'medium'});return '<span class="raw-time">'+esc(value)+'</span> ('+esc(readable)+')';}
-async function loadMetadata(){const response=await fetch('?meta=1'+languageQuery,{cache:'no-store'});if(!response.ok)throw new Error(i18n.metadataFailed);metadata=await response.json();metadata.channels=metadata.channels||{};metadataVersion=String(metadata.version||'');}
-function render(data){if(data&&data.error)throw new Error(data.error);const channels=Array.isArray(data&&data.data)?data.data:(Array.isArray(data)?data:[]);if(!channels.length){document.getElementById('state').innerHTML='<div class="empty">'+esc(i18n.noChannels)+'</div>';return;}const groups=new Map();channels.forEach((channel,index)=>{const uuid=channelUuid(channel);const meta=metadata.channels[uuid]||{};const serial=meta.serial||'unknown';if(!groups.has(serial))groups.set(serial,{name:meta.head_name||serial,serial,channels:[]});groups.get(serial).channels.push({channel,meta,index,uuid});});const output=[];groups.forEach(group=>{output.push('<section><h2>'+esc(group.name)+'<span class="serial">'+esc(i18n.readingHead)+': '+esc(group.serial)+'</span></h2>');output.push('<div class="table-wrap"><table><thead><tr><th class="time">'+esc(i18n.timestamp)+'</th><th>'+esc(i18n.value)+'</th></tr></thead><tbody>');group.channels.sort((a,b)=>channelNumber(a.meta,a.index)-channelNumber(b.meta,b.index)).forEach(item=>{const number=channelNumber(item.meta,item.index);const identifier=item.meta.identifier||item.channel.identifier||'';const catalog=i18n.locale==='de'?item.meta.catalog_name_de:item.meta.catalog_name_en;const name=item.meta.display_name||catalog||readableName(item.meta.name||identifier||item.uuid);output.push('<tr class="channel-heading"><th colspan="2"><span class="channel-title">'+esc(i18n.channel)+' '+esc(number)+' - '+esc(name)+'</span><span class="channel-meta">OBIS: '+esc(identifier||'-')+' | UUID: '+esc(item.uuid||'-')+'</span></th></tr>');const tuples=Array.isArray(item.channel.tuples)?item.channel.tuples:[];if(!tuples.length){output.push('<tr><td colspan="2" class="empty">'+esc(i18n.noReading)+'</td></tr>');return;}tuples.forEach(tuple=>{const timestamp=Array.isArray(tuple)?tuple[0]:'';const value=Array.isArray(tuple)?tuple[1]:tuple;output.push('<tr><td>'+timestampText(timestamp)+'</td><td class="value">'+displayValue(value,item.meta)+'</td></tr>');});});output.push('</tbody></table></div></section>');});output.push('<p class="status">vzLogger '+esc(data.version||'')+(data.generator?' | '+esc(data.generator):'')+'</p>');document.getElementById('state').innerHTML=output.join('');}
-async function refresh(){try{const response=await fetch('?json=1'+languageQuery,{cache:'no-store'});if(!response.ok)throw new Error(i18n.dataFailed);const currentVersion=response.headers.get('X-Smartmeter-Metadata-Version')||'';if(currentVersion&&currentVersion!==metadataVersion)await loadMetadata();render(await response.json());document.getElementById('status').className='status';document.getElementById('status').textContent=i18n.lastUpdate+': '+new Date().toLocaleString(locale);}catch(error){document.getElementById('status').className='status error';document.getElementById('status').textContent=error.message;}}
-(async()=>{try{await loadMetadata();await refresh();}catch(error){document.getElementById('status').className='status error';document.getElementById('status').textContent=error.message;}setInterval(refresh,2000);})();
-</script></body></html>
+ data-last-update="<TMPL_VAR NAME=VZLOGGER.LIVE_LAST_UPDATE ESCAPE=HTML>"
+ data-max-units="<TMPL_VAR NAME=VZLOGGER.LIVE_MAX_UNITS ESCAPE=HTML>"
+ data-one-channel="<TMPL_VAR NAME=VZLOGGER.LIVE_ONE_CHANNEL ESCAPE=HTML>"
+ data-time-axis="<TMPL_VAR NAME=VZLOGGER.LIVE_TIME_AXIS ESCAPE=HTML>"
+ data-absolute="<TMPL_VAR NAME=VZLOGGER.LIVE_ABSOLUTE ESCAPE=HTML>"
+ data-unavailable="<TMPL_VAR NAME=VZLOGGER.LIVE_UNAVAILABLE ESCAPE=HTML>"
+ data-balance-equal="<TMPL_VAR NAME=VZLOGGER.LIVE_BALANCE_EQUAL ESCAPE=HTML>"
+ data-balance-import="<TMPL_VAR NAME=VZLOGGER.LIVE_BALANCE_IMPORT ESCAPE=HTML>"
+ data-balance-export="<TMPL_VAR NAME=VZLOGGER.LIVE_BALANCE_EXPORT ESCAPE=HTML>"
+ data-since-rebaseline="<TMPL_VAR NAME=VZLOGGER.LIVE_SINCE_REBASELINE ESCAPE=HTML>"
+ data-session-import="<TMPL_VAR NAME=VZLOGGER.LIVE_SESSION_IMPORT ESCAPE=HTML>"
+ data-session-export="<TMPL_VAR NAME=VZLOGGER.LIVE_SESSION_EXPORT ESCAPE=HTML>"
+ data-session-balance="<TMPL_VAR NAME=VZLOGGER.LIVE_SESSION_BALANCE ESCAPE=HTML>"
+ data-current-flow="<TMPL_VAR NAME=VZLOGGER.LIVE_CURRENT_FLOW ESCAPE=HTML>"
+ data-current-import="<TMPL_VAR NAME=VZLOGGER.LIVE_CURRENT_IMPORT ESCAPE=HTML>"
+ data-current-export="<TMPL_VAR NAME=VZLOGGER.LIVE_CURRENT_EXPORT ESCAPE=HTML>"
+ data-peak-import="<TMPL_VAR NAME=VZLOGGER.LIVE_PEAK_IMPORT ESCAPE=HTML>"
+ data-peak-export="<TMPL_VAR NAME=VZLOGGER.LIVE_PEAK_EXPORT ESCAPE=HTML>"></div>
+<main>
+ <h1><TMPL_VAR NAME=VZLOGGER.LIVE_TITLE></h1>
+ <div id="status" class="status"><TMPL_VAR NAME=VZLOGGER.LIVE_LOADING></div>
+ <div id="state"></div>
+ <section class="chart-section" aria-labelledby="charts-heading">
+  <h2 id="charts-heading"><TMPL_VAR NAME=VZLOGGER.LIVE_CHARTS_TITLE></h2>
+  <h3><TMPL_VAR NAME=VZLOGGER.LIVE_SESSION_TITLE></h3>
+  <div id="session-summary"></div>
+  <div class="chart-wrap"><canvas id="live-chart"></canvas></div>
+  <details class="chart-settings">
+   <summary><TMPL_VAR NAME=VZLOGGER.LIVE_CHART_SETTINGS></summary>
+   <div class="chart-settings-body">
+    <div class="chart-options">
+     <div class="chart-option"><label for="energy-mode"><TMPL_VAR NAME=VZLOGGER.LIVE_ENERGY_MODE></label><select id="energy-mode"><option value="since-open"><TMPL_VAR NAME=VZLOGGER.LIVE_ENERGY_SINCE_OPEN></option><option value="absolute"><TMPL_VAR NAME=VZLOGGER.LIVE_ENERGY_ABSOLUTE></option></select></div>
+     <div class="chart-option"><button id="reset-chart-defaults" type="button"><TMPL_VAR NAME=VZLOGGER.LIVE_RESET_DEFAULTS></button></div>
+    </div>
+    <label class="background-option"><input id="background-collection" type="checkbox"><span><strong><TMPL_VAR NAME=VZLOGGER.LIVE_BACKGROUND_COLLECTION></strong><small class="help"><TMPL_VAR NAME=VZLOGGER.LIVE_BACKGROUND_HELP></small></span></label>
+    <div id="chart-choice-message" class="status" role="status" aria-live="polite"></div>
+    <h3><TMPL_VAR NAME=VZLOGGER.LIVE_CHANNEL_SELECTION></h3>
+    <div id="channel-choices"></div>
+   </div>
+  </details>
+ </section>
+</main>
+<script src="vendor/chart.js/chart.umd.min.js"></script>
+<script src="vzlogger_live.js"></script>
+</body></html>

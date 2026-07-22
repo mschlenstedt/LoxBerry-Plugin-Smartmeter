@@ -113,6 +113,7 @@ foreach my $config_key (sort keys %flat_config) {
 				catalog_name_de => $catalog_de->{known} ? ($catalog_de->{short} || "") : "",
 				catalog_name_en => $catalog_en->{known} ? ($catalog_en->{short} || "") : "",
 				unit => $catalog_de->{unit} || $catalog_en->{unit} || "",
+				category => $catalog_de->{category} || $catalog_en->{category} || "unknown",
 				display_factor => live_display_factor($channel->{identifier}),
 				identifier => $channel->{identifier},
 				identifier_ambiguous => $identifier_counts{$channel->{identifier}} > 1 ? JSON::PP::true : JSON::PP::false,
@@ -329,9 +330,16 @@ sub enrich_user_channels
 		$channel->{api} = "null" if (!exists($channel->{api}));
 		my $uuid = defined($channel->{uuid}) && !ref($channel->{uuid}) ? "$channel->{uuid}" : "";
 		if ($uuid ne "") {
+			my $catalog_de = lookup_obis($obis_catalog, $identifier, "de");
+			my $catalog_en = lookup_obis($obis_catalog, $identifier, "en");
 			$mapping->{$uuid} = {
 				serial => $serial,
 				name => user_channel_name($channel, $identifier, $meter_channel_index),
+				catalog_name_de => $catalog_de->{known} ? ($catalog_de->{short} || "") : "",
+				catalog_name_en => $catalog_en->{known} ? ($catalog_en->{short} || "") : "",
+				unit => $catalog_de->{unit} || $catalog_en->{unit} || "",
+				category => $catalog_de->{category} || $catalog_en->{category} || "unknown",
+				display_factor => live_display_factor($identifier),
 				identifier => $identifier,
 				channel => "chn$index",
 				channel_index => $index,
