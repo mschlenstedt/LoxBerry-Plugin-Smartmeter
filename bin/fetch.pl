@@ -25,6 +25,12 @@ use Cwd 'abs_path';
 use IO::Socket; # For sending UDP packages
 use Getopt::Long;
 use LoxBerry::System;
+use FindBin;
+use lib $FindBin::Bin;
+use SmartMeterVZLoggerConfig qw(implementation_mode);
+use SmartMeterLegacyRuntime qw(acquire_legacy_fetch_lock vzlogger_service_running);
+umask(0027);
+use File::Path qw(make_path);
 #use warnings;
 #use strict;
 no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
@@ -40,6 +46,7 @@ my  $installfolder;
 my  $version;
 my  $home = $lbhomedir;
 my  $psubfolder = $lbpplugindir;
+my  $runtime_dir = "/var/run/shm/$psubfolder";
 my  $pname;
 my  @heads;
 my  $name;
@@ -59,11 +66,14 @@ our $miniservers;
 our $clouddns;
 our $udpport;
 our $sendudp;
+our $sendmqtt;
+our $mqtttopic;
+our $implementation;
 my  $udpstring;
 my  @lines;
 my  $i;
 my  $verbose;
-my  $force;
+my  $manual;
 
 ##########################################################################
 # Read Settings
@@ -90,11 +100,14 @@ $plugin_cfg 	= new Config::Simple("$installfolder/config/plugins/$psubfolder/sma
 $pname          = $plugin_cfg->param("MAIN.SCRIPTNAME");
 $udpport        = $plugin_cfg->param("MAIN.UDPPORT");
 $sendudp        = $plugin_cfg->param("MAIN.SENDUDP");
+$sendmqtt       = $plugin_cfg->param("MAIN.SENDMQTT");
+$mqtttopic      = $plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter";
+$implementation = implementation_mode($plugin_cfg);
 $cron		= $plugin_cfg->param("MAIN.CRON");
 
 # Commandline options
 GetOptions (    "verbose"          => \$verbose,
-                "force"            => \$force,
+                "manual"           => \$manual,
 );
 
 if ($verbose) {
@@ -102,21 +115,37 @@ if ($verbose) {
 }
 
 # Create temp folder if not already exist
-if (!-d "/var/run/shm/$psubfolder") {
-	system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
+if (!-d $runtime_dir) {
+	make_path($runtime_dir);
 }
 # Check for temporary log folder
 if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
-	system("ln -s /var/run/shm/$psubfolder  $installfolder/log/plugins/$psubfolder/shm > /dev/null 2>&1");
+	symlink($runtime_dir, "$installfolder/log/plugins/$psubfolder/shm");
+}
+
+my ($lock_fh, $lock_error) = acquire_legacy_fetch_lock($runtime_dir);
+if (!$lock_fh) {
+	&LOG("Another meter polling run is already active. Giving up.", "WARN");
+	exit;
 }
 
 # Delete old Logfile
-if (-e "/var/run/shm/$psubfolder/fetch.log") {
-    system("rm /var/run/shm/$psubfolder/fetch.log > /dev/null 2>&1");
+if (-e "$runtime_dir/fetch.log") {
+	unlink("$runtime_dir/fetch.log");
 }
 
 # Check if we should read automatically
-if ( !$plugin_cfg->param("MAIN.READ") && !$force ) {
+if ( $implementation ne "legacy" ) {
+	&LOG ("Legacy meter polling is disabled because Legacy mode is not active.", "INFO");
+	exit;
+}
+
+if ( vzlogger_service_running() ) {
+	&LOG ("Legacy meter polling is disabled while the vzLogger service is running.", "WARN");
+	exit;
+}
+
+if ( !$plugin_cfg->param("MAIN.READ") && !$manual ) {
 	&LOG ("Reading serial devices is currently deactivated. Giving up.", "FAIL");
 	exit;
 }
@@ -128,17 +157,17 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 		$name 		=	$plugin_cfg->param("$configvalue.NAME");
 		$serial		=	$plugin_cfg->param("$configvalue.SERIAL");
 		$device		=	$plugin_cfg->param("$configvalue.DEVICE");
-		$meter		=	$plugin_cfg->param("$configvalue.METER");
-		$protocol	=	$plugin_cfg->param("$configvalue.PROTOCOL");
-		$startbaudrate	=	$plugin_cfg->param("$configvalue.STARTBAUDRATE");
-		$baudrate	=	$plugin_cfg->param("$configvalue.BAUDRATE");
-		$timeout	=	$plugin_cfg->param("$configvalue.TIMEOUT");
-		$handshake	=	$plugin_cfg->param("$configvalue.HANDSHAKE");
-		$databits	=	$plugin_cfg->param("$configvalue.DATABITS");
-		$stopbits	=	$plugin_cfg->param("$configvalue.STOPBITS");
-		$parity		=	$plugin_cfg->param("$configvalue.PARITY");
-		$delay 		=	$plugin_cfg->param("$configvalue.DELAY");
-		$crc 		=	$plugin_cfg->param("$configvalue.CRC");
+		$meter		=	legacy_meter_value($configvalue, "METER");
+		$protocol	=	legacy_meter_value($configvalue, "PROTOCOL");
+		$startbaudrate	=	legacy_meter_value($configvalue, "STARTBAUDRATE");
+		$baudrate	=	legacy_meter_value($configvalue, "BAUDRATE");
+		$timeout	=	legacy_meter_value($configvalue, "TIMEOUT");
+		$handshake	=	legacy_meter_value($configvalue, "HANDSHAKE");
+		$databits	=	legacy_meter_value($configvalue, "DATABITS");
+		$stopbits	=	legacy_meter_value($configvalue, "STOPBITS");
+		$parity		=	legacy_meter_value($configvalue, "PARITY");
+		$delay 		=	legacy_meter_value($configvalue, "DELAY");
+		$crc 		=	legacy_meter_value($configvalue, "CRC");
 		&LOG ("$serial: Found configuration for $name", "INFO");
 
 		# Check if head is connected and config is complete
@@ -146,7 +175,7 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 			&LOG ("$serial: Device does not exist. Skipping.", "INFO");
 			next;
 		}
-		if ( $plugin_cfg->param("$configvalue.METER") eq "0" ) {
+		if ( ($meter || "0") eq "0" ) {
 			&LOG ("$serial: Configuration for $name is not complete. Skipping.", "INFO");
 			next;
 		}
@@ -160,13 +189,24 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 			&LOG ("$serial: CRC: $crc", "INFO");
 			&LOG ("$serial: Device: $device", "INFO");
 			&LOG ("$serial: Baudrate:$baudrate/$startbaudrate Databits:$databits Stopbits:$stopbits Parity:$parity Handshake:$handshake", "INFO");
-			system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --protocol $protocol --startbaudrate $startbaudrate --baudrate $baudrate --timeout $timeout --delay $delay --handshake $handshake --databits $databits --stopbits $stopbits --parity $parity --crc $crc $verbose");
-            #system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --parse 015A98CA --protocol $protocol --startbaudrate $startbaudrate --baudrate $baudrate --timeout $timeout --delay $delay --handshake $handshake --databits $databits --stopbits $stopbits --parity $parity --crc $crc $verbose");
+			my @logger_args = ("--device", $device, "--protocol", $protocol);
+			&add_option(\@logger_args, "--startbaudrate", $startbaudrate);
+			&add_option(\@logger_args, "--baudrate", $baudrate);
+			&add_option(\@logger_args, "--timeout", $timeout);
+			&add_option(\@logger_args, "--delay", $delay);
+			&add_option(\@logger_args, "--handshake", $handshake);
+			&add_option(\@logger_args, "--databits", $databits);
+			&add_option(\@logger_args, "--stopbits", $stopbits);
+			&add_option(\@logger_args, "--parity", $parity);
+			&add_option(\@logger_args, "--crc", $crc);
+			push(@logger_args, "--verbose") if ($verbose);
+			&run_sm_logger(@logger_args);
         } else {
 			# If set to  a meter, use standard settings for this meter
 			&LOG ("$serial: Presetting: $meter.", "INFO");
-			system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --protocol $meter $verbose");
-			#system("$installfolder/bin/plugins/$psubfolder/sm_logger.pl --device $device --parse 01304DD6 --protocol $meter $verbose");
+			my @logger_args = ("--device", $device, "--protocol", $meter);
+			push(@logger_args, "--verbose") if ($verbose);
+			&run_sm_logger(@logger_args);
             }
 
 		# Send data by UDP to all configured miniservers
@@ -176,10 +216,10 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 		  $udpstring = "";
 
 		  # Read Data file
-		  if ( !-e "/var/run/shm/$psubfolder/$serial\.data" ) {
+		  if ( !-e "$runtime_dir/$serial\.data" ) {
 			$udpstring = "$serial: No data found";
  		  } else {
-			open(F,"</var/run/shm/$psubfolder/$serial\.data");
+			open(F,"<$runtime_dir/$serial\.data");
 				@lines = <F>;
 			close(F);
 
@@ -197,7 +237,11 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 
 		    if ( $cfg->param("MINISERVER$i.USECLOUDDNS") ) {
 		      my $miniservermac = $cfg->param("MINISERVER$i.CLOUDURL");
-		      my $dns_info = `$home/webfrontend/cgi/system/tools/showclouddns.pl $miniservermac`;
+		      my $dns_info = "";
+		      if (open(my $dns_fh, "-|", "$home/webfrontend/cgi/system/tools/showclouddns.pl", $miniservermac)) {
+		        $dns_info = do { local $/; <$dns_fh> };
+		        close($dns_fh);
+		      }
 		      my @dns_info_pieces = split /:/, $dns_info;
 		      if ($dns_info_pieces[0]) {
 		        $dns_info_pieces[0] =~ s/^\s+|\s+$//g;
@@ -234,14 +278,52 @@ while (my ($configname, $configvalue) = each %plugin_config_hash){
 
 		}
 
+		# Publish the same meter values by MQTT.
+		if ($sendmqtt) {
+			if ( !-e "$runtime_dir/$serial\.data" ) {
+				&LOG("$serial: No data found for MQTT publish.", "WARN");
+			} else {
+				open(F,"<$runtime_dir/$serial\.data");
+					@lines = <F>;
+				close(F);
+				&publish_mqtt_data($serial, @lines);
+			}
+		}
+
 	}
 
 }
-if ($plugin_cfg->param("MAIN.CRON") eq "M" && !$force) {
+if ($plugin_cfg->param("MAIN.CRON") eq "M" && !$manual) {
 	&LOG("$serial: Cronjob is MINIMUM - RERUN", "OK");	
+	sleep(5);
 	goto RERUN;
 	}
 exit;
+
+sub legacy_meter_value
+{
+	my ($section, $field) = @_;
+	my $value = $plugin_cfg->param("$section.LEGACY_$field");
+	return $value if (defined($value));
+	return $plugin_cfg->param("$section.$field");
+}
+
+sub add_option
+{
+	my ($args, $name, $value) = @_;
+	return if (!defined($value) || $value eq "");
+	push(@$args, $name, $value);
+}
+
+sub run_sm_logger
+{
+	my @args = @_;
+	my $logger = "$installfolder/bin/plugins/$psubfolder/sm_logger.pl";
+	system($^X, $logger, @args);
+	if ($? != 0) {
+		&LOG("sm_logger.pl failed with exit code " . ($? >> 8) . ".", "FAIL");
+	}
+}
 
 ################################
 ### SUB: Log
@@ -267,10 +349,99 @@ sub LOG
         $sec = sprintf("%02d", $sec);
 
         # Logfile
-        open(F,">>/var/run/shm/$psubfolder/fetch.log");
+        open(F,">>$runtime_dir/fetch.log");
                 print F "$year-$mon-$mday $hour:$min:$sec <$type> $message\n";
         close (F);
 
         return();
 
+}
+
+################################
+### SUB: Publish MQTT data
+################################
+
+sub publish_mqtt_data
+{
+	my $serial = shift;
+	my @data_lines = @_;
+
+	eval {
+		require JSON::PP;
+	};
+	if ($@) {
+		&LOG("$serial: JSON module for MQTT Gateway publish is not available: $@", "FAIL");
+		return;
+	}
+
+	my $general_json = "$home/config/system/general.json";
+	if (!-e $general_json) {
+		&LOG("$serial: MQTT settings not found in $general_json. Is LoxBerry MQTT Gateway installed?", "WARN");
+		return;
+	}
+
+	open(my $json_fh, "<", $general_json) or do {
+		&LOG("$serial: Could not open MQTT settings $general_json: $!", "FAIL");
+		return;
+	};
+	local $/;
+	my $json_text = <$json_fh>;
+	close($json_fh);
+
+	my $general = eval { JSON::PP->new->utf8->decode($json_text) };
+	if ($@ || !ref($general) || !ref($general->{Mqtt})) {
+		&LOG("$serial: Could not read MQTT settings from $general_json.", "FAIL");
+		return;
+	}
+
+	my $mqtt_settings = $general->{Mqtt};
+	my $udpport = $mqtt_settings->{Udpinport};
+	if (!$udpport) {
+		&LOG("$serial: MQTT Gateway UDP in-port is missing in $general_json.", "FAIL");
+		return;
+	}
+
+	my $base_topic = $mqtttopic || "smartmeter";
+	$base_topic =~ s/^\s+|\s+$//g;
+	$base_topic =~ s/^\/+|\/+$//g;
+	$base_topic = "smartmeter" if (!$base_topic);
+
+	my $json = JSON::PP->new->utf8;
+	my $sock = IO::Socket::INET->new(
+		Proto    => 'udp',
+		PeerPort => $udpport,
+		PeerAddr => '127.0.0.1',
+	) or do {
+		&LOG("$serial: Could not create MQTT Gateway UDP socket on port $udpport: $!", "FAIL");
+		return;
+	};
+
+	my $published = 0;
+	foreach my $line (@data_lines) {
+		chomp($line);
+		next if ($line eq "");
+
+		my ($line_serial, $value_name, $value) = split(/:/, $line, 3);
+		if (!defined $line_serial || !defined $value_name || !defined $value) {
+			&LOG("$serial: Skip invalid MQTT data line: $line", "WARN");
+			next;
+		}
+
+		my $topic = "$base_topic/$line_serial/$value_name";
+		$topic =~ s/[#+]//g;
+
+		my %packet = (
+			topic  => $topic,
+			value  => $value,
+			retain => 1,
+		);
+		my $payload = $json->encode(\%packet);
+		if (!$sock->send($payload)) {
+			&LOG("$serial: MQTT Gateway UDP send failed for $topic: $!", "FAIL");
+			next;
+		}
+		$published++;
+	}
+
+	&LOG("$serial: Published $published values by MQTT Gateway UDP on port $udpport using topic $base_topic/$serial/<value>.", "OK");
 }

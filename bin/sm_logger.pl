@@ -19,7 +19,10 @@
 ################################
 use Device::SerialPort;
 use Getopt::Long;
+use JSON::PP;
 use LoxBerry::System;
+umask(0027);
+use File::Path qw(make_path);
 #use File::HomeDir;
 #use Cwd 'abs_path';
 use DateTime;
@@ -95,424 +98,71 @@ if ( !$parse ) {
 
 ### Figure out in which subfolder we are installed
 our $home = $lbhomedir;
+our $installfolder = $lbhomedir;
 our $psubfolder = $lbpplugindir;
+our $runtime_dir = "/var/run/shm/$psubfolder";
 
 # Create temp folder if not already exist
-if (!-d "/var/run/shm/$psubfolder") {
-	system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
+if (!-d $runtime_dir) {
+	make_path($runtime_dir);
 }
 # Check for temporary log folder
 if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
-	system("ln -s /var/run/shm/$psubfolder  $installfolder/log/plugins/$psubfolder/shm > /dev/null 2>&1");
+	symlink($runtime_dir, "$installfolder/log/plugins/$psubfolder/shm");
 }
 
 # Clear Log
-system("rm /var/run/shm/$psubfolder/$serial\.log > /dev/null 2>&1");
+unlink("$runtime_dir/$serial.log");
 if ( !$parse ) {
-	system("rm /var/run/shm/$psubfolder/$serial\.dump > /dev/null 2>&1");
+	unlink("$runtime_dir/$serial.dump");
 }
 
 ################################
-### Determine which protocol to use
+### Load and apply the selected meter template
 ################################
 
-if ( $protocol eq "genericd0" ) {
-
-	### Defaults
-	our $baudrate = 300 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "120" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "genericsml" ) {
-
-	### Defaults
-	our $baudrate = 300 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "120" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "emhed300sml" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "20" if !$timeout;
-	our $delay = "1" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "emhehzksml" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "30" if !$timeout;
-	our $delay = "30" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "iskra173d0" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "iskra173sml" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "iskra174d0" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "iskra174sml" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "iskra175d0" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "60" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "iskra175sml" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "60" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "iskra382d0" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "iskra681sml" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "60" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "iskra691sml" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 9600 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "5" if !$timeout;
-	our $delay = "1" if !$delay;
-	our $crc = "CRC16_X_25" if !$crc;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICSML;
-}
-
-elsif ( $protocol eq "itronace3000type260d0" ) {
-
-	### Defaults
-	our $baudrate = 300 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "4" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "landisgyre320d0" ) {
-
-	### Defaults
-	our $baudrate = 4800 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "20" if !$timeout;
-	our $delay = "4" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "landisgyre350d0" ) {
-
-	### Defaults
-	our $baudrate = 4800 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "20" if !$timeout;
-	our $delay = "4" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "pafal20ec3grd0" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "5" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "siemenstd3511d0" ) {
-
-	### Defaults
-	our $baudrate = 9600 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "303531";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "landisgyret550d0" || $protocol eq "siemensuh50do" ) {
-
-	### Defaults
-	our $baudrate = 2400 if !$baudrate;
-	our $startbaudrate = 300 if !$startbaudrate;
-	our $databits = 7 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "even" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "1" if !$delay;
-	our $preinitcommand = "0000000000000000000000000000000000000000";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0("HEAT");
-}
-
-elsif ( $protocol eq "sagemcomt211d0" ) {
-
-	### Defaults
-	our $baudrate = 115200 if !$baudrate;
-	our $startbaudrate = 115200 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0;
-}
-
-elsif ( $protocol eq "sagemcomt211d0f" ) {
-
-	### Defaults
-	our $baudrate = 115200 if !$baudrate;
-	our $startbaudrate = 115200 if !$startbaudrate;
-	our $databits = 8 if !$databits;
-	our $stopbits = 1 if !$stopbits;
-	our $parity = "none" if !$parity;
-	our $handshake = "none" if !$handshake;
-	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
-	our $preinitcommand = "";
-	our $precommand = "";
-	our $postcommand = "";
-
-	&PROTO_GENERICD0("FLANDERS");
-}
-
-else {
-	$verbose =1;
-	&LOG ("No known protocol specified. Try --help to get an overview of possible options.", "FAIL");
+my $meter_template = load_meter_template($protocol);
+if (!$meter_template) {
+	$verbose = 1;
+	&LOG("No known meter template specified. Try --help to get an overview of possible options.", "FAIL");
 	exit;
+}
+
+my $legacy_defaults = $meter_template->{legacy} || {};
+my $serial_mode = lc($meter_template->{serial_mode} || "");
+if ($serial_mode !~ /\A([78])([neo])([12])\z/) {
+	die "Invalid serial_mode '$serial_mode' in meter template '$protocol'.\n";
+}
+my ($template_databits, $template_parity, $template_stopbits) = ($1, $2, $3);
+my %parity_names = (n => "none", e => "even", o => "odd");
+
+our $baudrate = $meter_template->{read_baudrate} if !$baudrate;
+our $startbaudrate = $meter_template->{initial_baudrate} if !$startbaudrate;
+our $databits = $template_databits if !$databits;
+our $parity = $parity_names{$template_parity} if !$parity;
+our $stopbits = $template_stopbits if !$stopbits;
+our $handshake = $legacy_defaults->{handshake} || "none" if !$handshake;
+our $timeout = $meter_template->{read_timeout} if !$timeout;
+our $delay = $legacy_defaults->{delay} if !$delay;
+our $crc = $legacy_defaults->{crc} if !$crc && $legacy_defaults->{crc};
+our $preinitcommand = $legacy_defaults->{preinitcommand} || "";
+our $precommand = $legacy_defaults->{precommand} || "";
+our $postcommand = $legacy_defaults->{postcommand} || "";
+my $parser_mode = $legacy_defaults->{parser_mode} || "";
+
+if ($meter_template->{protocol} eq "sml") {
+	&PROTO_GENERICSML;
+} elsif ($meter_template->{protocol} eq "d0") {
+	&PROTO_GENERICD0($parser_mode);
+} else {
+	die "Unsupported protocol '$meter_template->{protocol}' in meter template '$protocol'.\n";
 }
 
 ################################
 ### Output
 ################################
 
-&LOG("All data written to /var/run/shm/$psubfolder/$serial.xxxx");
+	&LOG("All data written to $runtime_dir/$serial.xxxx");
 
 exit;
 
@@ -522,6 +172,22 @@ exit;
 ### Subroutines
 ###
 ################################
+
+sub load_meter_template
+{
+	my ($template_id) = @_;
+	my $catalog_file = "$installfolder/templates/plugins/$psubfolder/meter_templates.json";
+	open(my $catalog_fh, "<", $catalog_file) or die "Could not read meter template catalog $catalog_file: $!\n";
+	local $/;
+	my $json = <$catalog_fh>;
+	close($catalog_fh);
+	my $templates = eval { JSON::PP->new->utf8->decode($json) };
+	die "Invalid meter template catalog $catalog_file: $@\n" if (!$templates || ref($templates) ne "ARRAY");
+	foreach my $template (@{$templates}) {
+		return $template if (($template->{id} || "") eq ($template_id || ""));
+	}
+	return undef;
+}
 
 
 ################################
@@ -598,6 +264,9 @@ sub PROTO_GENERICSML
 
 		### Open serial port
 		&INITIALIZE_PORT();
+
+		### Wait for next cyclic SML frame after purging the port
+		sleep($delay) if ( $delay > 0 );
 
 		### Read serial device
 		&READ_SERIAL("HEX");
@@ -874,18 +543,19 @@ sub READ_SERIAL
 	$port->close;
 
 	# Save output to file and convert line endings
-	&LOG ("Save raw buffer to /var/run/shm/$psubfolder/$serial\.dump", "INFO");
+	&LOG ("Save raw buffer to $runtime_dir/$serial\.dump", "INFO");
 	if ($hex eq "HEX"){
 		$bufferx = uc(unpack('H*',$buffer)); # nach hex wandeln
+	} else {
+		$buffer =~ s/\r\n?/\n/g;
 	}
-	open(F,">>/var/run/shm/$psubfolder/$serial\.dump");
+	open(F,">>$runtime_dir/$serial\.dump");
 		if ($hex eq "HEX"){
 			print F $bufferx;
 		} else {
 			print F $buffer;
 		}
 	close (F);
-	system("/usr/bin/dos2unix -f /var/run/shm/$psubfolder/$serial\.dump > /dev/null 2>&1");
 
 	if ($hex eq "HEX"){
 		return($bufferx);
@@ -905,12 +575,14 @@ sub PARSE_DUMP
 	our $proto = shift;
 	our $type = shift; # http://wiki.selfhtml.org/wiki/Perl/Subroutinen
 	if ($proto eq "SML") {
-		&LOG ("Parse /var/run/shm/$psubfolder/$serial\.dump as SML-Protocol.", "INFO");
-		our $dumpbuffer = `php $home/bin/plugins/$psubfolder/sml_parser.php /var/run/shm/$psubfolder/$serial\.dump $crc`;
+		&LOG ("Parse $runtime_dir/$serial\.dump as SML-Protocol.", "INFO");
+		open(my $php_fh, "-|", "php", "$home/bin/plugins/$psubfolder/sml_parser.php", "$runtime_dir/$serial.dump", $crc) or die "Could not start SML parser: $!";
+		our $dumpbuffer = do { local $/; <$php_fh> };
+		close($php_fh);
 		print "Buffer: $dumpbuffer\n";
 	} else {
-		&LOG ("Parse /var/run/shm/$psubfolder/$serial\.dump as D0-Protocol.", "INFO");
-		open(F,"</var/run/shm/$psubfolder/$serial\.dump");
+		&LOG ("Parse $runtime_dir/$serial\.dump as D0-Protocol.", "INFO");
+		open(F,"<$runtime_dir/$serial\.dump");
 			our $dumpbuffer = do { local $/; <F> };
 		close (F);
 	}
@@ -1040,6 +712,8 @@ sub PARSE_DUMP
 		($power9) = $dumpbuffer =~ /[\n|\r|:]56\.7\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
 		($power10) = $dumpbuffer =~ /[\n|\r|:]76\.7\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
         ($del_cons) = $dumpbuffer =~ /[\n|\r|:]C\.5\.(?:255|0)[\*255|\*00]*\(([-\d\.]+)/;
+		($manufacturerid) = $dumpbuffer =~ /(?:^|[\n\r:])96\.50\.1(?:\*255|\*00)?\(([^*]+)/;
+		($serverid) = $dumpbuffer =~ /(?:^|[\n\r:])96\.1\.0(?:\*255|\*00)?\(([^*]+)/;
 	}
 
 	### Calculate Avg. Power
@@ -1078,11 +752,11 @@ sub PARSE_DUMP
 #	print "Offset: $offset\n";
 
 	### Save to data file
-	&LOG ("Save Meter data to /var/run/shm/$psubfolder/$serial\.data.", "INFO");
+	&LOG ("Save Meter data to $runtime_dir/$serial\.data.", "INFO");
 
 	if ( $type eq "HEAT" ) {
 
-		open(F,">/var/run/shm/$psubfolder/$serial\.data");
+		&open_data_file();
 		print F "$serial:Last_Update:$datereadable\n";
 		print F "$serial:Last_UpdateLoxEpoche:$epoche_time_lox\n";
 		print F "$serial:Consumption_Total_OBIS_6.8.0:$readingconsT0\n"             if ( $readingconsT0 ne "" );
@@ -1104,12 +778,12 @@ sub PARSE_DUMP
 		print F "$serial:Flow_OBIS_6.33.0:$flow1\n"                                 if ( $flow1 ne "" );
 		print F "$serial:Heating_Flow_OBIS_9.4:$heating_flow\n"                     if ( $heating_flow ne "" );
 		print F "$serial:Heating_Return_OBIS_9.4:$heating_return\n"                 if ( $heating_return ne "" );
-		close (F);
+		&close_data_file();
 
 	}
 	elsif ( $type eq "FLANDERS" ) {
 	
-		open(F,">/var/run/shm/$psubfolder/$serial\.data");
+		&open_data_file();
 		print F "$serial:Last_Update:$datereadable\n";
 		print F "$serial:Last_UpdateLoxEpoche:$epoche_time_lox\n";
 		print F "$serial:Consumption_Total_OBIS_1.8.0:$readingconsT0\n"             if ( $readingconsT0 ne "" );
@@ -1153,13 +827,15 @@ sub PARSE_DUMP
 		print F "$serial:Breaker_State_Electricity_96.1.4:$breakerstate\n"          if ( $breakerstate ne "" );
 		print F "$serial:Text_Message_96.13.0:$messagetext\n"                       if ( $messagetext ne "" );
 		print F "$serial:Message_Code_96.13.1:$messagecode\n"                       if ( $messagecode ne "" );
-		close (F);
+		&close_data_file();
 
 	}	else {
 
-		open(F,">/var/run/shm/$psubfolder/$serial\.data");
+		&open_data_file();
 		print F "$serial:Last_Update:$datereadable\n";
 		print F "$serial:Last_UpdateLoxEpoche:$epoche_time_lox\n";
+		print F "$serial:Manufacturer_ID_OBIS_96.50.1:$manufacturerid\n"            if ( $manufacturerid ne "" );
+		print F "$serial:Server_ID_OBIS_96.1.0:$serverid\n"                         if ( $serverid ne "" );
 		print F "$serial:Consumption_Total_OBIS_1.8.0:$readingconsT0\n"             if ( $readingconsT0 ne "" );
 		print F "$serial:Consumption_Tarif1_OBIS_1.8.1:$readingconsT1\n"            if ( $readingconsT1 ne "" );
 		print F "$serial:Consumption_Tarif2_OBIS_1.8.2:$readingconsT2\n"            if ( $readingconsT2 ne "" );
@@ -1193,12 +869,27 @@ sub PARSE_DUMP
 		print F "$serial:Total_Power_OBIS_15.7.0:$power3\n"                         if ( $power3 ne "" );
 		print F "$serial:Total_Power_OBIS_16.7.0:$power4\n"                         if ( $power4 ne "" );
         print F "$serial:Delivery_Consumption_OBIS_C.5.0:$del_cons\n"               if ( $del_cons ne "" );
-		close (F);
+		&close_data_file();
 
 	}
 
 	return();
 
+}
+
+sub open_data_file
+{
+	our $data_file = "$runtime_dir/$serial.data";
+	our $data_tmpfile = "$data_file.$$";
+	open(F, ">", $data_tmpfile) or die "Could not open temporary data file $data_tmpfile: $!";
+}
+
+sub close_data_file
+{
+	our $data_file;
+	our $data_tmpfile;
+	close(F);
+	rename($data_tmpfile, $data_file) or die "Could not replace data file $data_file: $!";
 }
 
 ################################
@@ -1210,6 +901,7 @@ sub CALCULATE_POWER
 
 	our $reading = shift;
 	our $direction = lc shift;
+	our $statefile = "$runtime_dir/$serial\.last$direction";
 	&LOG ("Calculate average power for $direction.", "INFO");
 
 	$reading = sprintf("%.3f", $reading);
@@ -1220,8 +912,8 @@ sub CALCULATE_POWER
 
 	# Calculate power - the ISKRA MT174 doesn't provide power
 	$now = time;
-	if ( -e "/var/run/shm/$psubfolder/$serial\.last$direction" ) {
-		open(F,"</var/run/shm/$psubfolder/$serial\.last$direction");
+	if ( -e "$statefile" ) {
+		open(F,"<$statefile");
 		@lines = <F>;
 		foreach (@lines){
 			s/[\n\r]//g;
@@ -1230,18 +922,55 @@ sub CALCULATE_POWER
 			$lastreading = @fields[1];
 		}
 		close(F);
-		if ( $reading < $lastreading ) {
+		if ( !defined($lasttime) || !defined($lastreading) || $lasttime eq "" || $lastreading eq "" ) {
+			&LOG ("No valid last meter reading available. Reset calculation state.", "WARNING");
 			$lastreading = $reading;
+			$period = 0;
+			$energy = 0;
+			$power = 0;
+			open(F,">$statefile");
+				print F "$now|$reading\n";
+			close(F);
+		} elsif ( $reading < $lastreading ) {
+			&LOG ("Current meter reading is lower than last reading. Reset calculation state.", "WARNING");
+			$lastreading = $reading;
+			$period = 0;
+			$energy = 0;
+			$power = 0;
+			open(F,">$statefile");
+				print F "$now|$reading\n";
+			close(F);
+		} elsif ( $reading == $lastreading ) {
+			$period = ($now - $lasttime) / 3600;
+			$energy = 0;
+			$power = 0;
+		} else {
+			$period = ($now - $lasttime) / 3600;
+			if ( $period > 0 ) {
+				$energy = $reading - $lastreading;
+				$power = $energy / $period;
+				open(F,">$statefile");
+					print F "$now|$reading\n";
+				close(F);
+			} else {
+				&LOG ("Invalid calculation period. Reset calculation state.", "WARNING");
+				$period = 0;
+				$energy = 0;
+				$power = 0;
+				open(F,">$statefile");
+					print F "$now|$reading\n";
+				close(F);
+			}
 		}
-		$period = ($now - $lasttime) / 3600;
-		$energy = $reading - $lastreading;
-		$power = $energy / $period;
 	} else {
 		&LOG ("No last meter reading available. Calculation not possible,", "WARNING");
-		system("touch /var/run/shm/$psubfolder/$serial\.last$direction > /dev/null 2>&1");
+		$lastreading = $reading;
 		$period = 0;
 		$energy = 0;
 		$power = 0;
+		open(F,">$statefile");
+			print F "$now|$reading\n";
+		close(F);
 	}
 
 	### Round
@@ -1251,13 +980,6 @@ sub CALCULATE_POWER
 
 	### Debug output
 	&LOG ("Last Reading: $lastreading. Saved before: $period hours. Consumption: $energy. Avg. Power: $power,", "INFO");
-
-	### Zaehlerstand und Leistung speichern
-	if ( $reading > 0 ) {
-		open(F,">/var/run/shm/$psubfolder/$serial\.last$direction");
-			print F "$now|$reading\n";
-		close(F);
-	}
 
 	return ($power);
 
@@ -1290,7 +1012,7 @@ sub LOG
 	$sec = sprintf("%02d", $sec);
 
 	# Logfile
-	open(F,">>/var/run/shm/$psubfolder/$serial\.log");
+	open(F,">>$runtime_dir/$serial\.log");
 		print F "$year-$mon-$mday $hour:$min:$sec <$type> $message\n";
 	close (F);
 

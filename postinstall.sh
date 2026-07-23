@@ -17,14 +17,31 @@ ARGV5=$5 # Fifth argument is Base folder of LoxBerry
 
 /bin/sed -i "s#REPLACEBYSUBFOLDER#$ARGV3#" $ARGV5/config/plugins/$ARGV3/smartmeter.cfg
 /bin/sed -i "s#REPLACEBYNAME#$ARGV2#" $ARGV5/config/plugins/$ARGV3/smartmeter.cfg
-/bin/sed -i "s#REPLACEBYSUBFOLDER#$ARGV3#" $ARGV5/system/daemons/plugins/$ARGV2
-/bin/sed -i "s#REPLACEBYBASEFOLDER#$ARGV5#" $ARGV5/system/daemons/plugins/$ARGV2
+/bin/sed -i "s#REPLACELBHOMEDIR#$ARGV5#" $ARGV5/bin/plugins/$ARGV3/reboot_cron_runner.sh
+/bin/sed -i "s#REPLACELBPPLUGINDIR#$ARGV3#" $ARGV5/bin/plugins/$ARGV3/reboot_cron_runner.sh
+/bin/chmod +x $ARGV5/bin/plugins/$ARGV3/vzlogger_config.pl
+/bin/chmod +x $ARGV5/bin/plugins/$ARGV3/vzlogger_validate.pl
+/bin/chmod +x $ARGV5/bin/plugins/$ARGV3/vzlogger_control.pl
+/bin/chmod +x $ARGV5/bin/plugins/$ARGV3/vzlogger_mqtt_bridge.pl
+/bin/chmod +x $ARGV5/bin/plugins/$ARGV3/smartmeter_legacy_runtime.pl
+/bin/chmod +x $ARGV5/bin/plugins/$ARGV3/install_vzlogger_bridge_service.sh
+/bin/chmod +x $ARGV5/bin/plugins/$ARGV3/install_vzlogger_service_override.sh
+/bin/chmod +x $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/vzlogger_live.cgi
+/bin/chmod +x $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/vzlogger_config.cgi
 
 echo "<INFO> Rename htaccess to .htaccess"
 mv $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/htaccess $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/.htaccess
 
+echo "<INFO> vzLogger package is installed through LoxBerry dpkg/apt dependencies."
+
+if command -v mosquitto_sub >/dev/null 2>&1; then
+	echo "<INFO> mosquitto_sub found for MQTT bridge."
+else
+	echo "<WARNING> mosquitto_sub is not available. Install mosquitto-clients for HTTP/UDP cache updates from vzLogger MQTT."
+fi
+
 echo "<INFO> *******************************************************************"
-echo "<INFO> * Please reboot your LoxBerry to initialize the Smartmeter Plugin *"
+echo "<INFO> * Please reboot your LoxBerry to initialize the Smartmeter v2 Plugin *"
 echo "<INFO> *******************************************************************"
 
 # Exit with Status 0

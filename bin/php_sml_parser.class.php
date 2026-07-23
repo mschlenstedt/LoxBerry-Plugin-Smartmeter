@@ -5,7 +5,7 @@ class SML_PARSER {
 		'0100000000FF' => array('1-0:0.0.0*255','Seriennummer'),
 		'0100200700FF' => array('1-0:32.7.0*255','Spannung Phase 1'),
 		'0100340700FF' => array('1-0:52.7.0*255','Spannung Phase 2'),
-		'0100480700FF' => array('1-0:32.7.0*255','Spannung Phase 3'),
+		'0100480700FF' => array('1-0:72.7.0*255','Spannung Phase 3'),
 		'01001F0700FF' => array('1-0:31.7.0*255','Strom Phase 1'),
 		'0100330700FF' => array('1-0:51.7.0*255','Strom Phase 2'),
 		'0100470700FF' => array('1-0:71.7.0*255','Strom Phase 3'),
@@ -113,7 +113,7 @@ class SML_PARSER {
          */
         $cp = $this->hex2bin($part);
         for ($i=0 ; $i<strlen($cp) ; $i++) {
-            $char = ord($cp{$i});
+            $char = ord($cp[$i]);
             $this->crc16_message = ($this->crc16_message >> 8) ^ ($this->crctab[($this->crc16_message ^ $char) & 0xff]);
             if(!$global) continue;
             $this->crc16_global  = ($this->crc16_global >> 8)  ^ ($this->crctab[($this->crc16_global  ^ $char) & 0xff]);
@@ -368,6 +368,10 @@ class SML_PARSER {
         if(isset($this->obis_arr[$result['objName']])) {
             $result['OBIS']=$this->obis_arr[$result['objName']][0];
             $result['OBIS-Text']=$this->obis_arr[$result['objName']][1];
+        } elseif (strlen($result['objName']) == 12) {
+            $obis = array_map('hexdec', str_split($result['objName'], 2));
+            $result['OBIS'] = $obis[0].'-'.$obis[1].':'.$obis[2].'.'.$obis[3].'.'.$obis[4].'*'.$obis[5];
+            $result['OBIS-Text'] = 'Unbekannter OBIS-Code';
         }
         if(in_array($result['objName'],array('8181C78203FF','0100000000FF','00006001FFFF','010060320101'))) {
             # ggfs. weitere objNames in die Liste aufnehmen
@@ -486,7 +490,7 @@ class SML_PARSER {
         $result['abortOnError']  = $this->readUnsigned();
 		$this->debug('abortOnError ('.$result['abortOnError'].')');
         $result['messageBody']   = $this->readMessageBody();
-		$this->debug('messageBody ('.$result['messageBody'].')');
+		$this->debug('messageBody (' . (is_array($result['messageBody']) ? json_encode($result['messageBody']) : $result['messageBody']) . ')');
         if ($crc=="CRC16_X_25") {
             $crc_calc = strtoupper(substr('000'.dechex(($this->crc16_message ^ 0xffff)),-4)); # CRC16_X_25
             $result['crc_calc'] = substr($crc_calc,-2).substr($crc_calc,0,2); # Wert 4-stellig ausgeben  // CRC16_X_25
@@ -511,6 +515,12 @@ class SML_PARSER {
         $this->data = strtoupper($hexdata);
         $sml_header='1B1B1B1B01010101';
         $sml_footer='0000001B1B1B1B1A';
+        $result = array(
+            'choice' => 'GetListResponse',
+            'body' => array(
+                'vallist' => array()
+            )
+        );
         $start = strpos($this->data,$sml_header);
         if($start===false) return;
         if($start) {
@@ -520,6 +530,9 @@ class SML_PARSER {
         while($this->data) {
             $skip = false;
             $messages = array();
+            if(strpos($this->data,$sml_footer)===false) {
+                return (count($result['body']['vallist']) > 0) ? $result : null;
+            }
             $this->crc16_global = 0xffff;
             $this->match($sml_header);
             while($this->data<>'' && substr($this->data,0,16)!=$sml_footer) {
@@ -529,11 +542,15 @@ class SML_PARSER {
 					 $messages[] = $message;
 					 if ( $message['messageBody']['choice'] == "GetListResponse" ) 
 					 {
-						return($message['messageBody']);
+						foreach($message['messageBody']['body']['vallist'] as $value) {
+							$result['body']['vallist'][$value['objName']] = $value;
+						}
 					 }
                 }else{ # if no success, skip to next file
                     $start = strpos($this->data,$sml_header);
-                    if($start===false) return;
+                    if($start===false) {
+                        return (count($result['body']['vallist']) > 0) ? $result : null;
+                    }
                     if($start) {
                         echo "$start bytes skipped in between!\n";
                         $this->data=substr($this->data,$start);
@@ -555,6 +572,7 @@ class SML_PARSER {
                 'messages'=>$messages
             );
         }
+        return (count($result['body']['vallist']) > 0) ? $result : null;
     }
     public function parse_sml_string($string) {
         return $this->parse_sml_hexdata(bin2hex($string));

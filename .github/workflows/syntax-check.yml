@@ -1,0 +1,108 @@
+name: Syntax check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  syntax-check:
+    name: Perl and PHP syntax
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install syntax check dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          sudo find /etc/apt/sources.list.d \
+            -type f \( -iname '*microsoft*' -o -iname '*azure*' \) \
+            -delete
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libconfig-crontab-perl \
+            libconfig-simple-perl \
+            libcgi-pm-perl \
+            libdatetime-perl \
+            libdevice-serialport-perl \
+            libfile-homedir-perl \
+            libhtml-template-perl \
+            libjson-perl \
+            php-cli
+
+      - name: Set up Node.js for browser-model tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check Perl syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          found=0
+          while IFS= read -r -d '' file; do
+            found=1
+            perl -I .github/ci/perl-lib -I bin -c "$file"
+          done < <(find . -type f \( -name '*.pl' -o -name '*.pm' -o -name '*.cgi' \) -print0)
+
+          if [ "$found" -eq 0 ]; then
+            echo "No Perl files found."
+          fi
+
+      - name: Check PHP syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          found=0
+          while IFS= read -r -d '' file; do
+            found=1
+            php -l "$file"
+          done < <(find . -type f -name '*.php' -print0)
+
+          if [ "$found" -eq 0 ]; then
+            echo "No PHP files found."
+          fi
+
+      - name: Check lifecycle shell syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in preinstall.sh postinstall.sh preupgrade.sh postupgrade.sh postroot.sh uninstall.sh; do
+            [ ! -f "$file" ] || sh -n "$file"
+          done
+
+      - name: Run vzLogger configuration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_channels.pl
+          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_generator.pl
+          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_validator.pl
+          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_expert.pl
+          perl tests/test_language_resources.pl
+          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_runtime.pl
+          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_custom_channels.pl
+          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_config_validation.pl
+          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_bridge.pl
+          perl -I .github/ci/perl-lib -I bin tests/test_legacy_runtime.pl
+
+      - name: Test test-device file normalization
+        shell: pwsh
+        run: ./tests/test_deploy_line_endings.ps1
+
+      - name: Test vzLogger live chart model
+        run: node tests/test_vzlogger_live.js
+
+      - name: Verify vendored Chart.js
+        run: sha256sum --check webfrontend/htmlauth/vendor/chart.js/chart.umd.min.js.sha256

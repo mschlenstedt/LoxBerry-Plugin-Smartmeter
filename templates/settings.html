@@ -40,6 +40,324 @@
 	.mqtttable_headrow {
 	
 	}
+	.service-status {
+		display: inline-block;
+		padding: 3px 7px;
+		border-radius: 4px;
+		font-size: 13.5px;
+		line-height: 1.3;
+		font-weight: bold;
+	}
+	.service-status-idle { background: #e0e0e0; color: #333; }
+	.service-status-ok { background: #d7f0d2; color: #245b1d; }
+	.service-status-warning { background: #ffe0b2; color: #7a4100; }
+	.service-status-error { background: #f5c6cb; color: #721c24; }
+	.service-action-feedback { display: none; margin: 0 0 10px 0; padding: 8px 10px; background: #d7f0d2; border: 1px solid #8fbd87; color: #245b1d; }
+	.service-action-feedback.is-visible { display: block; }
+	.service-action-feedback.is-error { background: #f8d7da; border-color: #b00020; color: #721c24; }
+	.service-control-log { margin: -3px 0 14px 0; text-align: right; }
+	.service-action-reason { color: #8a5a00; font-size: 85%; margin-top: .25em; }
+	.service-action-reason:empty { display: none; }
+	.obis-channel-option { display: block; }
+	.obis-channel-label { font-size: 13px; line-height: 1.35; }
+	.obis-channel-new { display: block; color: #8a5a00; font-size: 85%; margin: .15em 0 .35em 2em; }
+	.obis-editor { display: grid; gap: 8px; margin-top: 8px; }
+	.obis-channel-card { border: 1px solid #bbb; border-radius: 5px; padding: 8px; background: rgba(255,255,255,.65); }
+	.channel-json-state { display: none !important; }
+	.obis-channel-summary { display: grid; grid-template-columns: 2.2em 5.8em minmax(10em,1.3fr) minmax(12em,2fr) auto auto auto; gap: 8px; align-items: center; }
+	.obis-channel-summary code { overflow-wrap: anywhere; }
+	.obis-channel-number, .obis-channel-uuid { color: #68737d; font-size: 82%; font-weight: normal; }
+	.obis-channel-uuid { margin-left: .45em; overflow-wrap: anywhere; }
+	.obis-channel-origin { font-size: 85%; color: #555; }
+	.obis-channel-details { margin-top: 7px; }
+	.obis-channel-grid { display: grid; grid-template-columns: repeat(2,minmax(15em,1fr)); gap: 7px 12px; margin-top: 8px; }
+	.obis-channel-details[open] > .obis-channel-grid { padding: 10px; background: #fffbed; border: 1px solid #eadfa6; border-radius: 4px; }
+	.obis-channel-field label { display: block; font-weight: bold; }
+	.channel-select-api .ui-select .ui-btn,
+	.channel-select-aggregation .ui-select .ui-btn { min-height: 0; padding: 5px 30px 5px 8px; font-size: 13px; line-height: 1.25; font-weight: normal; text-align: left; }
+	#vzlogger_form input.obis-number-spinner { width: 8em; max-width: 100%; height: auto; box-sizing: border-box; padding: 5px 6px; border: 1px solid #aaa; border-radius: 4px; background: #fff; font-size: 13px; line-height: 1.35; appearance: auto; }
+	.obis-number-spinner::-webkit-inner-spin-button { opacity: 1; -webkit-appearance: inner-spin-button; }
+	.obis-number-spinner:disabled { background: #eee; color: #777; }
+	.obis-storage-control { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+	.obis-storage-clear { min-height: 0; padding: 5px 8px; border: 1px solid #aaa; border-radius: 4px; background: #f6f6f6; color: #333; font-size: 12px; line-height: 1.35; cursor: pointer; }
+	.obis-storage-clear.is-active { border-color: #4985a8; background: #e6f1f8; font-weight: bold; }
+	.obis-storage-clear:disabled { background: #eee; color: #777; cursor: default; }
+	.obis-channel-help { display: block; margin-top: .22em; color: #5f6872; font-size: 82%; line-height: 1.3; font-weight: normal; }
+	.obis-channel-info { grid-column: 1 / -1; padding: 7px; background: #eef4f8; border-left: 3px solid #4985a8; }
+	.obis-api-fields { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2,minmax(15em,1fr)); gap: 7px 12px; }
+	.obis-output-fields { grid-column: 1 / -1; border-top: 1px solid #ccc; padding-top: 7px; }
+	.obis-channel-remove { grid-column: 1 / -1; border-top: 1px solid #ddd; padding-top: 8px; }
+	.obis-channel-remove-button.ui-btn { color: #9c1c1c; }
+	.obis-channel-toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; }
+	.obis-channel-toolbar-title { margin-right: auto; font-weight: bold; }
+	.meter-obis-settings > td { width: auto !important; }
+	@media (max-width: 800px) { .obis-channel-summary,.obis-channel-grid,.obis-api-fields { grid-template-columns: 1fr; } }
+	.activation-unsaved { display: block; color: #8a5a00; font-size: 85%; margin-top: .2em; }
+	.activation-unsaved[hidden] { display: none; }
+	.obis-runtime-action-reason { display: block; color: #8a5a00; font-size: 85%; margin: .25em 0; }
+	.obis-runtime-action-reason[hidden] { display: none; }
+	.meter-template-note { display: block; color: #8a5a00; font-size: 85%; margin-top: .2em; }
+	.meter-template-note[hidden] { display: none; }
+	.implementation-tabs { width: 100%; }
+	.implementation-tabs ul { display: flex !important; width: 100% !important; }
+	.implementation-tabs li { float: none !important; flex: 1 1 50%; width: 50% !important; }
+	.implementation-tabs .ui-btn { display: flex !important; align-items: center; justify-content: center; gap: .55em; min-height: 3.2em; padding: .65em .9em; box-sizing: border-box; font-size: 1.28em; line-height: 1.2; text-align: center; white-space: normal; overflow-wrap: anywhere; border-right-width: 1px !important; }
+	.implementation-tab-label { line-height: 1.2; }
+	.implementation-state { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 1.75em; height: 1.75em; margin: 0; box-sizing: border-box; border: 2px solid; border-radius: 50%; background: #fff; font-size: 1em; line-height: 1; font-weight: bold; text-shadow: none; }
+	.implementation-state-icon { display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-family: Arial, sans-serif; font-size: 1.15em; line-height: 1; }
+	.implementation-state.is-active { border-color: #247021; color: #247021; }
+	.implementation-state.is-inactive { border-color: #666; color: #555; }
+	#vzlogger_form { font-size: 13.5px; line-height: 1.35; }
+	#vzlogger_form label { font-size: 13px; line-height: 1.35; }
+	#vzlogger_form .ui-mini.ui-btn,
+	#vzlogger_form .ui-mini .ui-btn {
+		font-size: 12px;
+		line-height: 1.3;
+		padding-top: 6px;
+		padding-bottom: 6px;
+	}
+	#vzlogger_form .ui-flipswitch { width: 5.25em; font-size: 14px; }
+	#vzlogger_form .ui-flipswitch.ui-flipswitch-active { width: 1.875em; padding-left: 3.375em; }
+	#vzlogger_form .ui-flipswitch .ui-btn.ui-flipswitch-on { font-size: inherit; }
+	#vzlogger_form .ui-flipswitch .ui-flipswitch-off { box-sizing: border-box; }
+	#vzlogger_form .ui-input-text > input,
+	#vzlogger_form textarea.ui-input-text {
+		font-size: 13px;
+		line-height: 1.35;
+		padding: 5px 8px;
+	}
+	#vzlogger_form .ui-input-text,
+	#vzlogger_form .ui-select { margin: 3px 0; }
+	.inline-link { margin-right: 1em; }
+	.vzlogger-live-links { margin-top: 0.4em; }
+	.service-panel {
+		border: 1px solid #bbb;
+		border-radius: 6px;
+		background: rgba(255,255,255,0.55);
+		padding: 10px 12px;
+		margin: 0 0 10px 0;
+		font-size: 13.5px;
+		line-height: 1.35;
+	}
+	.service-panel h3 { margin: 0 0 4px 0; }
+	.service-panel-description { margin: 0 0 8px 0; color: #444; }
+	.service-panel table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+	.service-panel td { padding: 3px 5px; vertical-align: top; }
+	.service-panel .service-label { width: 18%; }
+	.service-panel .service-controls { width: 52%; }
+	.service-panel .service-spacer { width: 3%; }
+	.service-panel .service-help { width: 27%; font-size: 12.5px; line-height: 1.4; }
+	.configuration-section {
+		border: 1px solid #aaa;
+		border-radius: 6px;
+		background: rgba(255,255,255,0.4);
+		padding: 10px 12px;
+		margin: 14px 0;
+		font-size: 13.5px;
+		line-height: 1.35;
+	}
+	.configuration-section > h2 { margin: 0 0 8px 0; }
+	.configuration-heading { display: flex; align-items: center; justify-content: space-between; gap: 1em; margin-bottom: 8px; }
+	.configuration-heading h2 { margin: 0; }
+	.expert-mode-control { display: inline-flex; align-items: center; gap: .5em; white-space: nowrap; }
+	.expert-mode-notice { margin: 0 0 10px 0; padding: 8px 10px; border: 1px solid #d6a23c; border-radius: 4px; background: #fff4d6; color: #6f4700; }
+	.generated-config-path { margin: 0 0 .45em 0; overflow-wrap: anywhere; }
+	.generated-config-path code { display: block; }
+	.generated-config-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .4em; }
+	.generated-config-actions .ui-btn { margin: 0; }
+	.configuration-section > p { margin: 0 0 10px 0; }
+	.configuration-section.configuration-disabled { color: #888; }
+	.configuration-section.configuration-disabled .ui-collapsible-heading .ui-btn { color: #888 !important; opacity: .65; }
+	.settings-table tr.setting-disabled > td { color: #888; }
+	.settings-table tr.setting-disabled label,
+	.settings-table tr.setting-disabled h4,
+	.settings-table tr.setting-disabled font { color: inherit; }
+	.service-inline-setting.setting-disabled-inline { color: #888; opacity: .65; }
+	.service-action-line {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 3px 7px;
+		margin-top: 2px;
+	}
+	.service-action-line .ui-btn,
+	.service-action-line .ui-select,
+	.service-action-line .ui-flipswitch { margin: 0; }
+	.service-inline-setting {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		white-space: nowrap;
+	}
+	.service-inline-setting label { margin: 0; }
+	.service-inline-setting .ui-select { min-width: 170px; }
+	.settings-table {
+		width: 100%;
+		border-collapse: collapse;
+		table-layout: fixed;
+		font-size: 13px;
+		line-height: 1.35;
+	}
+	.settings-table > tbody > tr > td { padding: 4px 5px; vertical-align: top; }
+	.settings-table > tbody > tr > td:nth-child(1) { width: 18%; }
+	.settings-table > tbody > tr > td:nth-child(2) { width: 52%; }
+	.settings-table > tbody > tr > td:nth-child(3) { width: 3%; }
+	.settings-table > tbody > tr > td:nth-child(4) { width: 27%; font-size: 12.5px; line-height: 1.4; }
+	.settings-table > tbody > tr > td:nth-child(4) font { font-size: 100%; }
+	.compact-settings > tbody > tr > td { padding-top: 2px; padding-bottom: 2px; }
+	.compact-settings h4 { margin: 8px 0 3px 0; }
+	.meter-panel { margin: 8px 0; }
+	.meter-panel .ui-collapsible-content { padding: 8px 10px; }
+	.meter-panel .meter-summary-device { font-weight: normal; opacity: .8; }
+	.meter-pending-badge { display: inline-block; margin-left: .5em; color: #8a5a00; font-size: 85%; font-weight: normal; }
+	.meter-warning-icon {
+		display: inline-block;
+		margin-left: .45em;
+		color: #b00020;
+		font-weight: bold;
+		font-size: 1.15em;
+	}
+	.meter-warning-message {
+		margin: 0 0 8px 0;
+		padding: 8px 10px;
+		border: 1px solid #b00020;
+		border-radius: 4px;
+		background: #f8d7da;
+		color: #721c24;
+	}
+	.meter-json-editor { min-height: 18em; font-family: monospace; white-space: pre; }
+	.meter-doc-links { margin-top: .45em; }
+	.meter-remove-row td { padding-top: 12px !important; border-top: 1px solid #ddd; }
+	.meter-remove-button.ui-btn { color: #9c1c1c; }
+	.meter-remove-help { margin-left: .75em; font-size: 90%; }
+	.obis-search-overlay {
+		display: none;
+		position: fixed;
+		inset: 0;
+		z-index: 10000;
+		align-items: center;
+		justify-content: center;
+		padding: 20px;
+		background: rgba(0, 0, 0, .45);
+	}
+	.obis-search-overlay.is-visible { display: flex; }
+	.obis-search-dialog {
+		box-sizing: border-box;
+		width: 100%;
+		max-width: 420px;
+		padding: 24px;
+		border: 1px solid #777;
+		border-radius: 8px;
+		background: #fff;
+		box-shadow: 0 8px 28px rgba(0, 0, 0, .35);
+		color: #222;
+		text-align: center;
+	}
+	.obis-search-spinner {
+		width: 38px;
+		height: 38px;
+		margin: 0 auto 14px;
+		border: 4px solid #d4d4d4;
+		border-top-color: #2b6dad;
+		border-radius: 50%;
+		animation: obis-search-spin .8s linear infinite;
+	}
+	.obis-search-title { font-size: 1.15em; font-weight: bold; }
+	.obis-search-message { margin-top: 8px; line-height: 1.4; }
+	.ir-scan-results { margin: 12px 0 0; padding-left: 1.4em; text-align: left; }
+	.ir-scan-countdown { margin-top: 10px; color: #666; font-size: 90%; }
+	.service-action-details { max-height: 12em; overflow: auto; margin: 12px 0 0; padding: 8px; border: 1px solid #ddd; background: #f7f7f7; text-align: left; white-space: pre-wrap; }
+	.configuration-action-dialog { max-width: 640px; }
+	.configuration-action-dialog .service-action-details { max-height: 22em; }
+	.obis-search-actions { margin-top: 18px; }
+	.obis-search-actions .ui-btn { margin: 0 auto; }
+	.obis-search-dialog [hidden] { display: none !important; }
+	@keyframes obis-search-spin { to { transform: rotate(360deg); } }
+	@media (prefers-reduced-motion: reduce) {
+		.obis-search-spinner { animation-duration: 1.6s; }
+	}
+	@media (max-width: 700px) {
+		#vzlogger_form,
+		.configuration-section,
+		.service-panel,
+		.settings-table,
+		.settings-table > tbody,
+		.settings-table > tbody > tr,
+		.meter-panel,
+		.meter-panel .ui-collapsible-heading,
+		.meter-panel .ui-collapsible-content,
+		.obis-editor,
+		.obis-channel-card,
+		.obis-channel-summary,
+		.obis-channel-grid,
+		.obis-api-fields,
+		.obis-channel-field {
+			box-sizing: border-box;
+			min-width: 0;
+			max-width: 100%;
+		}
+		.configuration-section,
+		.service-panel,
+		.settings-table,
+		.settings-table > tbody,
+		.settings-table > tbody > tr,
+		.meter-panel,
+		.obis-editor,
+		.obis-channel-card,
+		.obis-channel-summary,
+		.obis-channel-grid,
+		.obis-api-fields { width: 100%; }
+		.service-panel table,
+		.service-panel tbody,
+		.service-panel tr,
+		.settings-table,
+		.settings-table > tbody,
+		.settings-table > tbody > tr { display: block; }
+		.service-panel td { display: block; box-sizing: border-box; width: 100% !important; max-width: 100%; }
+		.service-panel .service-spacer { display: none; }
+		.settings-table { table-layout: fixed; }
+		.settings-table > tbody > tr > td { display: block; box-sizing: border-box; width: 100% !important; max-width: 100%; }
+		.settings-table > tbody > tr > td:nth-child(3) { display: none; }
+		.service-panel tr > td:first-child:not([colspan]),
+		.settings-table > tbody > tr > td:first-child:not([colspan]) { padding-bottom: 0; }
+		.service-panel tr > td:nth-child(2),
+		.settings-table > tbody > tr > td:nth-child(2) { padding-top: 1px; }
+		.service-panel tr > td:nth-child(4),
+		.settings-table > tbody > tr > td:nth-child(4) { padding-top: 2px; padding-bottom: 12px; padding-left: 8px; border-left: 2px solid #d6dce1; color: #66717b; }
+		.configuration-heading { align-items: stretch; flex-direction: column; gap: .4em; }
+		.expert-mode-control { justify-content: space-between; min-width: 0; max-width: 100%; white-space: normal; }
+		.expert-mode-control label { flex: 1 1 auto; min-width: 0; }
+		.expert-mode-control .ui-flipswitch { flex: 0 0 auto; }
+		.service-inline-setting { width: 100%; min-width: 0; max-width: 100%; flex-wrap: wrap; white-space: normal; }
+		.service-inline-setting .ui-select { flex: 1 1 10em; min-width: 0; max-width: 100%; }
+		#vzlogger_form .ui-collapsible,
+		#vzlogger_form .ui-collapsible-heading,
+		#vzlogger_form .ui-collapsible-heading .ui-btn,
+		#vzlogger_form .ui-collapsible-content,
+		#vzlogger_form .ui-input-text,
+		#vzlogger_form .ui-select,
+		#vzlogger_form .ui-select .ui-btn,
+		#vzlogger_form input,
+		#vzlogger_form select,
+		#vzlogger_form textarea { box-sizing: border-box; min-width: 0; max-width: 100%; }
+		#vzlogger_form .ui-collapsible-heading .ui-btn,
+		#vzlogger_form summary,
+		#vzlogger_form label,
+		#vzlogger_form code,
+		#vzlogger_form .obis-channel-help { overflow-wrap: anywhere; }
+		#vzlogger_form .obis-channel-help { color: #66717b; }
+		#vzlogger_form label { margin-bottom: 0; }
+		#vzlogger_form .ui-input-text,
+		#vzlogger_form .ui-select,
+		#vzlogger_form .ui-flipswitch { margin-top: 1px; }
+	}
+	@media (max-width: 420px) {
+		.configuration-section { padding: 8px; }
+		.service-panel { padding: 8px; }
+		.meter-panel .ui-collapsible-content { padding: 7px; }
+		.obis-channel-card { padding: 7px; }
+		.obis-channel-details[open] > .obis-channel-grid { padding: 7px; }
+	}
 
 </style>
 
@@ -47,12 +365,1780 @@
 <!-- ****************************************************************************************** -->
 
 <TMPL_IF FORM_VZLOGGER>
-	<center>
-	<div style="background-color: rgba(255, 255, 200, 0.4); border-radius: 11px; border: 1px solid black; border-spacing: 15px; padding:10px; display:table; margin:0 auto;">
-		<i><TMPL_VAR MENU.HINT_VZLOGGER></i>
+	<div data-role="navbar" class="ui-navbar implementation-tabs" role="navigation" style="margin: 0 0 12px 0;">
+		<ul>
+			<li><a href="./index.cgi?form=vzlogger" class="ui-btn-active"><span id="vzlogger_tab_state" class="implementation-state <TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE>is-active<TMPL_ELSE>is-inactive</TMPL_IF>" data-active-label="<TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE>" data-inactive-label="<TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE>" title="<TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE></TMPL_IF>" aria-label="<TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE></TMPL_IF>"><span class="implementation-state-icon" aria-hidden="true"><TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE>✓<TMPL_ELSE>–</TMPL_IF></span></span><span class="implementation-tab-label"><TMPL_VAR NAME=COMMON.MENU_VZLOGGER></span></a></li>
+			<li><a href="./index_legacy.cgi?form=legacy"><span id="legacy_tab_state" class="implementation-state <TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE>is-active<TMPL_ELSE>is-inactive</TMPL_IF>" data-active-label="<TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE>" data-inactive-label="<TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE>" title="<TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE></TMPL_IF>" aria-label="<TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE></TMPL_IF>"><span class="implementation-state-icon" aria-hidden="true"><TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE>✓<TMPL_ELSE>–</TMPL_IF></span></span><span class="implementation-tab-label"><TMPL_VAR NAME=COMMON.MENU_LEGACY></span></a></li>
+		</ul>
 	</div>
-	</center>
+	<form method="post" data-ajax="false" name="vzlogger_form" id="vzlogger_form" action="./index.cgi">
+	<input type="hidden" name="saveformdata" value="1">
+	<input type="hidden" id="implementation_changed" name="implementation_changed" value="0">
+	<span id="expert_mode_enable_failed_text" hidden><TMPL_VAR NAME=VZLOGGER.EXPERT_MODE_ENABLE_FAILED></span>
+	<span id="expert_mode_overwrite_confirm_text" hidden><TMPL_VAR NAME=VZLOGGER.EXPERT_MODE_OVERWRITE_CONFIRM></span>
+	<span id="expert_mode_active_help_text" hidden><TMPL_VAR NAME=VZLOGGER.EXPERT_MODE_ACTIVE_HELP></span>
+	<span id="edit_expert_config_text" hidden><TMPL_VAR NAME=VZLOGGER.EDIT_EXPERT_CONFIG></span>
+	<span id="edit_expert_config_help_text" hidden><TMPL_VAR NAME=VZLOGGER.EDIT_EXPERT_CONFIG_HELP></span>
+	<span id="show_generated_config_text" hidden><TMPL_VAR NAME=VZLOGGER.SHOW_GENERATED_CONFIG></span>
+	<span id="show_generated_config_help_text" hidden><TMPL_VAR NAME=VZLOGGER.SHOW_GENERATED_CONFIG_HELP></span>
+	<span id="reset_expert_config_confirm_text" hidden><TMPL_VAR NAME=VZLOGGER.RESET_EXPERT_CONFIG_CONFIRM></span>
+	<span id="reset_expert_config_failed_text" hidden><TMPL_VAR NAME=VZLOGGER.RESET_EXPERT_CONFIG_FAILED></span>
+	<span id="reset_expert_config_help_text" hidden><TMPL_VAR NAME=VZLOGGER.RESET_EXPERT_CONFIG_HELP></span>
+	<input type="hidden" id="obis_serial" name="obis_serial" value="">
+	<textarea id="channel_definitions_json" name="channel_definitions_json" class="channel-json-state" hidden aria-hidden="true" tabindex="-1"><TMPL_VAR NAME=CHANNEL_DEFINITIONS_JSON ESCAPE=HTML></textarea>
+	<textarea id="channel_indices_json" class="channel-json-state" hidden aria-hidden="true" tabindex="-1"><TMPL_VAR NAME=CHANNEL_INDICES_JSON ESCAPE=HTML></textarea>
+	<textarea id="obis_catalog_json" class="channel-json-state" hidden aria-hidden="true" tabindex="-1"><TMPL_VAR NAME=OBIS_CATALOG_JSON ESCAPE=HTML></textarea>
+
+	<div id="service_action_feedback" class="service-action-feedback" role="status" aria-live="polite"></div>
+
+	<div class="service-panel">
+		<h3><TMPL_VAR NAME=VZLOGGER.VZLOGGER_SERVICE></h3>
+		<p class="service-panel-description"><TMPL_VAR NAME=VZLOGGER.VZLOGGER_SERVICE_DESCRIPTION></p>
+		<table border="0">
+		<tr>
+			<td class="service-label"><label for="implementation"><TMPL_VAR NAME=COMMON.IMPLEMENTATION_MODE></label></td>
+			<td class="service-controls"><select id="implementation" name="implementation" data-role="flipswitch" onChange="update_vzlogger_controls();"><option value="none"><TMPL_VAR NAME=COMMON.OFF></option><option value="vzlogger"><TMPL_VAR NAME=COMMON.ON></option></select><span id="implementation_unsaved" class="activation-unsaved" hidden><TMPL_VAR NAME=VZLOGGER.ACTIVATION_UNSAVED_RUNTIME></span></td>
+			<td class="service-spacer">&nbsp;</td>
+			<td class="service-help"><TMPL_VAR NAME=COMMON.IMPLEMENTATION_MODE_HELP></td>
+		</tr>
+		<tr>
+			<td class="service-label"><TMPL_VAR NAME=VZLOGGER.STATUS></td>
+			<td class="service-controls">
+				<span id="vzlogger_service_status" class="service-status <TMPL_VAR VZLOGGER_SERVICE_STATUS_CLASS>"><TMPL_VAR VZLOGGER_SERVICE_STATUS></span>
+				<div class="service-action-line">
+					<button id="vzlogger_restart_button" class="service-control-button" type="button" onclick="run_service_action('restart-vzlogger');" title="<TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" disabled><TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE></button>
+					<button id="vzlogger_start_button" class="service-control-button" type="button" onclick="run_service_action('start-vzlogger');" title="<TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="power" disabled <TMPL_IF VZLOGGER_SERVICE_RUNNING>style="display:none"</TMPL_IF>><TMPL_VAR NAME=VZLOGGER.START_SERVICE></button>
+					<button id="vzlogger_stop_button" class="service-control-button" type="button" onclick="run_service_action('stop-vzlogger');" title="<TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="delete" disabled <TMPL_IF VZLOGGER_SERVICE_RUNNING><TMPL_ELSE>style="display:none"</TMPL_IF>><TMPL_VAR NAME=VZLOGGER.STOP_SERVICE></button>
+					<a href="<TMPL_VAR VZLOGGER_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR VZLOGGER_LOG_DISABLED>"><TMPL_VAR NAME=VZLOGGER.SHOW_LOG></a>
+					<span class="service-inline-setting"><label for="vzlogger_service_debug"><TMPL_VAR NAME=VZLOGGER.DEBUG_LOG></label><select id="vzlogger_service_debug" name="vzlogger_service_debug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></span>
+					<span class="service-inline-setting"><label for="vzlogger_loglevel"><TMPL_VAR NAME=VZLOGGER.LOG_LEVEL></label><select id="vzlogger_loglevel" name="vzlogger_loglevel" data-inline="true" data-mini="true"><option value="0">0 - <TMPL_VAR NAME=VZLOGGER.LOG_LEVEL_0></option><option value="1">1 - <TMPL_VAR NAME=VZLOGGER.LOG_LEVEL_1></option><option value="3">3 - <TMPL_VAR NAME=VZLOGGER.LOG_LEVEL_3></option><option value="5">5 - <TMPL_VAR NAME=VZLOGGER.LOG_LEVEL_5></option><option value="10">10 - <TMPL_VAR NAME=VZLOGGER.LOG_LEVEL_10></option><option value="15">15 - <TMPL_VAR NAME=VZLOGGER.LOG_LEVEL_15></option></select></span>
+				</div>
+				<div id="vzlogger_service_action_reason" class="service-action-reason" aria-live="polite"></div>
+				<div class="vzlogger-live-links"><a id="vzlogger_live_link" class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_LIVEURL>" target="_blank"><TMPL_VAR NAME=VZLOGGER.OPEN_LIVE_READINGS></a><a id="vzlogger_rendered_link" class="inline-link <TMPL_VAR VZLOGGER_LIVE_DISABLED>" href="<TMPL_VAR VZLOGGER_RENDERED_URL>" target="_blank"><TMPL_VAR NAME=VZLOGGER.OPEN_RENDERED_READINGS></a></div>
+			</td>
+			<td class="service-spacer">&nbsp;</td>
+			<td class="service-help"><TMPL_VAR NAME=VZLOGGER.VZLOGGER_SERVICE_CONTROL_HELP><br><TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.VZLOGGER_DEBUG_HELP><br><TMPL_VAR NAME=VZLOGGER.LOG_LEVEL_HELP></td>
+		</tr>
+		</table>
+	</div>
+
+	<div class="service-panel">
+		<h3><TMPL_VAR NAME=VZLOGGER.BRIDGE_SERVICE></h3>
+		<p class="service-panel-description"><TMPL_VAR NAME=VZLOGGER.BRIDGE_SERVICE_DESCRIPTION></p>
+		<table border="0">
+		<tr>
+			<td class="service-label"><label for="read"><TMPL_VAR NAME=VZLOGGER.READ_METERS></label></td>
+			<td class="service-controls"><select onChange="update_bridge_controls();" id="read" name="read" data-role="flipswitch" disabled><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select><span id="bridge_activation_unsaved" class="activation-unsaved" hidden><TMPL_VAR NAME=VZLOGGER.ACTIVATION_UNSAVED_RUNTIME></span></td>
+			<td class="service-spacer">&nbsp;</td>
+			<td class="service-help"><TMPL_VAR NAME=VZLOGGER.READ_METERS_HELP></td>
+		</tr>
+		<tr>
+			<td class="service-label"><TMPL_VAR NAME=VZLOGGER.STATUS></td>
+			<td class="service-controls">
+				<span id="bridge_service_status" class="service-status <TMPL_VAR BRIDGE_SERVICE_STATUS_CLASS>"><TMPL_VAR BRIDGE_SERVICE_STATUS></span>
+				<div class="service-action-line">
+					<button id="bridge_restart_button" class="service-control-button" type="button" onclick="run_service_action('restart-bridge');" title="<TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" disabled><TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE></button>
+					<button id="bridge_start_button" class="service-control-button" type="button" onclick="run_service_action('start-bridge');" title="<TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="power" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING>style="display:none"</TMPL_IF>><TMPL_VAR NAME=VZLOGGER.START_SERVICE></button>
+					<button id="bridge_stop_button" class="service-control-button" type="button" onclick="run_service_action('stop-bridge');" title="<TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="delete" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING><TMPL_ELSE>style="display:none"</TMPL_IF>><TMPL_VAR NAME=VZLOGGER.STOP_SERVICE></button>
+					<a href="<TMPL_VAR BRIDGE_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR BRIDGE_LOG_DISABLED>"><TMPL_VAR NAME=VZLOGGER.SHOW_LOG></a>
+					<span class="service-inline-setting"><label for="vzlogger_debug"><TMPL_VAR NAME=VZLOGGER.DEBUG_LOG></label><select id="vzlogger_debug" name="vzlogger_debug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></span>
+				</div>
+				<div id="bridge_service_action_reason" class="service-action-reason" aria-live="polite"></div>
+			</td>
+			<td class="service-spacer">&nbsp;</td>
+			<td class="service-help"><TMPL_VAR BRIDGE_AVAILABILITY_HELP><br><TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.DEBUG_LOG_HELP><br>/opt/loxberry/log/plugins/smartmeter-v2/vzlogger_mqtt_bridge.log</td>
+		</tr>
+		</table>
+	</div>
+	<div class="service-control-log"><span><TMPL_VAR NAME=VZLOGGER.SERVICE_CONTROL_LOG_LABEL></span> <a href="<TMPL_VAR CONTROL_LOG_URL>" target="log" class="<TMPL_VAR CONTROL_LOG_DISABLED>"><TMPL_VAR NAME=VZLOGGER.SHOW_CONTROL_LOG></a></div>
+
+	<div id="vzlogger_configuration_section" class="configuration-section <TMPL_IF VZLOGGER_EXPERT_MODE>configuration-disabled</TMPL_IF>">
+	<div class="configuration-heading"><h2><TMPL_VAR NAME=VZLOGGER.VZLOGGER_CONFIGURATION></h2><span class="expert-mode-control"><label for="expert_mode"><TMPL_VAR NAME=VZLOGGER.EXPERT_MODE></label><select id="expert_mode" data-role="flipswitch" onchange="set_expert_mode(this.value);"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></span></div>
+	<p id="expert_mode_notice" class="expert-mode-notice"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> hidden</TMPL_IF>><TMPL_VAR NAME=VZLOGGER.EXPERT_MODE_ACTIVE_HELP></p>
+	<p><TMPL_VAR NAME=VZLOGGER.VZLOGGER_CONFIGURATION_HELP></p>
+	<table border="0" class="settings-table">
+	<tr>
+		<td colspan="4">
+			<div id="advanced_service_settings_panel" data-role="collapsible" data-collapsed="true" data-mini="true">
+				<h3><TMPL_VAR NAME=VZLOGGER.ADVANCED_SERVICE_SETTINGS></h3>
+				<table border="0" class="settings-table compact-settings">
+				<tr>
+					<td width="18%"><label for="vzlogger_retry"><TMPL_VAR NAME=VZLOGGER.RETRY></label></td>
+					<td><input id="vzlogger_retry" name="vzlogger_retry" type="text" data-validation="number" data-validation-allowing="range[0;86400]" value="<TMPL_VAR VZLOGGER_RETRY>" data-mini="true"></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.RETRY_HELP></font></td>
+				</tr>
+				</table>
+			</div>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="4">
+			<div id="local_settings_panel" data-role="collapsible" data-collapsed="true" data-mini="true">
+				<h3><TMPL_VAR NAME=VZLOGGER.LOCAL_SETTINGS></h3>
+				<p><TMPL_VAR NAME=VZLOGGER.LOCAL_SETTINGS_HELP></p>
+				<table border="0" class="settings-table compact-settings">
+				<tr>
+					<td width="20%"><label for="vzlogger_localenabled"><TMPL_VAR NAME=VZLOGGER.LOCAL_ENABLED></label></td>
+					<td width="55%"><select id="vzlogger_localenabled" name="vzlogger_localenabled" data-role="flipswitch" onchange="update_local_controls();"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td>
+					<td width="5%">&nbsp;</td>
+					<td width="20%"><font size="-1"><TMPL_VAR NAME=VZLOGGER.LOCAL_ENABLED_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_localport"><TMPL_VAR NAME=VZLOGGER.HTTP_PORT></label></td>
+					<td><input id="vzlogger_localport" name="vzlogger_localport" type="text" data-validation="number" value="<TMPL_VAR VZLOGGER_LOCALPORT>" data-validation-allowing="range[1024;65000]" data-mini="true"></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.HTTP_PORT_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_localindex"><TMPL_VAR NAME=VZLOGGER.LOCAL_INDEX></label></td>
+					<td><select id="vzlogger_localindex" name="vzlogger_localindex" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.LOCAL_INDEX_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_localtimeout"><TMPL_VAR NAME=VZLOGGER.LOCAL_TIMEOUT></label></td>
+					<td><input id="vzlogger_localtimeout" name="vzlogger_localtimeout" type="text" data-validation="number" data-validation-allowing="range[0;86400]" value="<TMPL_VAR VZLOGGER_LOCALTIMEOUT>" data-mini="true"></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.LOCAL_TIMEOUT_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_localbuffer"><TMPL_VAR NAME=VZLOGGER.LOCAL_BUFFER></label></td>
+					<td><input id="vzlogger_localbuffer" name="vzlogger_localbuffer" type="text" data-validation="custom" data-validation-regexp="^-?\d+$" value="<TMPL_VAR VZLOGGER_LOCALBUFFER>" data-mini="true"></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.LOCAL_BUFFER_HELP></font></td>
+				</tr>
+				</table>
+			</div>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="4">
+			<div id="mqtt_settings_panel" data-role="collapsible" data-collapsed="true" data-mini="true">
+				<h3><TMPL_VAR NAME=VZLOGGER.MQTT_SETTINGS></h3>
+				<p><TMPL_VAR NAME=VZLOGGER.MQTT_SETTINGS_HELP></p>
+				<table border="0" class="settings-table compact-settings">
+				<tr><td colspan="4"><h4><TMPL_VAR NAME=VZLOGGER.MQTT_CONNECTION_SETTINGS></h4></td></tr>
+				<tr>
+					<td width="20%"><label for="vzlogger_mqttenabled"><TMPL_VAR NAME=VZLOGGER.MQTT_ENABLED></label></td>
+					<td width="55%"><select id="vzlogger_mqttenabled" name="vzlogger_mqttenabled" data-role="flipswitch" onChange="update_mqtt_controls();"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td>
+					<td width="5%">&nbsp;</td>
+					<td width="20%"><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_ENABLED_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqtthost"><TMPL_VAR NAME=VZLOGGER.MQTT_HOST></label></td>
+					<td><input id="vzlogger_mqtthost" name="vzlogger_mqtthost" type="text" value="<TMPL_VAR VZLOGGER_MQTTHOST>" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_HOST_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttport"><TMPL_VAR NAME=VZLOGGER.MQTT_PORT></label></td>
+					<td><input id="vzlogger_mqttport" name="vzlogger_mqttport" type="text" value="<TMPL_VAR VZLOGGER_MQTTPORT>" data-validation="number" data-validation-optional="true" data-validation-allowing="range[1;65535]" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_PORT_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttkeepalive"><TMPL_VAR NAME=VZLOGGER.MQTT_KEEPALIVE></label></td>
+					<td><input id="vzlogger_mqttkeepalive" name="vzlogger_mqttkeepalive" type="text" value="<TMPL_VAR VZLOGGER_MQTTKEEPALIVE>" data-validation="number" data-validation-allowing="range[0;65535]" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_KEEPALIVE_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="mqtttopic"><TMPL_VAR NAME=VZLOGGER.MQTT_BASE_TOPIC></label></td>
+					<td><input id="mqtttopic" name="mqtttopic" type="text" class="textfield" value="<TMPL_VAR MQTTTOPIC>" data-validation="custom" data-validation-regexp="^[^#+]+$"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_BASE_TOPIC_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttid"><TMPL_VAR NAME=VZLOGGER.MQTT_ID></label></td>
+					<td><input id="vzlogger_mqttid" name="vzlogger_mqttid" type="text" value="<TMPL_VAR VZLOGGER_MQTTID>" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_ID_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttretain"><TMPL_VAR NAME=VZLOGGER.MQTT_RETAIN></label></td>
+					<td><select id="vzlogger_mqttretain" name="vzlogger_mqttretain" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_RETAIN_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttrawandagg"><TMPL_VAR NAME=VZLOGGER.MQTT_RAW_AND_AGG></label></td>
+					<td><select id="vzlogger_mqttrawandagg" name="vzlogger_mqttrawandagg" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_RAW_AND_AGG_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttqos"><TMPL_VAR NAME=VZLOGGER.MQTT_QOS></label></td>
+					<td><select id="vzlogger_mqttqos" name="vzlogger_mqttqos" data-mini="true" data-native-menu="true"><option value="0">0</option><option value="1">1</option></select></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_QOS_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqtttimestamp"><TMPL_VAR NAME=VZLOGGER.MQTT_TIMESTAMP></label></td>
+					<td><select id="vzlogger_mqtttimestamp" name="vzlogger_mqtttimestamp" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_TIMESTAMP_HELP></font></td>
+				</tr>
+				<tr><td colspan="4"><h4><TMPL_VAR NAME=VZLOGGER.MQTT_USER_AUTH></h4></td></tr>
+				<tr>
+					<td><label for="vzlogger_mqttuser"><TMPL_VAR NAME=VZLOGGER.MQTT_USER></label></td>
+					<td><input id="vzlogger_mqttuser" name="vzlogger_mqttuser" type="text" value="<TMPL_VAR VZLOGGER_MQTTUSER>" autocomplete="username" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_USER_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttpass"><TMPL_VAR NAME=VZLOGGER.MQTT_PASSWORD></label></td>
+					<td>
+						<input id="vzlogger_mqttpass" name="vzlogger_mqttpass" type="password" value="" autocomplete="new-password" placeholder="<TMPL_VAR VZLOGGER_MQTTPASS_STATUS>" data-mini="true">
+						<label for="vzlogger_mqttpass_reset"><input id="vzlogger_mqttpass_reset" name="vzlogger_mqttpass_reset" type="checkbox" value="1" data-mini="true"><TMPL_VAR NAME=VZLOGGER.MQTT_PASSWORD_RESET></label>
+					</td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_PASSWORD_HELP></font></td>
+				</tr>
+				<tr><td colspan="4"><h4><TMPL_VAR NAME=VZLOGGER.MQTT_CERT_AUTH></h4></td></tr>
+				<tr>
+					<td><label for="vzlogger_mqttcafile"><TMPL_VAR NAME=VZLOGGER.MQTT_CAFILE></label></td>
+					<td><input id="vzlogger_mqttcafile" name="vzlogger_mqttcafile" type="text" value="<TMPL_VAR VZLOGGER_MQTTCAFILE>" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_CAFILE_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttcapath"><TMPL_VAR NAME=VZLOGGER.MQTT_CAPATH></label></td>
+					<td><input id="vzlogger_mqttcapath" name="vzlogger_mqttcapath" type="text" value="<TMPL_VAR VZLOGGER_MQTTCAPATH>" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_CAPATH_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttcertfile"><TMPL_VAR NAME=VZLOGGER.MQTT_CERTFILE></label></td>
+					<td><input id="vzlogger_mqttcertfile" name="vzlogger_mqttcertfile" type="text" value="<TMPL_VAR VZLOGGER_MQTTCERTFILE>" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_CERTFILE_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttkeyfile"><TMPL_VAR NAME=VZLOGGER.MQTT_KEYFILE></label></td>
+					<td><input id="vzlogger_mqttkeyfile" name="vzlogger_mqttkeyfile" type="text" value="<TMPL_VAR VZLOGGER_MQTTKEYFILE>" data-mini="true"></td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_KEYFILE_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label for="vzlogger_mqttkeypass"><TMPL_VAR NAME=VZLOGGER.MQTT_KEYPASS></label></td>
+					<td>
+						<input id="vzlogger_mqttkeypass" name="vzlogger_mqttkeypass" type="password" value="" autocomplete="new-password" placeholder="<TMPL_VAR NAME=VZLOGGER.MQTT_PASSWORD_UNCHANGED>" data-mini="true">
+						<label for="vzlogger_mqttkeypass_reset"><input id="vzlogger_mqttkeypass_reset" name="vzlogger_mqttkeypass_reset" type="checkbox" value="1" data-mini="true"><TMPL_VAR NAME=VZLOGGER.MQTT_KEYPASS_RESET></label>
+					</td>
+					<td>&nbsp;</td><td><font size="-1"><TMPL_VAR NAME=VZLOGGER.MQTT_KEYPASS_HELP></font></td>
+				</tr>
+				</table>
+			</div>
+		</td>
+	</tr>
+	<tr>
+		<td colspan=4><h3><TMPL_VAR NAME=VZLOGGER.IR_HEADS></h3><p><TMPL_VAR NAME=VZLOGGER.IR_HEADS_HELP></p></td>
+	</tr>
+	<tr>
+		<td>&nbsp;</td><td><a id="rescan_ir_heads" title="<TMPL_VAR NAME=VZLOGGER.RESCAN_IR_HEADS_HELP>" data-icon="refresh" data-role="button" data-inline="true" data-mini="true" href="./index.cgi?rescan=1" onclick="return start_ir_head_scan(event);"><TMPL_VAR NAME=VZLOGGER.RESCAN_IR_HEADS></a></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.RESCAN_IR_HEADS_HELP></td>
+	</tr>
+	<TMPL_LOOP NAME=ROWS>
+	<tr id="meter_row_<TMPL_VAR NAME=SERIAL>" class="meter-row" data-meter-serial="<TMPL_VAR NAME=SERIAL ESCAPE=HTML>"><td colspan="4">
+		<div id="meter_<TMPL_VAR NAME=SERIAL>" class="meter-panel" data-role="collapsible" data-mini="true" data-collapsed="<TMPL_VAR NAME=COLLAPSED>" data-warning-kind="<TMPL_VAR NAME=WARNING_KIND>" data-oms-supported="<TMPL_VAR NAME=OMS_SUPPORTED>" data-current-mode="<TMPL_VAR NAME=METER>" data-meter-enabled="<TMPL_VAR NAME=METER_ENABLED>" data-allowskip="<TMPL_VAR NAME=ALLOWSKIP>" data-parity="<TMPL_VAR NAME=PARITYMODE>" data-local-time="<TMPL_VAR NAME=USELOCALTIME>" data-wait-sync="<TMPL_VAR NAME=WAITSYNC>" data-mbus-debug="<TMPL_VAR NAME=MBUSDEBUG>">
+			<h4>
+				<TMPL_VAR NAME=NAME ESCAPE=HTML>
+				<TMPL_IF NAME=PENDING_METER><span class="meter-pending-badge"><TMPL_VAR NAME=VZLOGGER.METER_PENDING_NEW></span></TMPL_IF>
+				<span class="meter-summary-device">– <TMPL_VAR NAME=DEVICE ESCAPE=HTML> – <span class="meter-protocol-summary"><TMPL_VAR NAME=PROTOCOL_LABEL ESCAPE=HTML></span></span>
+				<TMPL_IF NAME=HAS_WARNING><span class="meter-warning-icon" title="<TMPL_VAR NAME=WARNING_TEXT ESCAPE=HTML>" aria-label="<TMPL_VAR NAME=WARNING_TEXT ESCAPE=HTML>">!</span></TMPL_IF>
+			</h4>
+			<TMPL_IF NAME=SHOW_WARNING_DETAIL><div class="meter-primary-warning meter-warning-message" role="alert"><TMPL_VAR NAME=WARNING_TEXT ESCAPE=HTML></div></TMPL_IF>
+			<TMPL_IF NAME=OMS_UNSUPPORTED><div class="meter-oms-runtime-warning meter-warning-message" role="alert"><TMPL_VAR NAME=VZLOGGER.METER_WARNING_OMS_UNAVAILABLE></div></TMPL_IF>
+			<table border="0" class="settings-table compact-settings">
+			<tr class="meter-name-row"><td><label for="<TMPL_VAR NAME=SERIAL>_name"><TMPL_VAR NAME=COMMON.METER_NAME></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_name" name="<TMPL_VAR NAME=SERIAL>_name" type="text" value="<TMPL_VAR NAME=NAME ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_NAME_HELP></td></tr>
+			<tr class="meter-common-field meter-enabled-row"><td><label for="<TMPL_VAR NAME=SERIAL>_enabled"><TMPL_VAR NAME=VZLOGGER.METER_ENABLED></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_enabled" name="<TMPL_VAR NAME=SERIAL>_enabled" data-role="flipswitch" onchange="update_meter_enabled('<TMPL_VAR NAME=SERIAL>');"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_ENABLED_HELP></td></tr>
+			<tr><td><TMPL_VAR NAME=VZLOGGER.METER_DEVICE></td><td><code><TMPL_VAR NAME=DEVICE ESCAPE=HTML></code></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_DEVICE_HELP></td></tr>
+			<tr><td><label for="<TMPL_VAR NAME=SERIAL>_meter"><TMPL_VAR NAME=VZLOGGER.METER_PROTOCOL></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_meter" name="<TMPL_VAR NAME=SERIAL>_meter" data-mini="true" data-native-menu="true" onchange="update_meter_protocol(this.id.substring(0, this.id.length - 6));"><option value="0"><TMPL_VAR NAME=COMMON.PLEASE_SELECT></option><option value="sml">SML</option><option value="d0">D0</option><option value="oms">OMS</option><option value="user"><TMPL_VAR NAME=VZLOGGER.PROTOCOL_USER></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_PROTOCOL_HELP></td></tr>
+			<tr class="meter-template-row"><td><label for="<TMPL_VAR NAME=SERIAL>_template"><TMPL_VAR NAME=VZLOGGER.METER_TEMPLATE></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_template" class="meter-template-select" data-placeholder="<TMPL_VAR NAME=VZLOGGER.METER_TEMPLATE_SELECT ESCAPE=HTML>" data-mini="true" data-native-menu="true" onchange="apply_meter_template('<TMPL_VAR NAME=SERIAL>');"><option value=""><TMPL_VAR NAME=VZLOGGER.METER_TEMPLATE_SELECT></option></select><span id="<TMPL_VAR NAME=SERIAL>_template_unsaved" class="meter-template-note" hidden><TMPL_VAR NAME=COMMON.ACTIVATION_UNSAVED></span><span id="<TMPL_VAR NAME=SERIAL>_template_warning" class="meter-template-note" hidden><TMPL_VAR NAME=VZLOGGER.METER_TEMPLATE_LIMITED></span></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_TEMPLATE_HELP></td></tr>
+			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_allowskip"><TMPL_VAR NAME=VZLOGGER.METER_ALLOWSKIP></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_allowskip" name="<TMPL_VAR NAME=SERIAL>_allowskip" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_ALLOWSKIP_HELP></td></tr>
+			<tr class="meter-common-field"><td><label for="<TMPL_VAR NAME=SERIAL>_aggtime"><TMPL_VAR NAME=VZLOGGER.METER_AGGTIME></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_aggtime" name="<TMPL_VAR NAME=SERIAL>_aggtime" type="number" value="<TMPL_VAR NAME=AGGTIME>" oninput="render_channel_editor('<TMPL_VAR NAME=SERIAL>'); update_meter_enabled('<TMPL_VAR NAME=SERIAL>');"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_AGGTIME_HELP></td></tr>
+
+			<tr class="meter-field" data-meter-field="interval" data-protocols="sml d0"><td><label for="<TMPL_VAR NAME=SERIAL>_interval"><TMPL_VAR NAME=VZLOGGER.METER_INTERVAL></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_interval" name="<TMPL_VAR NAME=SERIAL>_interval" type="number" value="<TMPL_VAR NAME=INTERVAL>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_INTERVAL_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="pullseq" data-protocols="sml d0"><td><label for="<TMPL_VAR NAME=SERIAL>_pullseq"><TMPL_VAR NAME=VZLOGGER.METER_PULLSEQ></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_pullseq" name="<TMPL_VAR NAME=SERIAL>_pullseq" type="text" value="<TMPL_VAR NAME=PULLSEQ ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_PULLSEQ_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="baudrate" data-protocols="sml d0 oms"><td><label for="<TMPL_VAR NAME=SERIAL>_baudrate"><TMPL_VAR NAME=VZLOGGER.METER_BAUDRATE></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_baudrate" name="<TMPL_VAR NAME=SERIAL>_baudrate" type="number" min="1" value="<TMPL_VAR NAME=BAUDRATE>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_BAUDRATE_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="parity" data-protocols="sml d0"><td><label for="<TMPL_VAR NAME=SERIAL>_paritymode"><TMPL_VAR NAME=VZLOGGER.METER_PARITY></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_paritymode" name="<TMPL_VAR NAME=SERIAL>_paritymode" data-mini="true" data-native-menu="true"><option value=""><TMPL_VAR NAME=VZLOGGER.METER_AUTO_EMPTY></option><option value="8n1">8N1</option><option value="7e1">7E1</option><option value="7o1">7O1</option><option value="7n1">7N1</option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_PARITY_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="use_local_time" data-protocols="sml oms"><td><label for="<TMPL_VAR NAME=SERIAL>_uselocaltime"><TMPL_VAR NAME=VZLOGGER.METER_USE_LOCAL_TIME></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_uselocaltime" name="<TMPL_VAR NAME=SERIAL>_uselocaltime" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_USE_LOCAL_TIME_HELP></td></tr>
+
+			<tr class="meter-field" data-meter-field="dump_file" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_dumpfile"><TMPL_VAR NAME=VZLOGGER.METER_DUMP_FILE></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_dumpfile" name="<TMPL_VAR NAME=SERIAL>_dumpfile" type="text" value="<TMPL_VAR NAME=DUMPFILE ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_DUMP_FILE_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="ackseq" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_ackseq"><TMPL_VAR NAME=VZLOGGER.METER_ACKSEQ></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_ackseq" name="<TMPL_VAR NAME=SERIAL>_ackseq" type="text" value="<TMPL_VAR NAME=ACKSEQ ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_ACKSEQ_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="baudrate_read" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_baudrateread"><TMPL_VAR NAME=VZLOGGER.METER_BAUDRATE_READ></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_baudrateread" name="<TMPL_VAR NAME=SERIAL>_baudrateread" type="number" min="1" value="<TMPL_VAR NAME=BAUDRATEREAD>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_BAUDRATE_READ_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="wait_sync" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_waitsync"><TMPL_VAR NAME=VZLOGGER.METER_WAIT_SYNC></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_waitsync" name="<TMPL_VAR NAME=SERIAL>_waitsync" data-mini="true" data-native-menu="true"><option value=""><TMPL_VAR NAME=VZLOGGER.METER_AUTO_EMPTY></option><option value="off">off</option><option value="end">end</option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_WAIT_SYNC_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="read_timeout" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_readtimeout"><TMPL_VAR NAME=VZLOGGER.METER_READ_TIMEOUT></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_readtimeout" name="<TMPL_VAR NAME=SERIAL>_readtimeout" type="number" min="0" value="<TMPL_VAR NAME=READTIMEOUT>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_READ_TIMEOUT_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="baudrate_change_delay" data-protocols="d0"><td><label for="<TMPL_VAR NAME=SERIAL>_baudratechangedelay"><TMPL_VAR NAME=VZLOGGER.METER_BAUDRATE_CHANGE_DELAY></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_baudratechangedelay" name="<TMPL_VAR NAME=SERIAL>_baudratechangedelay" type="number" min="0" value="<TMPL_VAR NAME=BAUDRATECHANGEDELAY>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_BAUDRATE_CHANGE_DELAY_HELP></td></tr>
+
+			<tr class="meter-field" data-meter-field="key" data-protocols="oms"><td><label for="<TMPL_VAR NAME=SERIAL>_omskey"><TMPL_VAR NAME=VZLOGGER.METER_OMS_KEY></label></td><td><input id="<TMPL_VAR NAME=SERIAL>_omskey" name="<TMPL_VAR NAME=SERIAL>_omskey" type="password" autocomplete="off" maxlength="32" value="<TMPL_VAR NAME=OMSKEY ESCAPE=HTML>"></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_OMS_KEY_HELP></td></tr>
+			<tr class="meter-field" data-meter-field="mbus_debug" data-protocols="oms"><td><label for="<TMPL_VAR NAME=SERIAL>_mbusdebug"><TMPL_VAR NAME=VZLOGGER.METER_MBUS_DEBUG></label></td><td><select id="<TMPL_VAR NAME=SERIAL>_mbusdebug" name="<TMPL_VAR NAME=SERIAL>_mbusdebug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_MBUS_DEBUG_HELP></td></tr>
+
+			<tr class="meter-user-settings"><td><label for="<TMPL_VAR NAME=SERIAL>_userjson"><TMPL_VAR NAME=VZLOGGER.METER_USER_JSON></label></td><td><textarea class="meter-json-editor" id="<TMPL_VAR NAME=SERIAL>_userjson" name="<TMPL_VAR NAME=SERIAL>_userjson" maxlength="65536"><TMPL_VAR NAME=USER_JSON ESCAPE=HTML></textarea><div class="meter-doc-links"><a href="https://wiki.volkszaehler.org/software/controller/vzlogger/vzlogger_conf_parameter" target="_blank" rel="noopener"><TMPL_VAR NAME=VZLOGGER.METER_USER_JSON_DOCS></a> · <a href="https://github.com/volkszaehler/vzlogger/tree/master/etc" target="_blank" rel="noopener"><TMPL_VAR NAME=VZLOGGER.METER_USER_JSON_EXAMPLES></a></div></td><td>&nbsp;</td><td><TMPL_VAR NAME=VZLOGGER.METER_USER_JSON_HELP></td></tr>
+
+			<tr class="meter-obis-settings"><td colspan="4"><div class="obis-channel-toolbar"><span class="obis-channel-toolbar-title"><TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS></span><button class="obis-discovery" type="button" onclick="start_obis_discovery('<TMPL_VAR NAME=SERIAL>');" title="<TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS_HELP>" aria-describedby="<TMPL_VAR NAME=SERIAL>_obis_runtime_reason" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search" <TMPL_VAR NAME=OBIS_DISABLED>><TMPL_VAR NAME=VZLOGGER.READ_OBIS_CHANNELS></button><button type="button" onclick="add_manual_obis_channel('<TMPL_VAR NAME=SERIAL>');" data-role="button" data-inline="true" data-mini="true" data-icon="plus"><TMPL_VAR NAME=VZLOGGER.CHANNEL_ADD></button></div><span id="<TMPL_VAR NAME=SERIAL>_obis_runtime_reason" class="obis-runtime-action-reason" role="status" hidden><TMPL_VAR NAME=VZLOGGER.OBIS_SAVE_ACTIVATION_HELP></span><span class="obis-channel-help"><TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS_HELP></span><p id="<TMPL_VAR NAME=SERIAL>_obis_empty"><TMPL_VAR NAME=VZLOGGER.OBIS_CHANNELS_EMPTY></p><div id="<TMPL_VAR NAME=SERIAL>_obis_channels" class="obis-editor" data-protocol="<TMPL_VAR NAME=METER ESCAPE=HTML>"></div></td></tr>
+			<tr class="meter-remove-row"><td colspan="4"><input class="meter-remove-marker" type="hidden" name="remove_meter" value="<TMPL_VAR NAME=SERIAL>" disabled><button class="meter-remove-button" type="button" onclick="stage_meter_removal('<TMPL_VAR NAME=SERIAL>');" data-role="button" data-inline="true" data-mini="true" data-icon="delete"><TMPL_VAR NAME=VZLOGGER.REMOVE_METER></button><span class="meter-remove-help"><TMPL_VAR NAME=VZLOGGER.REMOVE_METER_HELP></span></td></tr>
+			</table>
+		</div>
+	</td></tr>
+	</TMPL_LOOP>
+	<tr id="meter_rows_end" hidden><td colspan="4"></td></tr>
+	</table>
+	</div>
+
+	<div id="bridge_configuration_section" class="configuration-section">
+	<h2><TMPL_VAR NAME=VZLOGGER.BRIDGE_CONFIGURATION></h2>
+	<p><TMPL_VAR NAME=VZLOGGER.BRIDGE_CONFIGURATION_HELP></p>
+	<table border="0" class="settings-table">
+	<tr>
+		<td colspan="4">
+			<div id="bridge_settings_panel" data-role="collapsible" data-collapsed="true" data-mini="true">
+				<h3><TMPL_VAR NAME=VZLOGGER.BRIDGE_SETTINGS></h3>
+				<p><TMPL_VAR NAME=VZLOGGER.BRIDGE_SETTINGS_HELP></p>
+				<table border="0" class="settings-table compact-settings">
+				<tr>
+					<td width="20%"><label for="vzlogger_udpinterval"><TMPL_VAR NAME=VZLOGGER.UPDATE_CYCLE></label></td>
+					<td width="55%"><select id="vzlogger_udpinterval" name="vzlogger_udpinterval" data-mini="true" data-native-menu="true"><TMPL_LOOP NAME=VZLOGGER_UDPINTERVAL_OPTIONS><option value="<TMPL_VAR NAME=VALUE>" <TMPL_VAR NAME=SELECTED>><TMPL_VAR NAME=LABEL></option></TMPL_LOOP></select></td>
+					<td width="5%">&nbsp;</td>
+					<td width="20%"><font size="-1"><TMPL_VAR NAME=VZLOGGER.UPDATE_CYCLE_HELP></font></td>
+				</tr>
+				<tr><td colspan="4"><h4><TMPL_VAR NAME=VZLOGGER.HTTP_CACHE></h4></td></tr>
+				<tr id="http_cache_status_row">
+					<td><TMPL_VAR NAME=VZLOGGER.HTTP_CACHE_STATUS></td>
+					<td><span><TMPL_VAR NAME=HTTP_CACHE_STATUS></span><br><a id="http_cache_link" data-cache-available="<TMPL_VAR HTTP_CACHE_AVAILABLE>" class="inline-link <TMPL_VAR HTTP_CACHE_DISABLED>" href="<TMPL_VAR HTTP_CACHE_URL>" target="_blank"><TMPL_VAR NAME=VZLOGGER.OPEN_HTTP_CACHE></a></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.HTTP_CACHE_HELP></font></td>
+				</tr>
+				<tr><td colspan="4"><h4><TMPL_VAR NAME=VZLOGGER.UDP_OPTIONS></h4></td></tr>
+				<tr>
+					<td><label for="sendudp"><TMPL_VAR NAME=VZLOGGER.SEND_UDP></label></td>
+					<td><select id="sendudp" name="sendudp" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.SEND_UDP_HELP></font></td>
+				</tr>
+				<tr>
+					<td><label id="labeludpport" for="udpport"><TMPL_VAR NAME=VZLOGGER.PORT></label></td>
+					<td><input id="udpport" name="udpport" type="text" data-validation="number" value="<TMPL_VAR UDPPORT>" data-validation-allowing="range[1;65000]"></td>
+					<td>&nbsp;</td>
+					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.UDP_PORT_HELP></font></td>
+				</tr>
+				</table>
+			</div>
+		</td>
+	</tr>
+	</table>
+	</div>
+
+	<table border="0" class="settings-table">
+	<tr>
+		<td><TMPL_VAR NAME=VZLOGGER.GENERATED_CONFIG></td>
+		<td><div class="generated-config-path"><code><TMPL_VAR VZLOGGER_CONFIG></code></div><div class="generated-config-actions"><a id="show_generated_config" href="<TMPL_VAR VZLOGGER_CONFIG_URL>" target="_blank"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> rel="noopener"</TMPL_IF> title="<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=VZLOGGER.EDIT_EXPERT_CONFIG_HELP><TMPL_ELSE><TMPL_VAR NAME=VZLOGGER.SHOW_GENERATED_CONFIG_HELP></TMPL_IF>" data-role="button" data-inline="true" data-mini="true" data-icon="<TMPL_IF VZLOGGER_EXPERT_MODE>edit<TMPL_ELSE>search</TMPL_IF>" class="<TMPL_VAR VZLOGGER_CONFIG_DISABLED>"><TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=VZLOGGER.EDIT_EXPERT_CONFIG><TMPL_ELSE><TMPL_VAR NAME=VZLOGGER.SHOW_GENERATED_CONFIG></TMPL_IF></a><span id="reset_expert_config_container"<TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_ELSE> hidden</TMPL_IF>><button id="reset_expert_config" type="button" onclick="reset_expert_configuration();" title="<TMPL_VAR NAME=VZLOGGER.RESET_EXPERT_CONFIG_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="refresh"><TMPL_VAR NAME=VZLOGGER.RESET_EXPERT_CONFIG></button></span></div></td><td>&nbsp;</td><td id="generated_config_help"><TMPL_IF VZLOGGER_EXPERT_MODE><TMPL_VAR NAME=VZLOGGER.EDIT_EXPERT_CONFIG_HELP><br><TMPL_VAR NAME=VZLOGGER.RESET_EXPERT_CONFIG_HELP><TMPL_ELSE><TMPL_VAR NAME=VZLOGGER.SHOW_GENERATED_CONFIG_HELP></TMPL_IF></td>
+	</tr>
+	<tr>
+		<td><TMPL_VAR NAME=VZLOGGER.ACTIONS></td>
+		<td>
+			<button id="validate_config_button" type="button" onclick="run_configuration_action('validate');" title="<TMPL_VAR NAME=VZLOGGER.VALIDATE_CONFIG_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="alert"><TMPL_VAR NAME=VZLOGGER.VALIDATE_CONFIG></button>
+			<button id="debug_log_button" type="button" onclick="run_configuration_action('debug-log');" title="<TMPL_VAR NAME=VZLOGGER.CREATE_DEBUG_LOG_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="search"><TMPL_VAR NAME=VZLOGGER.CREATE_DEBUG_LOG></button>
+			<button id="save_apply_button" type="button" onclick="run_configuration_action('apply');" title="<TMPL_VAR NAME=VZLOGGER.SAVE_APPLY_HELP>" form="vzlogger_form" data-role="button" data-inline="true" data-mini="true" data-icon="gear"><TMPL_VAR NAME=VZLOGGER.SAVE_APPLY></button>
+		</td>
+		<td>&nbsp;</td>
+		<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.VALIDATE_CONFIG_HELP><br><br><TMPL_VAR NAME=VZLOGGER.CREATE_DEBUG_LOG_HELP><br><br><TMPL_VAR NAME=VZLOGGER.SAVE_APPLY_HELP></font></td>
+	</tr>
+	</table>
+	</form>
+	<div id="ir_scan_overlay" class="obis-search-overlay" role="dialog" aria-modal="true" aria-labelledby="ir_scan_title" aria-describedby="ir_scan_message" aria-hidden="true" tabindex="-1">
+		<div class="obis-search-dialog">
+			<div id="ir_scan_spinner" class="obis-search-spinner" aria-hidden="true"></div>
+			<div id="ir_scan_title" class="obis-search-title"><TMPL_VAR NAME=VZLOGGER.IR_SCAN_RUNNING></div>
+			<div id="ir_scan_message" class="obis-search-message" role="status" aria-live="polite"><TMPL_VAR NAME=VZLOGGER.IR_SCAN_WAIT></div>
+			<ul id="ir_scan_results" class="ir-scan-results" hidden></ul>
+			<div id="ir_scan_staged_heading" class="obis-search-message" hidden></div>
+			<ul id="ir_scan_staged_results" class="ir-scan-results" hidden></ul>
+			<div id="ir_scan_countdown" class="ir-scan-countdown" aria-live="polite" hidden></div>
+			<div class="obis-search-actions"><button id="ir_scan_close" type="button" data-role="button" data-inline="true" data-mini="true" onclick="close_ir_head_scan();" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_CLOSE></button></div>
+			<span id="ir_scan_running_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_RUNNING></span>
+			<span id="ir_scan_wait_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_WAIT></span>
+			<span id="ir_scan_result_title_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_RESULT_TITLE></span>
+			<span id="ir_scan_none_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_NONE></span>
+			<span id="ir_scan_no_new_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_NO_NEW></span>
+			<span id="ir_scan_found_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_FOUND></span>
+			<span id="ir_scan_staged_found_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_STAGED_FOUND></span>
+			<span id="ir_scan_failed_title_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_FAILED_TITLE></span>
+			<span id="ir_scan_failed_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_FAILED></span>
+			<span id="ir_scan_timeout_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_TIMEOUT></span>
+			<span id="ir_scan_autoclose_text" hidden><TMPL_VAR NAME=VZLOGGER.IR_SCAN_AUTOCLOSE></span>
+		</div>
+	</div>
+	<div id="obis_search_overlay" class="obis-search-overlay" role="dialog" aria-modal="true" aria-labelledby="obis_search_title" aria-describedby="obis_search_message" aria-hidden="true" tabindex="-1">
+		<div class="obis-search-dialog">
+			<div class="obis-search-spinner" aria-hidden="true"></div>
+			<div id="obis_search_title" class="obis-search-title"><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_RUNNING></div>
+			<div id="obis_search_message" class="obis-search-message" role="status" aria-live="polite"><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_WAIT></div>
+			<div class="obis-search-actions"><button id="obis_search_cancel" type="button" data-role="button" data-inline="true" data-mini="true" data-icon="delete" onclick="cancel_obis_discovery();"><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_CANCEL></button></div>
+			<span id="obis_search_running_text" hidden><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_RUNNING></span>
+			<span id="obis_search_wait_text" hidden><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_WAIT></span>
+			<span id="obis_search_cancelling_text" hidden><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_CANCELLING></span>
+			<span id="obis_search_failed_text" hidden><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_FAILED></span>
+			<span id="obis_search_restore_warning_text" hidden><TMPL_VAR NAME=VZLOGGER.OBIS_SEARCH_RESTORE_WARNING></span>
+			<span id="obis_channel_new_text" hidden><TMPL_VAR NAME=VZLOGGER.OBIS_CHANNEL_NEW></span>
+			<span id="service_reason_waiting" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_REASON_WAITING></span>
+			<span id="service_reason_activation" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_REASON_ACTIVATION></span>
+			<span id="service_reason_config" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_REASON_CONFIG></span>
+			<span id="service_reason_mqtt" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_REASON_MQTT></span>
+			<span id="service_reason_busy" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_REASON_BUSY></span>
+		</div>
+	</div>
+	<div id="service_action_overlay" class="obis-search-overlay" role="dialog" aria-modal="true" aria-labelledby="service_action_title" aria-describedby="service_action_overlay_message" aria-hidden="true" tabindex="-1">
+		<div class="obis-search-dialog">
+			<div id="service_action_spinner" class="obis-search-spinner" aria-hidden="true"></div>
+			<div id="service_action_title" class="obis-search-title"></div>
+			<div id="service_action_overlay_message" class="obis-search-message" role="status" aria-live="polite"><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_WAIT></div>
+			<pre id="service_action_details" class="service-action-details" hidden></pre>
+			<div class="obis-search-actions">
+				<button id="service_action_hide" type="button" data-role="button" data-inline="true" data-mini="true" onclick="hide_service_action_overlay();"><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_HIDE></button>
+				<button id="service_action_close" type="button" data-role="button" data-inline="true" data-mini="true" onclick="close_service_action_overlay();" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_CLOSE></button>
+			</div>
+			<span id="service_action_start_vzlogger_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_START_VZLOGGER></span>
+			<span id="service_action_stop_vzlogger_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_STOP_VZLOGGER></span>
+			<span id="service_action_restart_vzlogger_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_RESTART_VZLOGGER></span>
+			<span id="service_action_start_bridge_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_START_BRIDGE></span>
+			<span id="service_action_stop_bridge_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_STOP_BRIDGE></span>
+			<span id="service_action_restart_bridge_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_RESTART_BRIDGE></span>
+			<span id="service_action_wait_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_WAIT></span>
+			<span id="service_action_slow_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_SLOW></span>
+			<span id="service_action_success_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_SUCCESS></span>
+			<span id="service_action_warning_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_WARNING></span>
+			<span id="service_action_failed_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_FAILED></span>
+		</div>
+	</div>
+	<div id="configuration_action_overlay" class="obis-search-overlay" role="dialog" aria-modal="true" aria-labelledby="configuration_action_title" aria-describedby="configuration_action_message" aria-hidden="true" tabindex="-1">
+		<div class="obis-search-dialog configuration-action-dialog">
+			<div id="configuration_action_spinner" class="obis-search-spinner" aria-hidden="true"></div>
+			<div id="configuration_action_title" class="obis-search-title"></div>
+			<div id="configuration_action_message" class="obis-search-message" role="status" aria-live="polite"></div>
+			<div id="configuration_action_elapsed" class="ir-scan-countdown" aria-live="polite" hidden></div>
+			<pre id="configuration_action_details" class="service-action-details" hidden></pre>
+			<div id="configuration_action_countdown" class="ir-scan-countdown" aria-live="polite" hidden></div>
+			<div class="obis-search-actions"><button id="configuration_action_close" type="button" data-role="button" data-inline="true" data-mini="true" onclick="close_configuration_action_overlay();" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_CLOSE></button></div>
+			<span id="configuration_action_validate_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_VALIDATE></span>
+			<span id="configuration_action_debug_log_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_DEBUG_LOG></span>
+			<span id="configuration_action_apply_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_APPLY></span>
+			<span id="configuration_action_validate_wait_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_VALIDATE_WAIT></span>
+			<span id="configuration_action_debug_log_wait_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_DEBUG_LOG_WAIT></span>
+			<span id="configuration_action_apply_wait_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_APPLY_WAIT></span>
+			<span id="configuration_action_success_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_SUCCESS></span>
+			<span id="configuration_action_failed_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_FAILED></span>
+			<span id="configuration_action_autoclose_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_AUTOCLOSE></span>
+			<span id="configuration_action_elapsed_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_ELAPSED></span>
+			<span id="configuration_action_timeout_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_TIMEOUT></span>
+			<span id="configuration_action_debug_tab_title_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_DEBUG_TAB_TITLE></span>
+			<span id="configuration_action_debug_tab_wait_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_DEBUG_TAB_WAIT></span>
+			<span id="configuration_action_debug_elapsed_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_DEBUG_ELAPSED></span>
+			<span id="configuration_action_debug_timeout_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_DEBUG_TIMEOUT></span>
+			<span id="configuration_action_debug_popup_blocked_text" hidden><TMPL_VAR NAME=VZLOGGER.CONFIG_ACTION_DEBUG_POPUP_BLOCKED></span>
+		</div>
+	</div>
+	<span id="remove_meter_confirm_text" hidden><TMPL_VAR NAME=VZLOGGER.REMOVE_METER_CONFIRM></span>
+
+	<script>
+		var ui_language = "<TMPL_VAR NAME=COMMON.LANGUAGE_CODE>";
+		var obis_job_id = "";
+		var obis_job_serial = "";
+		var obis_poll_timer = null;
+		var obis_poll_failures = 0;
+		var service_poll_timer = null;
+		var service_poll_in_flight = false;
+		var service_action_running = false;
+		var service_action_timeout_timer = null;
+		var service_action_feedback_timer = null;
+		var last_service_snapshot = null;
+		var ir_scan_running = false;
+		var ir_scan_close_timer = null;
+		var configuration_action_running = false;
+		var configuration_action_close_timer = null;
+		var configuration_action_elapsed_timer = null;
+		var debug_log_tab = null;
+
+		function service_ajax_url(action) {
+			return "./index.cgi?ajax=1&ajaxaction=" + encodeURIComponent(action) + "&lang=" + encodeURIComponent(ui_language) + "&_=" + Date.now();
+		}
+
+		function show_service_success() {
+			var element = document.getElementById("service_action_feedback");
+			if (service_action_feedback_timer) window.clearTimeout(service_action_feedback_timer);
+			element.textContent = obis_text("service_action_success_text");
+			element.classList.add("is-visible");
+			service_action_feedback_timer = window.setTimeout(function () {
+				element.classList.remove("is-visible");
+				service_action_feedback_timer = null;
+			}, 4000);
+		}
+
+		function clear_service_success() {
+			if (service_action_feedback_timer) window.clearTimeout(service_action_feedback_timer);
+			service_action_feedback_timer = null;
+			var element = document.getElementById("service_action_feedback");
+			if (element) element.classList.remove("is-visible");
+		}
+
+		function set_service_button_state(id, visible, enabled, reason) {
+			var button = $("#" + id);
+			button.toggle(!!visible);
+			button.prop("disabled", !enabled).toggleClass("ui-disabled", !enabled);
+			set_service_button_title(button, !enabled ? reason : "");
+		}
+
+		function set_service_button_title(button, reason) {
+			var help = button.attr("data-help-title") || "";
+			var title = help + (help && reason ? " " : "") + (reason || "");
+			if (title) button.attr("title", title);
+			else button.removeAttr("title");
+		}
+
+		function render_service_status(name, status) {
+			if (!status) return;
+			var element = $("#" + name + "_service_status");
+			element.text(status.status_text || status.state || "unknown");
+			element.removeClass("service-status-idle service-status-ok service-status-warning service-status-error");
+			element.addClass(status.status_class || "service-status-error");
+		}
+
+		function render_service_snapshot(response) {
+			if (!response || !response.services) return;
+			last_service_snapshot = response;
+			if (response.config) expert_runtime_applied = !!response.config.expert_applied;
+			render_service_status("vzlogger", response.services.vzlogger);
+			render_service_status("bridge", response.services.bridge);
+			update_all_control_states();
+		}
+
+		function schedule_service_poll() {
+			if (service_poll_timer) window.clearTimeout(service_poll_timer);
+			service_poll_timer = null;
+			if (!document.hidden && !service_action_running && !configuration_action_running) service_poll_timer = window.setTimeout(poll_service_status, 3000);
+		}
+
+		function poll_service_status() {
+			if (document.hidden || service_action_running || configuration_action_running || service_poll_in_flight) {
+				schedule_service_poll();
+				return;
+			}
+			service_poll_in_flight = true;
+			fetch(service_ajax_url("service-status"), { credentials: "same-origin", cache: "no-store" })
+				.then(function (response) {
+					if (!response.ok) throw new Error("HTTP " + response.status);
+					return response.json();
+				})
+				.then(render_service_snapshot)
+				.catch(function () {})
+				.then(function () {
+					service_poll_in_flight = false;
+					schedule_service_poll();
+				});
+		}
+
+		function show_service_action_overlay(action) {
+			var overlay = document.getElementById("service_action_overlay");
+			if (!overlay) return;
+			document.getElementById("service_action_spinner").style.display = "block";
+			var title_id = "service_action_" + action.replace(/-/g, "_") + "_text";
+			document.getElementById("service_action_title").textContent = obis_text(title_id);
+			document.getElementById("service_action_overlay_message").textContent = obis_text("service_action_wait_text");
+			document.getElementById("service_action_details").hidden = true;
+			document.getElementById("service_action_details").textContent = "";
+			document.getElementById("service_action_hide").hidden = false;
+			document.getElementById("service_action_close").hidden = true;
+			overlay.classList.add("is-visible");
+			overlay.setAttribute("aria-hidden", "false");
+			document.getElementById("vzlogger_form").setAttribute("aria-busy", "true");
+			overlay.focus();
+			service_action_timeout_timer = window.setTimeout(function () {
+				if (service_action_running) document.getElementById("service_action_overlay_message").textContent = obis_text("service_action_slow_text");
+			}, 15000);
+		}
+
+		function hide_service_action_overlay() {
+			var overlay = document.getElementById("service_action_overlay");
+			overlay.classList.remove("is-visible");
+			overlay.setAttribute("aria-hidden", "true");
+		}
+
+		function close_service_action_overlay() {
+			if (service_action_running) return;
+			hide_service_action_overlay();
+		}
+
+		function finish_service_action_overlay(result, message) {
+			if (service_action_timeout_timer) window.clearTimeout(service_action_timeout_timer);
+			service_action_timeout_timer = null;
+			document.getElementById("service_action_spinner").style.display = "none";
+			document.getElementById("service_action_overlay_message").textContent = obis_text("service_action_" + result + "_text");
+			var details = document.getElementById("service_action_details");
+			details.textContent = message || "";
+			details.hidden = !message;
+			document.getElementById("service_action_hide").hidden = true;
+			document.getElementById("service_action_close").hidden = false;
+			document.getElementById("vzlogger_form").removeAttribute("aria-busy");
+			if (result == "success") {
+				hide_service_action_overlay();
+			} else {
+				var overlay = document.getElementById("service_action_overlay");
+				overlay.classList.add("is-visible");
+				overlay.setAttribute("aria-hidden", "false");
+				overlay.focus();
+			}
+		}
+
+		function run_service_action(action) {
+			if (service_action_running) return;
+			service_action_running = true;
+			if (service_poll_timer) window.clearTimeout(service_poll_timer);
+			service_poll_timer = null;
+			update_all_control_states();
+			clear_service_success();
+			show_service_action_overlay(action);
+			var action_ok = false;
+			var action_result = "failed";
+			var action_message = "";
+			var needs_status_refresh = false;
+			var data = new FormData();
+			data.append("ajax", "1");
+			data.append("ajaxaction", "service-action");
+			data.append("lang", ui_language);
+			data.append("service_action", action);
+			if (/-vzlogger$/.test(action)) {
+				data.append("implementation", $("#implementation").val());
+				data.append("vzlogger_service_debug", $("#vzlogger_service_debug").val());
+				data.append("vzlogger_loglevel", $("#vzlogger_loglevel").val());
+			} else {
+				data.append("implementation", $("#implementation").val());
+				data.append("read", $("#read").val());
+				data.append("vzlogger_debug", $("#vzlogger_debug").val());
+			}
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
+				.then(function (response) {
+					if (!response.ok) throw new Error("HTTP " + response.status);
+					return response.json();
+				})
+				.then(function (response) {
+					action_ok = !!response.ok;
+					action_result = !action_ok ? "failed" : (response.warning ? "warning" : "success");
+					action_message = response.message || (response.ok ? "OK" : obis_text("service_action_failed_text"));
+					if (action_result == "success") show_service_success();
+					if (response.ok && /^(?:start|restart)-/.test(action)) {
+						initial_implementation_value = $("#implementation").val();
+						saved_implementation = initial_implementation_value;
+						if (/-bridge$/.test(action)) initial_read_value = $("#read").val();
+						update_activation_dirty_hints();
+					}
+					render_service_snapshot(response);
+					needs_status_refresh = !response.services;
+				})
+				.catch(function (error) {
+					action_message = obis_text("service_action_failed_text") + ": " + error.message;
+					action_result = "failed";
+					needs_status_refresh = true;
+				})
+				.then(function () {
+					service_action_running = false;
+					update_all_control_states();
+					finish_service_action_overlay(action_result, action_message);
+					if (needs_status_refresh) poll_service_status();
+					else schedule_service_poll();
+				});
+		}
+
+		document.addEventListener("visibilitychange", function () {
+			if (document.hidden) {
+				if (service_poll_timer) window.clearTimeout(service_poll_timer);
+				service_poll_timer = null;
+			} else {
+				poll_service_status();
+			}
+		});
+
+		function obis_text(id) {
+			var element = document.getElementById(id);
+			return element ? element.textContent : "";
+		}
+
+		function configuration_action_text(action, suffix) {
+			return obis_text("configuration_action_" + action.replace(/-/g, "_") + (suffix || "") + "_text");
+		}
+
+		function set_configuration_action_buttons(disabled) {
+			["validate_config_button", "debug_log_button", "save_apply_button"].forEach(function (id) {
+				var button = $("#" + id);
+				button.prop("disabled", disabled).toggleClass("ui-disabled", disabled);
+			});
+		}
+
+		function show_configuration_action_overlay(action) {
+			var overlay = document.getElementById("configuration_action_overlay");
+			document.getElementById("configuration_action_spinner").style.display = "block";
+			document.getElementById("configuration_action_title").textContent = configuration_action_text(action, "");
+			document.getElementById("configuration_action_message").textContent = configuration_action_text(action, "_wait");
+			document.getElementById("configuration_action_details").hidden = true;
+			document.getElementById("configuration_action_details").textContent = "";
+			document.getElementById("configuration_action_countdown").hidden = true;
+			var elapsed = document.getElementById("configuration_action_elapsed");
+			var started = Date.now();
+			function render_elapsed() {
+				var seconds = Math.floor((Date.now() - started) / 1000);
+				elapsed.textContent = obis_text("configuration_action_elapsed_text").replace("{seconds}", seconds);
+				elapsed.hidden = false;
+			}
+			if (configuration_action_elapsed_timer) window.clearInterval(configuration_action_elapsed_timer);
+			render_elapsed();
+			configuration_action_elapsed_timer = window.setInterval(render_elapsed, 1000);
+			document.getElementById("configuration_action_close").hidden = true;
+			overlay.classList.add("is-visible");
+			overlay.setAttribute("aria-hidden", "false");
+			document.getElementById("vzlogger_form").setAttribute("aria-busy", "true");
+			overlay.focus();
+		}
+
+		function close_configuration_action_overlay() {
+			if (configuration_action_running) return;
+			if (configuration_action_close_timer) window.clearInterval(configuration_action_close_timer);
+			configuration_action_close_timer = null;
+			var overlay = document.getElementById("configuration_action_overlay");
+			overlay.classList.remove("is-visible");
+			overlay.setAttribute("aria-hidden", "true");
+		}
+
+		function start_configuration_action_countdown(seconds) {
+			var countdown = document.getElementById("configuration_action_countdown");
+			function render() {
+				countdown.textContent = obis_text("configuration_action_autoclose_text").replace("{seconds}", seconds);
+				countdown.hidden = false;
+			}
+			render();
+			configuration_action_close_timer = window.setInterval(function () {
+				seconds--;
+				if (seconds <= 0) {
+					close_configuration_action_overlay();
+					return;
+				}
+				render();
+			}, 1000);
+		}
+
+		function finish_configuration_action_overlay(action, ok, message) {
+			if (configuration_action_elapsed_timer) window.clearInterval(configuration_action_elapsed_timer);
+			configuration_action_elapsed_timer = null;
+			document.getElementById("configuration_action_spinner").style.display = "none";
+			document.getElementById("configuration_action_message").textContent = obis_text(ok ? "configuration_action_success_text" : "configuration_action_failed_text");
+			var details = document.getElementById("configuration_action_details");
+			details.textContent = message || "";
+			details.hidden = !message;
+			document.getElementById("configuration_action_close").hidden = false;
+			document.getElementById("vzlogger_form").removeAttribute("aria-busy");
+			if (action == "apply" && ok) start_configuration_action_countdown(3);
+		}
+
+		function escape_debug_tab_text(value) {
+			return String(value || "").replace(/[&<>]/g, function (character) {
+				return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[character];
+			});
+		}
+
+		function open_debug_progress_tab() {
+			if (debug_log_tab && !debug_log_tab.closed) {
+				debug_log_tab.focus();
+				return debug_log_tab;
+			}
+			var tab = window.open("", "_blank");
+			if (!tab) return null;
+			debug_log_tab = tab;
+			var title = escape_debug_tab_text(obis_text("configuration_action_debug_tab_title_text"));
+			var wait = escape_debug_tab_text(obis_text("configuration_action_debug_tab_wait_text"));
+			var elapsedText = obis_text("configuration_action_debug_elapsed_text");
+			var failedText = obis_text("configuration_action_failed_text");
+			var timeoutText = obis_text("configuration_action_debug_timeout_text");
+			var endpoint = new URL("./index.cgi?ajax=1&ajaxaction=debug-log&lang=" + encodeURIComponent(ui_language) + "&_=" + Date.now(), window.location.href).href;
+			var script = '(function(){var elapsed=0;var elapsedNode=document.getElementById("elapsed");var spinner=document.getElementById("spinner");var message=document.getElementById("message");var details=document.getElementById("details");var timer=setInterval(function(){elapsed++;elapsedNode.textContent=' + JSON.stringify(elapsedText) + '.replace("{seconds}",elapsed);},1000);var controller=window.AbortController?new AbortController():null;var browserTimeout=setTimeout(function(){if(controller)controller.abort();},52000);var data=new FormData();data.append("ajax","1");data.append("ajaxaction","debug-log");data.append("lang",' + JSON.stringify(ui_language) + ');fetch(' + JSON.stringify(endpoint) + ',{method:"POST",body:data,credentials:"same-origin",cache:"no-store",signal:controller?controller.signal:undefined}).then(function(result){if(!result.ok)throw new Error("HTTP "+result.status);return result.json();}).then(function(response){if(!response.ok||!response.log_url)throw new Error(response.message||' + JSON.stringify(failedText) + ');try{if(window.opener)window.opener.debug_log_tab=null;}catch(ignore){}window.location.replace(response.log_url);}).catch(function(error){spinner.style.display="none";message.textContent=(error.name==="AbortError"?' + JSON.stringify(timeoutText) + ':' + JSON.stringify(failedText) + ');details.textContent=error.name==="AbortError"?"":(error.message||"");details.hidden=!details.textContent;}).then(function(){clearInterval(timer);clearTimeout(browserTimeout);});})();';
+			tab.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + title + '</title><style>body{margin:0;background:#f3f5f7;color:#222;font:16px/1.5 system-ui,sans-serif;display:grid;min-height:100vh;place-items:center}.box{width:min(42rem,calc(100% - 3rem));text-align:center;padding:2rem}.spinner{width:42px;height:42px;margin:0 auto 1rem;border:4px solid #ccd3da;border-top-color:#2b6dad;border-radius:50%;animation:s .8s linear infinite}pre{padding:1rem;background:#fff;border:1px solid #ccd3da;text-align:left;white-space:pre-wrap}@keyframes s{to{transform:rotate(360deg)}}</style></head><body><main class="box"><div id="spinner" class="spinner"></div><h1>' + title + '</h1><p id="message">' + wait + '</p><p id="elapsed"></p><pre id="details" hidden></pre></main><script>' + script + '<\/script></body></html>');
+			tab.document.close();
+			return tab;
+		}
+
+		function mark_configuration_form_saved(response) {
+			initial_implementation_value = $("#implementation").val();
+			saved_implementation = initial_implementation_value;
+			initial_read_value = $("#read").val();
+			document.getElementById("implementation_changed").value = "0";
+			update_activation_dirty_hints();
+			$("#vzlogger_mqttpass, #vzlogger_mqttkeypass").val("");
+			$("#vzlogger_mqttpass_reset, #vzlogger_mqttkeypass_reset").prop("checked", false).checkboxradio("refresh");
+			if (response && response.action == "apply") {
+				var removed_channel_state = false;
+				document.querySelectorAll(".meter-remove-marker:not(:disabled)").forEach(function (marker) {
+					var row = marker.closest("tr.meter-row");
+					var serial = marker.value || (row && row.getAttribute("data-meter-serial")) || "";
+					if (serial && channel_definitions.meters && Object.prototype.hasOwnProperty.call(channel_definitions.meters, serial)) {
+						delete channel_definitions.meters[serial];
+						removed_channel_state = true;
+					}
+					if (row) row.remove();
+				});
+				if (removed_channel_state) sync_channel_definitions();
+				document.querySelectorAll(".meter-pending-badge, .obis-channel-new").forEach(function (marker) { marker.remove(); });
+				document.querySelectorAll(".meter-template-note[id$='_template_unsaved']").forEach(function (note) { note.hidden = true; });
+			}
+			if (response && response.config && response.config.present) {
+				$("#show_generated_config").removeClass("ui-disabled").attr("aria-disabled", "false");
+			}
+		}
+
+		function run_configuration_action(action) {
+			if (configuration_action_running || service_action_running) return;
+			if (action == "apply" && !expert_mode_active && expert_runtime_applied && !window.confirm(obis_text("expert_mode_overwrite_confirm_text"))) return;
+			if (action == "debug-log") {
+				if (!open_debug_progress_tab()) window.alert(obis_text("configuration_action_debug_popup_blocked_text"));
+				return;
+			}
+			var form = document.getElementById("vzlogger_form");
+			if (!form || (form.reportValidity && !form.reportValidity())) return;
+			configuration_action_running = true;
+			set_configuration_action_buttons(true);
+			if (service_poll_timer) window.clearTimeout(service_poll_timer);
+			service_poll_timer = null;
+			show_configuration_action_overlay(action);
+			var ok = false;
+			var message = "";
+			var data = new FormData(form);
+			data.set("ajax", "1");
+			data.set("ajaxaction", "form-action");
+			data.set("lang", ui_language);
+			data.set("submitaction", action);
+			var controller = window.AbortController ? new AbortController() : null;
+			var request_timeout = window.setTimeout(function () {
+				if (controller) controller.abort();
+			}, 70000);
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store", signal: controller ? controller.signal : undefined })
+				.then(function (result) {
+					if (!result.ok) throw new Error("HTTP " + result.status);
+					return result.json();
+				})
+				.then(function (response) {
+					ok = !!response.ok;
+					message = response.message || (ok ? obis_text("configuration_action_success_text") : obis_text("configuration_action_failed_text"));
+					if (response.timed_out) message = obis_text("configuration_action_timeout_text") + (response.message ? "\n\n" + response.message : "");
+					if (action == "apply" && response.ok) {
+						mark_configuration_form_saved(response);
+						if (response.ok && response.channel_indices) {
+							runtime_channel_indices = response.channel_indices;
+							document.getElementById("channel_indices_json").value = JSON.stringify(runtime_channel_indices);
+							document.querySelectorAll('.obis-editor').forEach(function(container){ render_channel_editor(container.id.replace(/_obis_channels$/,'')); });
+						}
+					}
+					render_service_snapshot(response);
+				})
+				.catch(function (error) {
+					message = error.name === "AbortError" ? obis_text("configuration_action_timeout_text") : obis_text("configuration_action_failed_text") + ": " + error.message;
+				})
+				.then(function () {
+					window.clearTimeout(request_timeout);
+					configuration_action_running = false;
+					set_configuration_action_buttons(false);
+					finish_configuration_action_overlay(action, ok, message);
+					schedule_service_poll();
+				});
+		}
+
+		function show_ir_head_scan() {
+			var overlay = document.getElementById("ir_scan_overlay");
+			ir_scan_running = true;
+			if (ir_scan_close_timer) window.clearInterval(ir_scan_close_timer);
+			ir_scan_close_timer = null;
+			document.getElementById("ir_scan_spinner").style.display = "block";
+			document.getElementById("ir_scan_title").textContent = obis_text("ir_scan_running_text");
+			document.getElementById("ir_scan_message").textContent = obis_text("ir_scan_wait_text");
+			document.getElementById("ir_scan_results").replaceChildren();
+			document.getElementById("ir_scan_results").hidden = true;
+			document.getElementById("ir_scan_staged_heading").hidden = true;
+			document.getElementById("ir_scan_staged_results").replaceChildren();
+			document.getElementById("ir_scan_staged_results").hidden = true;
+			document.getElementById("ir_scan_countdown").hidden = true;
+			document.getElementById("ir_scan_close").hidden = true;
+			overlay.classList.add("is-visible");
+			overlay.setAttribute("aria-hidden", "false");
+			document.getElementById("vzlogger_form").setAttribute("aria-busy", "true");
+			overlay.focus();
+		}
+
+		function finish_ir_head_scan(status) {
+			ir_scan_running = false;
+			document.getElementById("ir_scan_spinner").style.display = "none";
+			document.getElementById("ir_scan_title").textContent = obis_text("ir_scan_result_title_text");
+			var message = status.result == "none" ? obis_text("ir_scan_none_text") :
+				status.result == "no_new" ? obis_text("ir_scan_no_new_text") :
+				status.result == "staged" ? obis_text("ir_scan_staged_found_text") : obis_text("ir_scan_found_text");
+			document.getElementById("ir_scan_message").textContent = message;
+			render_ir_head_list("ir_scan_results", status.heads || []);
+			var staged = status.staged_heads || [];
+			var staged_heading = document.getElementById("ir_scan_staged_heading");
+			staged_heading.textContent = obis_text("ir_scan_staged_found_text");
+			staged_heading.hidden = !(staged.length && (status.heads || []).length);
+			render_ir_head_list("ir_scan_staged_results", staged);
+			restore_staged_meter_panels(staged);
+			document.getElementById("ir_scan_close").hidden = false;
+			document.getElementById("vzlogger_form").removeAttribute("aria-busy");
+			if (status.result == "no_new") start_ir_scan_countdown(3);
+		}
+
+		function render_ir_head_list(id, heads) {
+			var list = document.getElementById(id);
+			list.replaceChildren();
+			heads.forEach(function (head) {
+				var item = document.createElement("li");
+				item.textContent = (head.name || head.serial) + ": " + head.path;
+				list.appendChild(item);
+			});
+			list.hidden = !list.children.length;
+		}
+
+		function restore_staged_meter_panels(heads) {
+			heads.forEach(function (head) {
+				var panel = $(document.getElementById("meter_" + head.serial));
+				if (!panel.length) return;
+				panel.find(".meter-remove-marker").prop("disabled", true);
+				panel.closest("tr").show();
+			});
+		}
+
+		function synchronize_ir_head_panels() {
+			return fetch("./index.cgi?form=vzlogger&_=" + Date.now(), { credentials: "same-origin", cache: "no-store" })
+				.then(function (response) {
+					if (!response.ok) throw new Error("HTTP " + response.status);
+					return response.text();
+				})
+				.then(function (html) {
+					var parsed = new DOMParser().parseFromString(html, "text/html");
+					var parsed_channel_definitions = { meters: {} };
+					try {
+						parsed_channel_definitions = JSON.parse((parsed.getElementById("channel_definitions_json") || {}).value || "{}");
+					} catch (error) {}
+					parsed_channel_definitions.meters = parsed_channel_definitions.meters || {};
+					var end = document.getElementById("meter_rows_end");
+					if (!end) throw new Error("Meter insertion point not found.");
+					parsed.querySelectorAll("tr.meter-row").forEach(function (source_row) {
+						var source_panel = source_row.querySelector(".meter-panel");
+						if (!source_panel || document.getElementById(source_panel.id)) return;
+						var serial = source_row.getAttribute("data-meter-serial") || source_panel.id.substring("meter_".length);
+						// A re-detected reader must use the freshly loaded server state. In
+						// particular, never resurrect channels removed with the meter earlier
+						// in this browser session.
+						if (Object.prototype.hasOwnProperty.call(parsed_channel_definitions.meters, serial)) {
+							channel_definitions.meters[serial] = parsed_channel_definitions.meters[serial];
+						} else {
+							delete channel_definitions.meters[serial];
+						}
+						var row = document.importNode(source_row, true);
+						end.parentNode.insertBefore(row, end);
+						initialize_meter_panel(row.querySelector(".meter-panel"), true);
+					});
+					sync_channel_definitions();
+					update_all_control_states();
+				});
+		}
+
+		function fail_ir_head_scan(message) {
+			ir_scan_running = false;
+			document.getElementById("ir_scan_spinner").style.display = "none";
+			document.getElementById("ir_scan_title").textContent = obis_text("ir_scan_failed_title_text");
+			document.getElementById("ir_scan_message").textContent = obis_text("ir_scan_failed_text") + " " + message;
+			document.getElementById("ir_scan_results").hidden = true;
+			document.getElementById("ir_scan_staged_heading").hidden = true;
+			document.getElementById("ir_scan_staged_results").hidden = true;
+			document.getElementById("ir_scan_countdown").hidden = true;
+			document.getElementById("ir_scan_close").hidden = false;
+			document.getElementById("vzlogger_form").removeAttribute("aria-busy");
+		}
+
+		function start_ir_scan_countdown(seconds) {
+			var countdown = document.getElementById("ir_scan_countdown");
+			function render() {
+				countdown.textContent = obis_text("ir_scan_autoclose_text").replace("{seconds}", seconds);
+				countdown.hidden = false;
+			}
+			render();
+			ir_scan_close_timer = window.setInterval(function () {
+				seconds--;
+				if (seconds <= 0) {
+					window.clearInterval(ir_scan_close_timer);
+					ir_scan_close_timer = null;
+					close_ir_head_scan();
+					return;
+				}
+				render();
+			}, 1000);
+		}
+
+		function close_ir_head_scan() {
+			if (ir_scan_running) return;
+			if (ir_scan_close_timer) window.clearInterval(ir_scan_close_timer);
+			ir_scan_close_timer = null;
+			var overlay = document.getElementById("ir_scan_overlay");
+			overlay.classList.remove("is-visible");
+			overlay.setAttribute("aria-hidden", "true");
+		}
+
+		function start_ir_head_scan(event) {
+			if (event) event.preventDefault();
+			if (ir_scan_running || $("#rescan_ir_heads").attr("aria-disabled") == "true") return false;
+			show_ir_head_scan();
+			var controller = window.AbortController ? new AbortController() : null;
+			var timed_out = false;
+			var timeout = window.setTimeout(function () {
+				timed_out = true;
+				if (controller) controller.abort();
+				else fail_ir_head_scan(obis_text("ir_scan_timeout_text"));
+			}, 15000);
+			var data = new FormData();
+			data.append("ajax", "1");
+			data.append("ajaxaction", "ir-scan");
+			data.append("lang", ui_language);
+			document.querySelectorAll(".meter-remove-marker:not(:disabled)").forEach(function (marker) {
+				data.append("staged_removed", marker.value);
+			});
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store", signal: controller ? controller.signal : undefined })
+				.then(function (response) { return response.json(); })
+				.then(function (status) {
+					if (!status.ok) throw new Error(status.message || obis_text("ir_scan_failed_text"));
+					return synchronize_ir_head_panels().then(function () { finish_ir_head_scan(status); });
+				})
+				.catch(function (error) {
+					fail_ir_head_scan(timed_out ? obis_text("ir_scan_timeout_text") : (error.message || obis_text("ir_scan_failed_text")));
+				})
+				.then(function () { window.clearTimeout(timeout); });
+			return false;
+		}
+
+		function show_obis_search_overlay() {
+			var overlay = document.getElementById("obis_search_overlay");
+			if (!overlay) return;
+			document.querySelector(".obis-search-spinner").style.display = "block";
+			document.getElementById("obis_search_title").textContent = obis_text("obis_search_running_text");
+			document.getElementById("obis_search_message").textContent = obis_text("obis_search_wait_text");
+			document.getElementById("obis_search_cancel").disabled = false;
+			overlay.classList.add("is-visible");
+			overlay.setAttribute("aria-hidden", "false");
+			document.getElementById("vzlogger_form").setAttribute("aria-busy", "true");
+			overlay.focus();
+		}
+
+		function reset_obis_search_overlay() {
+			if (obis_poll_timer) window.clearTimeout(obis_poll_timer);
+			obis_poll_timer = null;
+			var overlay = document.getElementById("obis_search_overlay");
+			if (overlay) {
+				overlay.classList.remove("is-visible");
+				overlay.setAttribute("aria-hidden", "true");
+			}
+			var form = document.getElementById("vzlogger_form");
+			if (form) form.removeAttribute("aria-busy");
+			obis_job_id = "";
+			obis_job_serial = "";
+			obis_poll_failures = 0;
+		}
+
+		function obis_ajax_url(action) {
+			return "./index.cgi?ajax=1&ajaxaction=" + encodeURIComponent(action) + "&lang=" + encodeURIComponent(ui_language) + "&_=" + Date.now();
+		}
+
+		var channel_definitions = (function () {
+			try { return JSON.parse(document.getElementById("channel_definitions_json").value || "{}"); }
+			catch (error) { return { version: 1, meters: {} }; }
+		})();
+		var runtime_channel_indices = (function () {
+			try { return JSON.parse(document.getElementById("channel_indices_json").value || "{}"); }
+			catch (error) { return {}; }
+		})();
+		var obis_catalog = (function () {
+			try { return JSON.parse(document.getElementById("obis_catalog_json").value || "{}"); }
+			catch (error) { return { entries: [], rules: [] }; }
+		})();
+		var channel_labels = {
+			active: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_ACTIVE ESCAPE=JS>", details: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_DETAILS ESCAPE=JS>",
+			display: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_DISPLAY_NAME ESCAPE=JS>", storage: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_STORAGE ESCAPE=JS>", storageClear: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_STORAGE_CLEAR ESCAPE=JS>",
+			aggregation: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_AGGREGATION ESCAPE=JS>", duplicates: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_DUPLICATES ESCAPE=JS>",
+			output: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_OUTPUT ESCAPE=JS>", outputKey: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_OUTPUT_KEY ESCAPE=JS>", outputKeyFormat: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_OUTPUT_KEY_FORMAT ESCAPE=JS>",
+			originFound: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_ORIGIN_FOUND ESCAPE=JS>", originManual: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_ORIGIN_MANUAL ESCAPE=JS>",
+			identifier: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_IDENTIFIER ESCAPE=JS>", api: "API", unknown: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_UNKNOWN ESCAPE=JS>",
+			channelNumber: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_NUMBER ESCAPE=JS>", channelUnassigned: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_NUMBER_UNASSIGNED ESCAPE=JS>",
+			channelNumberHelp: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_NUMBER_HELP ESCAPE=JS>", channelUnassignedHelp: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_NUMBER_UNASSIGNED_HELP ESCAPE=JS>",
+			remove: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_REMOVE ESCAPE=JS>", removeHelp: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_REMOVE_HELP ESCAPE=JS>", removeConfirm: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_REMOVE_CONFIRM ESCAPE=JS>",
+			manualPrompt: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_MANUAL_PROMPT ESCAPE=JS>", storageOms: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_STORAGE_OMS ESCAPE=JS>",
+			apiOptions: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_OPTIONS ESCAPE=JS>", registrationName: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_MSG_NAME ESCAPE=JS>"
+		};
+		var channel_help = {
+			identifier: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_IDENTIFIER_HELP ESCAPE=JS>", storage: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_STORAGE_HELP ESCAPE=JS>",
+			display: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_DISPLAY_NAME_HELP ESCAPE=JS>", api: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_HELP ESCAPE=JS>",
+			aggregation: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_AGGREGATION_HELP ESCAPE=JS>", duplicates: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_DUPLICATES_HELP ESCAPE=JS>",
+			output: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_OUTPUT_HELP ESCAPE=JS>", outputKey: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_OUTPUT_KEY_HELP ESCAPE=JS>"
+		};
+		var api_field_help = {
+			middleware: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_MIDDLEWARE_HELP ESCAPE=JS>", timeout: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_TIMEOUT_HELP ESCAPE=JS>",
+			version: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_VERSION_HELP ESCAPE=JS>", host: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_HOST_HELP ESCAPE=JS>",
+			database: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_DATABASE_HELP ESCAPE=JS>", organization: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_ORGANIZATION_HELP ESCAPE=JS>",
+			measurement_name: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_MEASUREMENT_HELP ESCAPE=JS>", tags: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_TAGS_HELP ESCAPE=JS>",
+			token: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_TOKEN_HELP ESCAPE=JS>", username: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_USERNAME_HELP ESCAPE=JS>",
+			password: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_PASSWORD_HELP ESCAPE=JS>", max_batch_inserts: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_BATCH_HELP ESCAPE=JS>",
+			max_buffer_size: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_BUFFER_HELP ESCAPE=JS>", send_uuid: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_SEND_UUID_HELP ESCAPE=JS>",
+			ssl_verifypeer: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_TLS_HELP ESCAPE=JS>", secretKey: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_SECRET_HELP ESCAPE=JS>",
+			device: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_DEVICE_HELP ESCAPE=JS>", type: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_TYPE_HELP ESCAPE=JS>",
+			interval: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_INTERVAL_HELP ESCAPE=JS>", scaler: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_SCALER_HELP ESCAPE=JS>",
+			name: "<TMPL_VAR NAME=VZLOGGER.CHANNEL_API_REGISTRATION_NAME_HELP ESCAPE=JS>"
+		};
+
+		function html_text(value) {
+			return String(value == null ? "" : value).replace(/[&<>"']/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; });
+		}
+		function channel_help_html(value) { return value ? '<small class="obis-channel-help">'+html_text(value)+'</small>' : ''; }
+		function channel_uuid() {
+			if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+			return "xxxxxxxx-xxxx-4xxx-axxx-xxxxxxxxxxxx".replace(/x/g, function () { return Math.floor(Math.random() * 16).toString(16); });
+		}
+		function parse_obis_ui(value) {
+			var match = String(value || "").trim().match(/^(?:(\d+)-(\d+):)?([A-Za-z0-9]+)\.(\d+)\.(\d+)(?:\*(\d+))?$/);
+			if (!match) return null;
+			var f = match[6] == null || match[6] == "255" ? null : Number(match[6]);
+			if (f != null && (f < 0 || f > 254)) return null;
+			return { a: match[1] == null ? null : Number(match[1]), b: match[2] == null ? null : Number(match[2]), c: /^\d+$/.test(match[3]) ? Number(match[3]) : match[3], d:Number(match[4]), e:Number(match[5]), f:f, base:(match[1] == null ? "" : match[1]+"-"+match[2]+":")+match[3]+"."+match[4]+"."+match[5] };
+		}
+		function full_obis(channel) { return channel.obis + (channel.storage == null || channel.storage === "" || String(channel.storage) === "255" ? "" : "*" + channel.storage); }
+		function catalog_info(identifier) {
+			var parsed = parse_obis_ui(identifier);
+			if (!parsed) return { short: channel_labels.unknown, long: channel_labels.unknown, unit:"", recommended_aggmode:"none", output_name:"Unknown" };
+			var full = parsed.base + (parsed.f == null ? "" : "*" + parsed.f);
+			var entry = (obis_catalog.entries || []).find(function (item) { return item.code === full; }) || (obis_catalog.entries || []).find(function (item) { return item.code === parsed.base; });
+			if (!entry) entry = (obis_catalog.rules || []).slice().sort(function(a,b){return (a.priority||9999)-(b.priority||9999);}).find(function (item) { return Object.keys(item.match || {}).every(function(group){ var wanted=item.match[group], actual=parsed[group]; return Array.isArray(wanted) ? wanted.map(String).indexOf(String(actual))>=0 : String(wanted)===String(actual); }); });
+			var lang = (document.documentElement.lang && document.documentElement.lang.toLowerCase().indexOf("de") === 0) || channel_labels.active === "Aktiv" ? "de" : "en";
+			var groups=(lang==='de'?' Gruppen A (Medium)=':' Groups A (medium)=')+(parsed.a==null?(lang==='de'?'nicht angegeben':'not specified'):parsed.a)+', B ('+(lang==='de'?'Kanal':'channel')+')='+(parsed.b==null?(lang==='de'?'nicht angegeben':'not specified'):parsed.b)+', C ('+(lang==='de'?'Messgröße':'quantity')+')='+parsed.c+', D ('+(lang==='de'?'Verarbeitung':'processing')+')='+parsed.d+', E ('+(lang==='de'?'Tarif/Ausprägung':'tariff/variant')+')='+parsed.e+', F ('+(lang==='de'?'Speicher':'storage')+')='+(parsed.f==null?(lang==='de'?'nicht angegeben':'not specified'):parsed.f)+'.';
+			if (!entry) return { short:channel_labels.unknown, long:channel_labels.unknown+groups, unit:"", recommended_aggmode:"none", output_name:"Unknown" };
+			return { short:(entry.short||{})[lang] || (entry.short||{}).en || parsed.base, long:((entry.long||{})[lang] || (entry.long||{}).en || "")+groups, unit:entry.unit||"", recommended_aggmode:entry.recommended_aggmode||"none", warning:((entry.limitations||{})[lang]||""), output_name:entry.output_name||((entry.short||{}).en||"") };
+		}
+		function default_output_key_ui(parsed, info) {
+			var name=String((info||{}).output_name||(info||{}).short||"Unknown").replace(/\s+/g,"_").replace(/[^A-Za-z0-9_]+/g,"_").replace(/^_+|_+$/g,"")||"Value";
+			var shortObis=parsed.c+"."+parsed.d+"."+parsed.e+(parsed.f==null?"":"*"+parsed.f), suffix="_OBIS_"+shortObis, available=64-suffix.length; if(available<1)return ("Value"+suffix).substring(0,64);
+			if(name.length>available) name=name.substring(0,available).replace(/_+$/g,"");
+			return name+suffix;
+		}
+		function unique_output_key_ui(serial, key) {
+			var used={}; (channel_definitions.meters[serial]||[]).forEach(function(ch){var existing=((ch.plugin_output||{}).key||"").toLowerCase();if(existing)used[existing]=true;});
+			var candidate=key, number=2; while(used[candidate.toLowerCase()]){var suffix="_"+number++;candidate=key.substring(0,64-suffix.length)+suffix;} return candidate;
+		}
+		function validate_output_key_input(input) {
+			if(!input||input.disabled||input.value===""){if(input)input.setCustomValidity("");return;}
+			input.setCustomValidity(/^[A-Za-z0-9 _#|()\[\]\/\'%$!.*-]{1,64}$/.test(input.value)?"":channel_labels.outputKeyFormat);
+		}
+		function sync_channel_definitions() { document.getElementById("channel_definitions_json").value = JSON.stringify(channel_definitions); }
+		function api_option_fields(api, options) {
+			var fields = [];
+			if (api === "volkszaehler") fields = [["middleware","Middleware",true],["timeout","Timeout",false]];
+			if (api === "influxdb") fields = [["version","Version (1 / 2)"],["host","Host",true],["database","Database / Bucket"],["organization","Organization"],["measurement_name","Measurement"],["tags","Tags (JSON)"],["token","Token"],["username","Username"],["password","Password"],["timeout","Timeout"],["max_batch_inserts","Batch"],["max_buffer_size","Buffer"],["send_uuid","Send UUID",false,"checkbox"],["ssl_verifypeer","TLS verify peer",false,"checkbox"]];
+			if (api === "mysmartgrid") fields = [["middleware","Middleware",true],["secretKey","Secret key",true],["device","Device",true],["type","Type",true],["interval","Interval"],["scaler","Scaler"],["timeout","Timeout"],["name",channel_labels.registrationName]];
+			return fields.map(function(field){ var value=options[field[0]]; if(value==null && (field[0]==='send_uuid'||field[0]==='ssl_verifypeer')) value=true; var type=field[3]||((/password|token|secretKey/.test(field[0]))?"password":"text"); return '<div class="obis-channel-field"><label>'+html_text(field[1])+(field[2]?' *':'')+'</label><input data-option="'+field[0]+'" type="'+type+'" '+(field[2]?'required ':'')+(type==='checkbox'?(value?'checked':''):'value="'+html_text(value==null?"":(typeof value==='object'?JSON.stringify(value):value))+'"')+'>'+channel_help_html(api_field_help[field[0]])+'</div>'; }).join("");
+		}
+		function render_channel_editor(serial) {
+			channel_definitions.meters = channel_definitions.meters || {};
+			var channels = channel_definitions.meters[serial] || (channel_definitions.meters[serial] = []);
+			var container = document.getElementById(serial + "_obis_channels"); if (!container) return;
+			var protocol = container.getAttribute("data-protocol") || "";
+			var aggtime = Number((document.getElementById(serial + "_aggtime") || {}).value || 0);
+			var open_by_uuid = {};
+			container.querySelectorAll('.obis-channel-card').forEach(function(card) { var existing=channels[Number(card.getAttribute('data-index'))], details=card.querySelector('details.obis-channel-details'); if(existing && existing.uuid && details && details.open) open_by_uuid[existing.uuid]=true; });
+			container.innerHTML = "";
+			channels.forEach(function(channel, index) {
+				channel.api_options = channel.api_options || {volkszaehler:{},influxdb:{},mysmartgrid:{}}; channel.plugin_output=channel.plugin_output||{enabled:true,key:""}; if(channel.storage==null || channel.storage==="" || String(channel.storage)==="255") channel.storage=null;
+				var info=catalog_info(full_obis(channel)), title=channel.display_name||info.short, api=channel.api||"null", options=channel.api_options[api]||{};
+				var applied_index=runtime_channel_indices[String(channel.uuid||'').toLowerCase()], has_applied_index=Number.isInteger(applied_index), channel_number=has_applied_index?channel_labels.channelNumber.replace('{number}',applied_index):channel_labels.channelUnassigned;
+				var remove_html=channel.origin==='manual'?'<div class="obis-channel-remove"><button class="ch-remove obis-channel-remove-button ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-delete ui-btn-icon-left" type="button" data-role="button" data-inline="true" data-mini="true" data-icon="delete">'+html_text(channel_labels.remove)+'</button>'+channel_help_html(channel_labels.removeHelp)+'</div>':'';
+				var card=document.createElement("div"); card.className="obis-channel-card"; card.setAttribute("data-index",index);
+				card.innerHTML='<div class="obis-channel-summary"><input class="ch-enabled" type="checkbox" '+(channel.enabled?'checked':'')+' title="'+html_text(channel_labels.active)+'"><span class="obis-channel-number" title="'+html_text(has_applied_index?channel_labels.channelNumberHelp:channel_labels.channelUnassignedHelp)+'">'+html_text(channel_number)+'</span><code>'+html_text(full_obis(channel))+'</code><span title="'+html_text(info.long+(info.unit?' ['+info.unit+']':''))+'">'+html_text(title)+'</span><span class="obis-channel-origin">'+html_text(channel.origin==='manual'?channel_labels.originManual:channel_labels.originFound)+'</span><span>'+html_text(api)+'</span><span>'+html_text(channel.plugin_output.enabled?channel_labels.output:'–')+'</span></div>'+
+				'<details class="obis-channel-details" '+(open_by_uuid[channel.uuid]?'open':'')+'><summary>'+html_text(channel_labels.details)+'<span class="obis-channel-uuid">· UUID: '+html_text(channel.uuid||'–')+'</span></summary><div class="obis-channel-grid"><div class="obis-channel-info"><strong>'+html_text(info.short)+'</strong>'+(info.unit?' · '+html_text(info.unit):'')+'<br>'+html_text(info.long)+(info.warning?'<br>'+html_text(info.warning):'')+'</div>'+
+				'<div class="obis-channel-field"><label>'+html_text(channel_labels.identifier)+'</label><input class="ch-obis" required value="'+html_text(channel.obis)+'">'+channel_help_html(channel_help.identifier)+'</div><div class="obis-channel-field"><label>'+html_text(channel_labels.storage)+'</label><div class="obis-storage-control"><input class="ch-storage obis-number-spinner" type="number" min="0" max="254" step="1" inputmode="numeric" data-role="none" '+(protocol==='oms'?'disabled title="'+html_text(channel_labels.storageOms)+'"':'')+' value="'+html_text(channel.storage==null?'':channel.storage)+'"><button class="ch-storage-clear obis-storage-clear '+(channel.storage==null?'is-active':'')+'" type="button" data-role="none" aria-pressed="'+(channel.storage==null?'true':'false')+'" '+(protocol==='oms'?'disabled ':'')+'title="'+html_text(channel_labels.storageClear)+'">'+html_text(channel_labels.storageClear)+'</button></div>'+channel_help_html(protocol==='oms'?channel_labels.storageOms:channel_help.storage)+'</div>'+
+				'<div class="obis-channel-field"><label>'+html_text(channel_labels.display)+'</label><input class="ch-display" value="'+html_text(channel.display_name||'')+'">'+channel_help_html(channel_help.display)+'</div><div class="obis-channel-field"><label>'+html_text(channel_labels.api)+'</label><div class="channel-select-api"><select class="ch-api" data-mini="true" data-native-menu="true"><option value="null">null</option><option value="volkszaehler">volkszaehler</option><option value="influxdb">influxdb</option><option value="mysmartgrid">mysmartgrid</option></select></div>'+channel_help_html(channel_help.api)+'</div>'+
+				'<div class="obis-channel-field"><label>'+html_text(channel_labels.aggregation)+'</label><div class="channel-select-aggregation"><select class="ch-agg" data-mini="true" data-native-menu="true" '+(aggtime>0?'':'disabled')+'><option value="none">none</option><option value="avg">avg</option><option value="max">max</option><option value="sum">sum</option></select></div>'+channel_help_html(channel_help.aggregation)+'</div><div class="obis-channel-field"><label>'+html_text(channel_labels.duplicates)+'</label><input class="ch-duplicates" type="number" min="0" '+((api==='volkszaehler'||api==='influxdb')?'':'disabled')+' value="'+html_text(channel.duplicates||0)+'">'+channel_help_html(channel_help.duplicates)+'</div>'+
+				'<div class="obis-api-fields"><strong>'+html_text(channel_labels.apiOptions)+'</strong>'+api_option_fields(api,options)+'</div><div class="obis-output-fields"><label><input class="ch-output" type="checkbox" '+(channel.plugin_output.enabled?'checked':'')+'> '+html_text(channel_labels.output)+'</label>'+channel_help_html(channel_help.output)+'<div class="obis-channel-field"><label>'+html_text(channel_labels.outputKey)+'</label><input class="ch-output-key" maxlength="64" title="'+html_text(channel_labels.outputKeyFormat)+'" '+(channel.plugin_output.enabled?'required':'disabled')+' value="'+html_text(channel.plugin_output.key||'')+'">'+channel_help_html(channel_help.outputKey)+'</div></div>'+remove_html+'</div></details>';
+				container.appendChild(card); card.querySelector('select.ch-api').value=api; card.querySelector('select.ch-agg').value=aggtime>0?(channel.aggmode||'none'):'none';
+				var output_key_input=card.querySelector('input.ch-output-key'); validate_output_key_input(output_key_input); output_key_input.addEventListener('input',function(){validate_output_key_input(this);});
+				card.querySelector('button.ch-storage-clear').addEventListener('click',function(){ var input=card.querySelector('input.ch-storage'); input.value=''; update_channel_card(serial,index,card,protocol,aggtime); this.classList.add('is-active'); this.setAttribute('aria-pressed','true'); });
+				var remove_button=card.querySelector('button.ch-remove'); if(remove_button) remove_button.addEventListener('click',function(){ remove_manual_channel(serial,index,channel_number); });
+				card.addEventListener('change',function(event){ update_channel_card(serial,index,card,protocol,aggtime); var refresh=['ch-api','ch-output','ch-obis','ch-storage','ch-display'].some(function(name){return event.target.classList.contains(name);}); if(refresh) render_channel_editor(serial); if(refresh) update_meter_enabled(serial); });
+				card.addEventListener('input',function(event){ update_channel_card(serial,index,card,protocol,aggtime); if(event.target.classList.contains('ch-storage')) { var clear=card.querySelector('button.ch-storage-clear'), unspecified=event.target.value===''; clear.classList.toggle('is-active',unspecified); clear.setAttribute('aria-pressed',unspecified?'true':'false'); } });
+			});
+			var empty=document.getElementById(serial+'_obis_empty'); if(empty) empty.hidden=channels.length>0; sync_channel_definitions();
+		}
+		function update_channel_card(serial,index,card,protocol,aggtime) {
+			var ch=channel_definitions.meters[serial][index], parsed=parse_obis_ui(card.querySelector('input.ch-obis').value); if(parsed) ch.obis=parsed.base;
+			ch.enabled=card.querySelector('input.ch-enabled').checked; ch.storage=protocol==='oms'?null:(card.querySelector('input.ch-storage').value===''?null:Number(card.querySelector('input.ch-storage').value)); ch.display_name=card.querySelector('input.ch-display').value; ch.api=card.querySelector('select.ch-api').value; ch.aggmode=aggtime>0?card.querySelector('select.ch-agg').value:'none'; ch.duplicates=Number(card.querySelector('input.ch-duplicates').value||0); ch.plugin_output.enabled=card.querySelector('input.ch-output').checked; ch.plugin_output.key=card.querySelector('input.ch-output-key').value;
+			var opts=ch.api_options[ch.api]||(ch.api_options[ch.api]={}); card.querySelectorAll('[data-option]').forEach(function(input){ var value=input.type==='checkbox'?input.checked:input.value; if(input.getAttribute('data-option')==='tags'&&value){try{value=JSON.parse(value);}catch(e){}} opts[input.getAttribute('data-option')]=value; }); sync_channel_definitions();
+		}
+		function remove_manual_channel(serial,index,channel_number) {
+			var channels=channel_definitions.meters[serial]||[], channel=channels[index];
+			if(!channel || channel.origin!=='manual') return;
+			var message=channel_labels.removeConfirm.replace('{channel}',channel_number).replace('{obis}',full_obis(channel)).replace('{uuid}',channel.uuid||'–');
+			if(!window.confirm(message)) return;
+			channels.splice(index,1); render_channel_editor(serial); update_meter_enabled(serial);
+		}
+		function add_manual_obis_channel(serial) {
+			var value=window.prompt(channel_labels.manualPrompt,'1-0:1.8.0'); var parsed=parse_obis_ui(value); if(!parsed){ if(value!=null) window.alert(channel_labels.unknown); return; }
+			var info=catalog_info(value), aggtime=Number((document.getElementById(serial+'_aggtime')||{}).value||0), key=unique_output_key_ui(serial,default_output_key_ui(parsed,info));
+			(channel_definitions.meters[serial]||(channel_definitions.meters[serial]=[])).push({uuid:channel_uuid(),enabled:true,origin:'manual',obis:parsed.base,storage:parsed.f,display_name:'',api:'null',aggmode:aggtime>0?info.recommended_aggmode:'none',duplicates:0,api_options:{volkszaehler:{},influxdb:{},mysmartgrid:{}},plugin_output:{enabled:true,key:key.substring(0,64)}}); render_channel_editor(serial);
+		}
+		document.querySelectorAll('.obis-editor').forEach(function(container){ render_channel_editor(container.id.replace(/_obis_channels$/,'')); });
+
+		function start_obis_discovery(serial) {
+			var form = document.getElementById("vzlogger_form");
+			if (!form || (form.reportValidity && !form.reportValidity())) return;
+			document.getElementById("obis_serial").value = serial;
+			obis_job_serial = serial;
+			show_obis_search_overlay();
+			var data = new FormData(form);
+			data.append("ajax", "1");
+			data.append("ajaxaction", "obis-start");
+			data.append("lang", ui_language);
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
+				.then(function (response) { return response.json(); })
+				.then(function (status) {
+					if (!status.ok || !status.job_id) throw new Error(status.message || obis_text("obis_search_failed_text"));
+					obis_job_id = status.job_id;
+					obis_job_serial = status.serial || serial;
+					poll_obis_discovery();
+				})
+				.catch(obis_discovery_failed);
+		}
+
+		function poll_obis_discovery() {
+			fetch(obis_ajax_url("obis-status"), { credentials: "same-origin", cache: "no-store" })
+				.then(function (response) { return response.json(); })
+				.then(function (status) {
+					obis_poll_failures = 0;
+					if (status.state == "completed") {
+						var serial = status.serial || obis_job_serial;
+						if (status.restore_failed || status.warning) {
+							window.alert($("#obis_search_restore_warning_text").text() || status.warning);
+						}
+						render_discovered_obis_channels(serial, status.channels || []);
+						reset_obis_search_overlay();
+						return;
+					}
+					if (status.state == "cancelled") {
+						reset_obis_search_overlay();
+						return;
+					}
+					if (status.state == "failed") {
+						obis_discovery_failed(new Error(status.message || obis_text("obis_search_failed_text")));
+						return;
+					}
+					if (status.state == "cancelling") {
+						document.getElementById("obis_search_message").textContent = obis_text("obis_search_cancelling_text");
+						document.getElementById("obis_search_cancel").disabled = true;
+					}
+					obis_job_id = status.job_id || obis_job_id;
+					obis_job_serial = status.serial || obis_job_serial;
+					obis_poll_timer = window.setTimeout(poll_obis_discovery, 1000);
+				})
+				.catch(function (error) {
+					obis_poll_failures++;
+					if (obis_poll_failures < 3) {
+						obis_poll_timer = window.setTimeout(poll_obis_discovery, 1000);
+						return;
+					}
+					obis_discovery_failed(error);
+				});
+		}
+
+		function render_discovered_obis_channels(serial, channels) {
+			var existing = {};
+			(channel_definitions.meters[serial] || []).forEach(function(ch){ existing[full_obis(ch)]=true; });
+			channels.forEach(function (channel) {
+				var identifier = channel.identifier || "";
+				var parsed=parse_obis_ui(identifier); if(!parsed || existing[identifier]) return;
+				var info=catalog_info(identifier), aggtime=Number((document.getElementById(serial+'_aggtime')||{}).value||0);
+				(channel_definitions.meters[serial]||(channel_definitions.meters[serial]=[])).push({uuid:channel_uuid(),enabled:true,origin:'discovered',obis:parsed.base,storage:parsed.f,display_name:'',api:'null',aggmode:aggtime>0?info.recommended_aggmode:'none',duplicates:0,api_options:{volkszaehler:{},influxdb:{},mysmartgrid:{}},plugin_output:{enabled:true,key:unique_output_key_ui(serial,default_output_key_ui(parsed,info))}}); existing[identifier]=true;
+			});
+			render_channel_editor(serial);
+		}
+
+		function cancel_obis_discovery() {
+			if (!obis_job_id) return;
+			document.getElementById("obis_search_message").textContent = obis_text("obis_search_cancelling_text");
+			document.getElementById("obis_search_cancel").disabled = true;
+			var data = new FormData();
+			data.append("ajax", "1");
+			data.append("ajaxaction", "obis-cancel");
+			data.append("lang", ui_language);
+			data.append("job_id", obis_job_id);
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
+				.then(function (response) { return response.json(); })
+				.then(function (status) {
+					if (!status.ok) throw new Error(status.message || obis_text("obis_search_failed_text"));
+					if (!obis_poll_timer) poll_obis_discovery();
+				})
+				.catch(obis_discovery_failed);
+		}
+
+		function obis_discovery_failed(error) {
+			var message = error && error.message ? error.message : obis_text("obis_search_failed_text");
+			reset_obis_search_overlay();
+			var alert_message = obis_text("obis_search_failed_text") + "\n\n" + message;
+			// Yield so the hidden overlay is painted before the blocking alert.
+			window.setTimeout(function () { window.alert(alert_message); }, 0);
+		}
+
+		function resume_obis_discovery() {
+			fetch(obis_ajax_url("obis-status"), { credentials: "same-origin", cache: "no-store" })
+				.then(function (response) { return response.json(); })
+				.then(function (status) {
+					if (["starting", "running", "cancelling"].indexOf(status.state) < 0) return;
+					obis_job_id = status.job_id || "";
+					obis_job_serial = status.serial || "";
+					show_obis_search_overlay();
+					if (status.state == "cancelling") {
+						document.getElementById("obis_search_message").textContent = obis_text("obis_search_cancelling_text");
+						document.getElementById("obis_search_cancel").disabled = true;
+					}
+					obis_poll_timer = window.setTimeout(poll_obis_discovery, 1000);
+				});
+		}
+
+		window.addEventListener("pageshow", function () {
+			reset_obis_search_overlay();
+			resume_obis_discovery();
+			poll_service_status();
+		});
+
+		var saved_implementation = "<TMPL_VAR IMPLEMENTATION>";
+		var initial_implementation_value = "<TMPL_VAR IMPLEMENTATION_SWITCH_VALUE>";
+		var initial_read_value = "<TMPL_VAR READ>";
+		var expert_mode_active = "<TMPL_VAR VZLOGGER_EXPERT_MODE_VALUE>" == "1";
+		var expert_source_present = "<TMPL_VAR VZLOGGER_EXPERT_SOURCE_PRESENT>" == "1";
+		var expert_runtime_applied = "<TMPL_VAR VZLOGGER_EXPERT_APPLIED>" == "1";
+		var expert_mqtt_enabled = "<TMPL_VAR EXPERT_MQTT_ENABLED>" == "1";
+		$("#read").val(initial_read_value);
+		$("#implementation").val(initial_implementation_value);
+		$("#expert_mode").val(expert_mode_active ? "1" : "0");
+		var sendudp_control = $("#sendudp");
+		sendudp_control.val("<TMPL_VAR SENDUDP>");
+		sendudp_control.off("change.smartmeterUdp").on("change.smartmeterUdp", disable_udp);
+		try { sendudp_control.flipswitch("refresh"); } catch (error) {}
+		$("#rescan_ir_heads, #http_cache_link, #vzlogger_live_link, #vzlogger_rendered_link").off("click.smartmeterDisabled").on("click.smartmeterDisabled", function (event) {
+			if ($(this).attr("aria-disabled") == "true") event.preventDefault();
+		});
+		$("#vzlogger_debug").val("<TMPL_VAR VZLOGGER_DEBUG>");
+		$("#vzlogger_service_debug").val("<TMPL_VAR VZLOGGER_SERVICE_DEBUG>");
+		$("#vzlogger_loglevel").val("<TMPL_VAR VZLOGGER_LOGLEVEL>");
+		$("#vzlogger_localenabled").val("<TMPL_VAR VZLOGGER_LOCALENABLED>");
+		$("#vzlogger_localindex").val("<TMPL_VAR VZLOGGER_LOCALINDEX>");
+		$("#vzlogger_mqttenabled").val("<TMPL_VAR VZLOGGER_MQTTENABLED>");
+		$("#vzlogger_mqttretain").val("<TMPL_VAR VZLOGGER_MQTTRETAIN>");
+		$("#vzlogger_mqttrawandagg").val("<TMPL_VAR VZLOGGER_MQTTRAWANDAGG>");
+		$("#vzlogger_mqttqos").val("<TMPL_VAR VZLOGGER_MQTTQOS>");
+		$("#vzlogger_mqtttimestamp").val("<TMPL_VAR VZLOGGER_MQTTTIMESTAMP>");
+		$("#vzlogger_udpinterval").val("<TMPL_VAR VZLOGGER_UDPINTERVAL>");
+		try { $("#expert_mode").flipswitch("refresh"); } catch (error) {}
+		update_activation_dirty_hints();
+		disable_cron();
+		disable_udp();
+
+		function disable_cron() {
+			update_all_control_states();
+		}
+
+		function set_control_disabled(selector, disabled) {
+			var controls = $(selector);
+			controls.prop("disabled", disabled).toggleClass("ui-disabled", disabled);
+			controls.each(function() {
+				var control = $(this);
+				control.closest(".ui-input-text, .ui-select, .ui-flipswitch, .ui-checkbox").toggleClass("ui-disabled", disabled);
+				try {
+					if (control.is("select[data-role='flipswitch']")) control.flipswitch(disabled ? "disable" : "enable");
+					else if (control.is("select")) {
+						control.selectmenu(disabled ? "disable" : "enable");
+						// Native select state and the generated jQuery Mobile button can diverge
+						// after an AJAX apply. Rebuild the visible widget from the final state.
+						control.selectmenu("refresh", true);
+					}
+					else if (control.is("input[type='text'], input[type='number'], input[type='password']")) control.textinput(disabled ? "disable" : "enable");
+				} catch (error) {}
+				var inline_setting = control.closest(".service-inline-setting");
+				if (inline_setting.length) inline_setting.toggleClass("setting-disabled-inline", disabled);
+				else control.closest("tr").toggleClass("setting-disabled", disabled);
+			});
+		}
+
+		function set_anchor_disabled(selector, disabled) {
+			var anchors = $(selector);
+			anchors.toggleClass("ui-disabled", disabled).attr("aria-disabled", disabled ? "true" : "false");
+			if (disabled) anchors.attr("tabindex", "-1"); else anchors.removeAttr("tabindex");
+		}
+
+		function service_reason(id) {
+			return obis_text("service_reason_" + id);
+		}
+
+		function update_service_action_states(ui) {
+			if (!last_service_snapshot || !last_service_snapshot.services) {
+				var waiting_reason = service_reason("waiting");
+				$(".service-control-button").prop("disabled", true).addClass("ui-disabled").each(function () {
+					set_service_button_title($(this), waiting_reason);
+				});
+				$("#vzlogger_service_action_reason, #bridge_service_action_reason").text(waiting_reason);
+				return;
+			}
+			var services = last_service_snapshot.services;
+			var config = last_service_snapshot.config || {};
+			var applied = last_service_snapshot.applied || {};
+			var saved_vzlogger = !!applied.vzlogger_enabled;
+			var saved_bridge = saved_vzlogger && !!applied.bridge_enabled;
+			var busy_reason = service_reason("busy");
+			var expert_invalid = !!config.expert_mode && !config.expert_valid;
+			var expert_unapplied = !!config.expert_mode && !config.expert_applied;
+			var vz_reason = !saved_vzlogger ? service_reason("activation") : (expert_invalid || expert_unapplied || !config.valid) ? service_reason("config") : "";
+			var bridge_reason = !saved_bridge ? service_reason("activation") : (expert_invalid || expert_unapplied || !config.valid) ? service_reason("config") :
+				(!applied.mqtt_enabled || !config.mqtt_enabled ? service_reason("mqtt") : "");
+			var vz_enabled = saved_vzlogger && ui.vzlogger && !!config.valid && !expert_invalid && !expert_unapplied && !service_action_running;
+			var bridge_enabled = saved_bridge && ui.bridge && !!config.valid && !expert_invalid && !expert_unapplied && !!applied.mqtt_enabled && !!config.mqtt_enabled && !service_action_running;
+			set_control_disabled("#save_apply_button", expert_invalid || configuration_action_running || service_action_running);
+			if (expert_invalid && config.expert_message) {
+				var feedback = document.getElementById("service_action_feedback");
+				feedback.textContent = config.expert_message;
+				feedback.classList.add("is-error", "is-visible");
+			} else if (config.expert_mode && config.expert_valid) {
+				var feedback = document.getElementById("service_action_feedback");
+				if (feedback.classList.contains("is-error")) {
+					feedback.textContent = config.expert_message || "";
+					feedback.classList.remove("is-error");
+					feedback.classList.toggle("is-visible", !!feedback.textContent);
+				}
+			}
+			$("#vzlogger_service_action_reason").text(vz_enabled ? "" : (service_action_running ? busy_reason : vz_reason));
+			$("#bridge_service_action_reason").text(bridge_enabled ? "" : (service_action_running ? busy_reason : bridge_reason));
+			set_service_button_state("vzlogger_start_button", !services.vzlogger.running, vz_enabled, service_action_running ? busy_reason : vz_reason);
+			set_service_button_state("vzlogger_restart_button", true, vz_enabled, service_action_running ? busy_reason : vz_reason);
+			set_service_button_state("vzlogger_stop_button", !!services.vzlogger.running, !!services.vzlogger.running && !service_action_running, service_action_running ? busy_reason : "");
+			set_service_button_state("bridge_start_button", !services.bridge.running, bridge_enabled, service_action_running ? busy_reason : bridge_reason);
+			set_service_button_state("bridge_restart_button", true, bridge_enabled, service_action_running ? busy_reason : bridge_reason);
+			set_service_button_state("bridge_stop_button", !!services.bridge.running, !!services.bridge.running && !service_action_running, service_action_running ? busy_reason : "");
+			set_anchor_disabled("#vzlogger_live_link, #vzlogger_rendered_link", !services.vzlogger.running);
+		}
+
+		function update_all_control_states() {
+			var ui = {
+				vzlogger: $("#implementation").val() == "vzlogger",
+				local: $("#vzlogger_localenabled").val() == "1",
+				mqtt: expert_mode_active ? expert_mqtt_enabled : $("#vzlogger_mqttenabled").val() == "1",
+				bridge_switch: $("#read").val() == "1",
+				udp: $("#sendudp").val() == "1"
+			};
+			ui.bridge_available = ui.vzlogger && ui.mqtt;
+			ui.bridge = ui.bridge_available && ui.bridge_switch;
+
+			$("#vzlogger_configuration_section").toggleClass("configuration-disabled", !ui.vzlogger || expert_mode_active);
+			set_control_disabled("#vzlogger_service_debug, #vzlogger_loglevel, #vzlogger_retry, #vzlogger_localenabled, #vzlogger_mqttenabled", !ui.vzlogger);
+			set_control_disabled("#vzlogger_localport, #vzlogger_localindex, #vzlogger_localtimeout, #vzlogger_localbuffer", !(ui.vzlogger && ui.local));
+			set_control_disabled("#vzlogger_mqtthost, #vzlogger_mqttport, #vzlogger_mqttcafile, #vzlogger_mqttcapath, #vzlogger_mqttcertfile, #vzlogger_mqttkeyfile, #vzlogger_mqttkeypass, #vzlogger_mqttkeypass_reset, #vzlogger_mqttkeepalive, #mqtttopic, #vzlogger_mqttid, #vzlogger_mqttuser, #vzlogger_mqttpass, #vzlogger_mqttpass_reset, #vzlogger_mqttretain, #vzlogger_mqttrawandagg, #vzlogger_mqttqos, #vzlogger_mqtttimestamp", !(ui.vzlogger && ui.mqtt));
+			$("#mqtt_settings_panel h4").closest("tr").toggleClass("setting-disabled", !(ui.vzlogger && ui.mqtt));
+			$("#mqtt_settings_panel > p").toggleClass("setting-disabled-inline", !(ui.vzlogger && ui.mqtt));
+
+			set_anchor_disabled("#rescan_ir_heads", !ui.vzlogger);
+			$("#rescan_ir_heads").closest("tr").toggleClass("setting-disabled", !ui.vzlogger);
+			$(".meter-panel").each(function () { update_meter_enabled(this.id.substring("meter_".length)); });
+
+			set_control_disabled("#read", !ui.bridge_available);
+			$("#bridge_configuration_section").toggleClass("configuration-disabled", !ui.bridge);
+			set_control_disabled("#vzlogger_debug, #vzlogger_udpinterval, #sendudp", !ui.bridge);
+			$("#bridge_settings_panel > p").toggleClass("setting-disabled-inline", !ui.bridge);
+			$("#bridge_settings_panel h4").closest("tr").toggleClass("setting-disabled", !ui.bridge);
+			$("#http_cache_status_row").toggleClass("setting-disabled", !ui.bridge);
+			var cache_available = $("#http_cache_link").attr("data-cache-available") == "1";
+			set_anchor_disabled("#http_cache_link", !ui.bridge || !cache_available);
+			set_control_disabled("#udpport", !ui.bridge || !ui.udp);
+			$("#labeludpport").toggleClass("ui-disabled", !ui.bridge || !ui.udp);
+			if (expert_mode_active) {
+				$("#vzlogger_configuration_section").find("input, select, textarea, button").not("#expert_mode").each(function () {
+					set_control_disabled($(this), true);
+				});
+				set_anchor_disabled("#rescan_ir_heads", true);
+			}
+
+			update_service_action_states(ui);
+		}
+
+		function set_expert_mode(value) {
+			var control = $("#expert_mode");
+			control.prop("disabled", true).addClass("ui-disabled");
+			var data = new FormData();
+			data.append("ajax", "1");
+			data.append("ajaxaction", "expert-mode");
+			data.append("lang", ui_language);
+			data.append("enabled", value == "1" ? "1" : "0");
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
+				.then(function (response) { return response.json(); })
+				.then(function (response) {
+					if (!response.ok) throw new Error(response.message || obis_text("expert_mode_enable_failed_text"));
+					expert_mode_active = !!response.expert_mode;
+					expert_source_present = expert_source_present || expert_mode_active;
+					expert_runtime_applied = !!response.expert_applied;
+					expert_mqtt_enabled = !!response.mqtt_enabled;
+					control.val(expert_mode_active ? "1" : "0").prop("disabled", false).removeClass("ui-disabled");
+					try { control.flipswitch("refresh"); } catch (ignore) {}
+					render_expert_mode_state();
+					if (last_service_snapshot && last_service_snapshot.config) {
+						last_service_snapshot.config.expert_mode = expert_mode_active;
+						last_service_snapshot.config.expert_valid = !!response.expert_valid;
+						last_service_snapshot.config.expert_applied = !!response.expert_applied;
+						last_service_snapshot.config.expert_present = expert_source_present;
+						last_service_snapshot.config.expert_message = response.validation_message || "";
+					}
+					update_all_control_states();
+					poll_service_status();
+				})
+				.catch(function (error) {
+					control.val(expert_mode_active ? "1" : "0").prop("disabled", false).removeClass("ui-disabled");
+					try { control.flipswitch("refresh"); } catch (ignore) {}
+					window.alert(error.message || obis_text("expert_mode_enable_failed_text"));
+				});
+		}
+
+		function render_expert_mode_state() {
+			var button = $("#show_generated_config");
+			var label = obis_text(expert_mode_active ? "edit_expert_config_text" : "show_generated_config_text");
+			var help = obis_text(expert_mode_active ? "edit_expert_config_help_text" : "show_generated_config_help_text");
+			var text = button.find(".ui-btn-text");
+			if (text.length) text.text(label); else button.text(label);
+			button.attr("title", help).attr("data-icon", expert_mode_active ? "edit" : "search");
+			if (expert_mode_active) button.removeAttr("rel"); else button.attr("rel", "noopener");
+			$("#generated_config_help").text(help + (expert_mode_active ? " " + obis_text("reset_expert_config_help_text") : ""));
+			$("#expert_mode_notice").prop("hidden", !expert_mode_active);
+			$("#reset_expert_config_container").prop("hidden", !expert_mode_active).toggle(expert_mode_active);
+		}
+
+		function reset_expert_configuration() {
+			if (!expert_mode_active || !window.confirm(obis_text("reset_expert_config_confirm_text"))) return;
+			var button = $("#reset_expert_config");
+			button.prop("disabled", true).addClass("ui-disabled");
+			var data = new FormData();
+			data.append("ajax", "1");
+			data.append("ajaxaction", "expert-reset");
+			data.append("lang", ui_language);
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
+				.then(function (response) { return response.json(); })
+				.then(function (response) {
+					if (!response.ok) throw new Error(response.message || obis_text("reset_expert_config_failed_text"));
+					expert_source_present = true;
+					expert_mqtt_enabled = !!response.mqtt_enabled;
+					if (last_service_snapshot && last_service_snapshot.config) {
+						last_service_snapshot.config.expert_valid = !!response.expert_valid;
+						last_service_snapshot.config.expert_applied = !!response.expert_applied;
+						last_service_snapshot.config.expert_present = true;
+						last_service_snapshot.config.expert_message = response.validation_message || "";
+					}
+					var feedback = document.getElementById("service_action_feedback");
+					feedback.textContent = response.message || response.validation_message || "";
+					feedback.classList.remove("is-error");
+					feedback.classList.toggle("is-visible", !!feedback.textContent);
+					update_all_control_states();
+					poll_service_status();
+				})
+				.catch(function (error) {
+					window.alert(error.message || obis_text("reset_expert_config_failed_text"));
+				})
+				.then(function () {
+					button.prop("disabled", false).removeClass("ui-disabled");
+				});
+		}
+
+		window.addEventListener("message", function (event) {
+			if (event.origin != window.location.origin || !event.data || event.data.type != "smartmeter-vzlogger-expert") return;
+			var feedback = document.getElementById("service_action_feedback");
+			feedback.textContent = event.data.message || "";
+			feedback.classList.toggle("is-error", !event.data.valid);
+			feedback.classList.add("is-visible");
+			schedule_service_poll();
+		});
+
+		function set_implementation_tab_state(id, active) {
+			var state = $("#" + id);
+			if (!state.length) return;
+			var label = state.attr(active ? "data-active-label" : "data-inactive-label") || "";
+			state.toggleClass("is-active", active).toggleClass("is-inactive", !active).attr("title", label).attr("aria-label", label);
+			state.find(".implementation-state-icon").text(active ? "✓" : "–");
+		}
+
+		function set_implementation_tab_states(mode) {
+			set_implementation_tab_state("vzlogger_tab_state", mode == "vzlogger");
+			set_implementation_tab_state("legacy_tab_state", mode == "legacy");
+		}
+
+		function update_activation_dirty_hints() {
+			var implementation_changed = $("#implementation").val() != initial_implementation_value;
+			var bridge_changed = $("#read").val() != initial_read_value;
+			$("#implementation_changed").val(implementation_changed ? "1" : "0");
+			$("#implementation_unsaved").prop("hidden", !implementation_changed);
+			$("#bridge_activation_unsaved").prop("hidden", !bridge_changed);
+			set_implementation_tab_states(saved_implementation);
+		}
+
+		function update_vzlogger_controls() { update_activation_dirty_hints(); update_all_control_states(); }
+		function update_local_controls() { update_all_control_states(); }
+		function update_mqtt_controls() { update_all_control_states(); }
+		function update_bridge_controls() { update_activation_dirty_hints(); update_all_control_states(); }
+		function disable_udp() {
+			update_all_control_states();
+		}
+
+		function update_meter_protocol(serial) {
+			var panelElement = document.getElementById("meter_" + serial);
+			var selectElement = document.getElementById(serial + "_meter");
+			if (!panelElement || !selectElement) return;
+			var panel = $(panelElement);
+			var mode = selectElement.value;
+			panel.find(".meter-field").each(function () {
+				var protocols = (this.getAttribute("data-protocols") || "").split(/\s+/);
+				$(this).toggle(protocols.indexOf(mode) >= 0);
+			});
+			var fieldOrder = {
+				sml: ["interval", "pullseq", "baudrate", "parity", "use_local_time"],
+				d0: ["interval", "dump_file", "pullseq", "ackseq", "baudrate", "baudrate_read", "parity", "wait_sync", "read_timeout", "baudrate_change_delay"],
+				oms: ["baudrate", "key", "mbus_debug", "use_local_time"]
+			};
+			var userAnchor = panel.find(".meter-user-settings").first();
+			(fieldOrder[mode] || []).forEach(function (field) {
+				userAnchor.before(panel.find('.meter-field[data-meter-field="' + field + '"]'));
+			});
+			panel.find(".meter-user-settings").toggle(mode == "user");
+			panel.find(".meter-common-field").toggle(["sml", "d0", "oms"].indexOf(mode) >= 0);
+			panel.find(".meter-obis-settings").toggle(["sml", "d0", "oms"].indexOf(mode) >= 0);
+			var channelEditor = document.getElementById(serial + "_obis_channels");
+			if (channelEditor) { channelEditor.setAttribute("data-protocol", mode); render_channel_editor(serial); }
+			panel.find(".meter-template-row").toggle(["sml", "d0"].indexOf(mode) >= 0);
+			update_meter_template_options(serial, mode);
+			var omsUnsupported = mode == "oms" && panel.attr("data-oms-supported") != "1";
+			panel.find(".meter-oms-runtime-warning").toggle(omsUnsupported);
+			var selectedOption = selectElement.options[selectElement.selectedIndex];
+			panel.find(".meter-protocol-summary").text(selectedOption ? selectedOption.text : "");
+			var warningKind = panel.attr("data-warning-kind") || "";
+			var showWarning = !warningKind || warningKind == mode;
+			panel.find(".meter-warning-icon, .meter-primary-warning").toggle(showWarning);
+			update_meter_enabled(serial);
+		}
+
+		var meter_templates = <TMPL_VAR NAME=METER_TEMPLATES_JSON>;
+
+		function refresh_meter_select(select) {
+			try { $(select).selectmenu("refresh", true); } catch (error) {}
+		}
+
+		function update_meter_template_options(serial, protocol) {
+			var select = document.getElementById(serial + "_template");
+			if (!select) return;
+			var placeholder = select.getAttribute("data-placeholder") || "";
+			select.options.length = 0;
+			select.add(new Option(placeholder, ""));
+			meter_templates.forEach(function (template) {
+				if (template.protocol == protocol) select.add(new Option(template.label, template.id));
+			});
+			select.value = "";
+			document.getElementById(serial + "_template_warning").hidden = true;
+			refresh_meter_select(select);
+		}
+
+		function apply_meter_template(serial) {
+			var protocol = $("#" + serial + "_meter").val();
+			var select = document.getElementById(serial + "_template");
+			if (!select || !select.value) return;
+			var template = meter_templates.find(function (candidate) { return candidate.id == select.value && candidate.protocol == protocol; });
+			if (!template) return;
+			var operating_baudrate = protocol == "sml" ? template.read_baudrate : template.initial_baudrate;
+			$("#" + serial + "_baudrate").val(String(operating_baudrate));
+			$("#" + serial + "_paritymode").val(template.serial_mode);
+			if (protocol == "d0") {
+				$("#" + serial + "_baudrateread").val(String(template.read_baudrate));
+				$("#" + serial + "_readtimeout").val(String(template.read_timeout));
+			}
+			refresh_meter_select(document.getElementById(serial + "_paritymode"));
+			document.getElementById(serial + "_template_unsaved").hidden = false;
+			document.getElementById(serial + "_template_warning").hidden = !template.limited;
+		}
+
+		function update_meter_enabled(serial) {
+			var panel = $("#meter_" + serial);
+			if (!panel.length) return;
+			var mode = $("#" + serial + "_meter").val();
+			var standard_meter = ["sml", "d0", "oms"].indexOf(mode) >= 0;
+			var global_disabled = $("#implementation").val() != "vzlogger";
+			var runtime_action_disabled = saved_implementation != "vzlogger";
+			var meter_disabled = standard_meter && $("#" + serial + "_enabled").val() == "0";
+			var name_control = $("#" + serial + "_name");
+			var enabled_control = $("#" + serial + "_enabled");
+			var remove_control = panel.find(".meter-remove-button");
+			var dependent_controls = panel.find("input, select, textarea, button").not(name_control).not(enabled_control).not(remove_control).not(".meter-remove-marker");
+			set_control_disabled(name_control, global_disabled);
+			set_control_disabled(enabled_control, global_disabled);
+			set_control_disabled(dependent_controls, global_disabled || meter_disabled);
+			set_control_disabled(panel.find("input.ch-storage"), global_disabled || meter_disabled || mode == "oms");
+			set_control_disabled(panel.find("button.ch-storage-clear"), global_disabled || meter_disabled || mode == "oms");
+			set_control_disabled(panel.find("select.ch-agg"), global_disabled || meter_disabled || Number($("#" + serial + "_aggtime").val() || 0) <= 0);
+			panel.find(".obis-channel-card").each(function () {
+				var api = $(this).find("select.ch-api").val();
+				set_control_disabled($(this).find("input.ch-duplicates"), global_disabled || meter_disabled || ["volkszaehler", "influxdb"].indexOf(api) < 0);
+				set_control_disabled($(this).find("input.ch-output-key"), global_disabled || meter_disabled || !$(this).find("input.ch-output").prop("checked"));
+			});
+			set_control_disabled(remove_control, global_disabled);
+			var rows = panel.find("table.settings-table").first().children("tbody").children("tr");
+			rows.each(function () {
+				var keep_active = $(this).hasClass("meter-name-row") || $(this).hasClass("meter-enabled-row");
+				$(this).toggleClass("setting-disabled", global_disabled || (meter_disabled && !keep_active));
+			});
+			var oms_unsupported = mode == "oms" && panel.attr("data-oms-supported") != "1";
+			set_control_disabled(panel.find(".obis-discovery"), global_disabled || runtime_action_disabled || meter_disabled || oms_unsupported);
+			panel.find(".obis-runtime-action-reason").prop("hidden", !runtime_action_disabled).toggle(runtime_action_disabled);
+		}
+
+		function stage_meter_removal(serial) {
+			var panel = $("#meter_" + serial);
+			if (!panel.length || !window.confirm(obis_text("remove_meter_confirm_text"))) return;
+			panel.find(".meter-remove-marker").prop("disabled", false);
+			panel.closest("tr").hide();
+		}
+
+		function collapsible_storage_key(element) {
+			return "smartmeter-vzlogger-collapsible:" + window.location.pathname + ":" + element.id;
+		}
+
+		function restore_collapsible_state(element) {
+			if (!element || !element.id) return;
+			try {
+				var state = window.localStorage.getItem(collapsible_storage_key(element));
+				if (state == "open") $(element).collapsible("expand");
+				else if (state == "closed") $(element).collapsible("collapse");
+			} catch (error) {}
+		}
+
+		function initialize_collapsible_persistence() {
+			$(document).off("collapsibleexpand.smartmeterPersistence collapsiblecollapse.smartmeterPersistence", "#vzlogger_form [data-role='collapsible'][id]");
+			$(document).on("collapsibleexpand.smartmeterPersistence collapsiblecollapse.smartmeterPersistence", "#vzlogger_form [data-role='collapsible'][id]", function (event) {
+				try { window.localStorage.setItem(collapsible_storage_key(this), event.type == "collapsibleexpand" ? "open" : "closed"); } catch (error) {}
+			});
+			document.querySelectorAll("#vzlogger_form [data-role='collapsible'][id]").forEach(restore_collapsible_state);
+		}
+
+		function initialize_meter_panel(panel, enhance) {
+			if (!panel) return;
+			var serial = panel.id.substring("meter_".length);
+			var values = {
+				meter: panel.getAttribute("data-current-mode") || "0",
+				enabled: panel.getAttribute("data-meter-enabled") || "1",
+				allowskip: panel.getAttribute("data-allowskip") || "1",
+				paritymode: panel.getAttribute("data-parity") || "8n1",
+				uselocaltime: panel.getAttribute("data-local-time") || "0",
+				waitsync: panel.getAttribute("data-wait-sync") || "off",
+				mbusdebug: panel.getAttribute("data-mbus-debug") || "0"
+			};
+			Object.keys(values).forEach(function (suffix) {
+				var control = document.getElementById(serial + "_" + suffix);
+				if (control) control.value = values[suffix];
+			});
+			if (enhance) {
+				try { $(panel.closest("tr")).enhanceWithin(); } catch (error) {}
+			}
+			update_meter_protocol(serial);
+			if (enhance) restore_collapsible_state(panel);
+		}
+
+		$(".meter-panel").each(function () { initialize_meter_panel(this, false); });
+		initialize_collapsible_persistence();
+	</script>
 </TMPL_IF>
 
 <!-- ****************************************************************************************** -->
-

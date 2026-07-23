@@ -1,0 +1,4 @@
+<!doctype html><html lang="<TMPL_VAR NAME=COMMON.LANGUAGE_CODE ESCAPE=HTML>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><TMPL_VAR NAME=RESULT_TITLE></title>
+<style>body{margin:0;background:#f3f5f7;color:#202428;font:15px/1.5 system-ui,sans-serif}.box{max-width:60rem;margin:3rem auto;padding:1.5rem}pre{padding:1rem;border:1px solid #c8ced5;border-radius:6px;background:#fff;white-space:pre-wrap}button{padding:.65rem 1rem}</style></head>
+<body><main class="box"><h1><TMPL_VAR NAME=RESULT_TITLE></h1><pre><TMPL_VAR NAME=RESULT_MESSAGE ESCAPE=HTML></pre><button type="button" onclick="window.close()"><TMPL_VAR NAME=COMMON.CLOSE></button></main>
+<script>var payload=<TMPL_VAR NAME=RESULT_PAYLOAD>;try{if(window.opener)window.opener.postMessage(payload,window.location.origin)}catch(ignore){}window.setTimeout(function(){window.close()},250);</script></body></html>

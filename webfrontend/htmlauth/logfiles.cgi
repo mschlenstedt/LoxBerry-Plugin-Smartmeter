@@ -22,9 +22,11 @@
 use CGI::Carp qw(fatalsToBrowser);
 use CGI qw/:standard/;
 use Config::Simple;
+use LoxBerry::System;
 use File::HomeDir;
 use Cwd 'abs_path';
 use HTML::Template;
+use File::Path qw(make_path);
 #use warnings;
 #use strict;
 #no strict "refs"; # we need it for template system and for contructs like ${"skalar".$i} in loops
@@ -37,13 +39,10 @@ my  $cfg;
 my  $plugin_cfg;
 my  $lang;
 my  $installfolder;
-my  $languagefile;
 my  $version;
 my  $home = File::HomeDir->my_home;
 my  $psubfolder;
 my  $pname;
-my  $languagefileplugin;
-my  %TPhrases;
 my  @files;
 my  @heads;
 my  @rows;
@@ -55,6 +54,7 @@ my  $helplink;
 my  @help;
 my  $helptext;
 my  $serial;
+my  $runtime_dir;
 
 ##########################################################################
 # Read Settings
@@ -78,26 +78,27 @@ print "Content-type: text/html\n\n";
 $cfg	 	= new Config::Simple("$home/config/system/general.cfg") or die $cfg->error();
 $installfolder	= $cfg->param("BASE.INSTALLFOLDER");
 $lang		= $cfg->param("BASE.LANG");
+$runtime_dir = "/var/run/shm/$psubfolder";
 
 # Read plugin config
 $plugin_cfg 	= new Config::Simple("$installfolder/config/plugins/$psubfolder/smartmeter.cfg") or die $plugin_cfg->error();
 $pname          = $plugin_cfg->param("MAIN.SCRIPTNAME");
 
 # Create temp folder if not already exist
-if (!-d "/var/run/shm/$psubfolder") {
-	system("mkdir -p /var/run/shm/$psubfolder > /dev/null 2>&1");
+if (!-d $runtime_dir) {
+	make_path($runtime_dir);
 }
 # Check for temporary log folder
 if (!-e "$installfolder/log/plugins/$psubfolder/shm") {
-	system("ln -s /var/run/shm/$psubfolder  $installfolder/log/plugins/$psubfolder/shm > /dev/null 2>&1");
+	symlink($runtime_dir, "$installfolder/log/plugins/$psubfolder/shm");
 }
 
 # Read all files in Logdir
-opendir(DIR,"/var/run/shm/$psubfolder");
+opendir(DIR,$runtime_dir);
 	@files = readdir(DIR);
 close DIR;
 # Read all devices
-my @devices = split(/\n/,`ls /dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_*`);
+my @devices = glob("/dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_*");
 foreach (@devices)
 {
 	my $device 	= $_;
@@ -138,36 +139,8 @@ $maintemplate = HTML::Template->new(
 # Translations
 ##########################################################################
 
-# Init Language
-# Clean up lang variable
-$lang         =~ tr/a-z//cd;
-$lang         = substr($lang,0,2);
-
-# Read Plugin transations
-# Read English language as default
-# Missing phrases in foreign language will fall back to English
-$languagefileplugin 	= "$installfolder/templates/plugins/$psubfolder/en/language.txt";
-Config::Simple->import_from($languagefileplugin, \%TPhrases);
-
-# If there's no language phrases file for choosed language, use english as default
-if (!-e "$installfolder/templates/system/$lang/language.dat")
-{
-  $lang = "en";
-}
-
-# Read foreign language if exists and not English
-$languagefileplugin = "$installfolder/templates/plugins/$psubfolder/$lang/language.txt";
-if ((-e $languagefileplugin) and ($lang ne 'en')) {
-	# Now overwrite phrase variables with user language
-	Config::Simple->import_from($languagefileplugin, \%TPhrases);
-}
-
-# Parse Language phrases to html templates
-while (my ($name, $value) = each %TPhrases){
-	$maintemplate->param("T::$name" => $value);
-	#$headertemplate->param("T::$name" => $value);
-	#$footertemplate->param("T::$name" => $value);
-}
+# LoxBerry loads the selected plugin language and fills missing phrases from English.
+LoxBerry::System::readlanguage($maintemplate, "language.ini");
 
 ##########################################################################
 # Main program
