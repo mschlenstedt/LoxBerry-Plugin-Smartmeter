@@ -29,6 +29,7 @@ use File::Temp qw(tempdir);
 use FindBin;
 use JSON::PP;
 use LoxBerry::System;
+use LoxBerry::Log;
 #use LoxBerry::Web;
 use LoxBerry::JSON; # Available with LoxBerry 2.0
 use POSIX qw(:sys_wait_h setsid);
@@ -299,7 +300,6 @@ sub form_vzlogger
 	my $udp_interval = clean_udp_interval($plugin_cfg->param("VZLOGGER.UDPINTERVAL"), "5");
 	$template->param("VZLOGGER_UDPINTERVAL" => $udp_interval);
 	$template->param("VZLOGGER_UDPINTERVAL_OPTIONS" => udp_interval_options($udp_interval));
-	$template->param("VZLOGGER_DEBUG" => $plugin_cfg->param("VZLOGGER.DEBUG") || 0);
 	$template->param("VZLOGGER_SERVICE_DEBUG" => $plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || 0);
 	$template->param("VZLOGGER_LOGLEVEL" => clean_log_level($plugin_cfg->param("VZLOGGER.LOGLEVEL"), "0"));
 	$template->param("VZLOGGER_MQTTENABLED" => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTENABLED"), 1));
@@ -358,14 +358,21 @@ sub add_service_template_params
 	$template->param("BRIDGE_SERVICE_RUNNING" => $bridge_state eq "active");
 	$template->param("VZLOGGER_LIVE_DISABLED" => ($vzlogger_state eq "active" ? "" : "ui-disabled"));
 
+	# vzLogger writes its own log at a fixed path (configured in vzlogger.conf).
+	# The bridge and control logs are LoxBerry sessions with timestamped names,
+	# so their buttons link to the most recent file; all of them also appear in
+	# the central LoxBerry log manager.
 	my $vzlogger_log = "$lbhomedir/log/plugins/$lbpplugindir/vzlogger.log";
-	my $bridge_log = "$lbhomedir/log/plugins/$lbpplugindir/vzlogger_mqtt_bridge.log";
 	$template->param("VZLOGGER_LOG_URL" => log_url("plugins/$lbpplugindir/vzlogger.log"));
 	$template->param("VZLOGGER_LOG_DISABLED" => (-e $vzlogger_log ? "" : "ui-disabled"));
-	$template->param("BRIDGE_LOG_URL" => log_url("plugins/$lbpplugindir/vzlogger_mqtt_bridge.log"));
-	$template->param("BRIDGE_LOG_DISABLED" => (-e $bridge_log ? "" : "ui-disabled"));
-	$template->param("CONTROL_LOG_URL" => log_url("plugins/$lbpplugindir/vzlogger_control.log"));
-	$template->param("CONTROL_LOG_DISABLED" => "");
+
+	my $bridge_log = latest_plugin_log_name("bridge");
+	$template->param("BRIDGE_LOG_URL" => $bridge_log ? log_url("plugins/$lbpplugindir/$bridge_log") : "#");
+	$template->param("BRIDGE_LOG_DISABLED" => ($bridge_log ? "" : "ui-disabled"));
+
+	my $control_log = latest_plugin_log_name("control");
+	$template->param("CONTROL_LOG_URL" => $control_log ? log_url("plugins/$lbpplugindir/$control_log") : "#");
+	$template->param("CONTROL_LOG_DISABLED" => ($control_log ? "" : "ui-disabled"));
 }
 
 sub add_http_cache_template_params
@@ -436,6 +443,18 @@ sub log_url
 {
 	my ($logfile) = @_;
 	return "/admin/system/tools/logfile.cgi?logfile=$logfile&amp;header=html&amp;format=template";
+}
+
+# Returns the basename of the newest LoxBerry log file for a base name
+# (e.g. "bridge", "control"), or undef. The high-resolution timestamp prefix
+# sorts chronologically, so the last entry is the most recent.
+sub latest_plugin_log_name
+{
+	my ($name) = @_;
+	my @files = sort glob("$lbhomedir/log/plugins/$lbpplugindir/*_$name.log");
+	return undef if (!@files);
+	my ($base) = $files[-1] =~ m{([^/]+)\z};
+	return $base;
 }
 
 sub log_redirect_url
@@ -798,12 +817,10 @@ sub save_service_log_settings
 		$plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG", $q->{vzlogger_service_debug});
 		$plugin_cfg->param("VZLOGGER.LOGLEVEL", $q->{vzlogger_loglevel});
 	} else {
-		die $L{'VZLOGGER.UI_INVALID_BRIDGE_DEBUG'} if (!defined($q->{vzlogger_debug}) || $q->{vzlogger_debug} !~ /\A[01]\z/);
 		if ($starting) {
 			die $L{'VZLOGGER.UI_INVALID_ACTIVATION'} if (!defined($q->{implementation}) || $q->{implementation} ne "vzlogger");
 			die $L{'VZLOGGER.UI_INVALID_BRIDGE_ACTIVATION'} if (!defined($q->{read}) || $q->{read} ne "1");
 		}
-		$plugin_cfg->param("VZLOGGER.DEBUG", $q->{vzlogger_debug});
 	}
 	$plugin_cfg->save;
 }
@@ -882,7 +899,7 @@ sub ensure_vzlogger_defaults
 	foreach my $entry (
 		["VZLOGGER.EXPERTMODE", "0"], ["VZLOGGER.RETRY", "30"], ["VZLOGGER.LOCALENABLED", "1"],
 		["VZLOGGER.LOCALINDEX", "1"], ["VZLOGGER.LOCALTIMEOUT", "30"], ["VZLOGGER.LOCALBUFFER", "-1"],
-		["VZLOGGER.UDPINTERVAL", "5"], ["VZLOGGER.DEBUG", "0"], ["VZLOGGER.VZLOGGERDEBUG", "0"],
+		["VZLOGGER.UDPINTERVAL", "5"], ["VZLOGGER.VZLOGGERDEBUG", "0"],
 		["VZLOGGER.LOGLEVEL", "0"], ["VZLOGGER.MQTTENABLED", "1"], ["VZLOGGER.MQTTHOST", ""],
 		["VZLOGGER.MQTTPORT", ""], ["VZLOGGER.MQTTCAFILE", ""], ["VZLOGGER.MQTTCAPATH", ""],
 		["VZLOGGER.MQTTCERTFILE", ""], ["VZLOGGER.MQTTKEYFILE", ""], ["VZLOGGER.MQTTKEYPASS", ""],
@@ -1024,7 +1041,6 @@ sub save_expert_allowed_form
 	$plugin_cfg->param("MAIN.SENDUDP", clean_config_value($q->{sendudp}, qr/\A[01]\z/, $plugin_cfg->param("MAIN.SENDUDP") || "0"));
 	$plugin_cfg->param("MAIN.UDPPORT", clean_config_value($q->{udpport}, qr/\A\d+\z/, $plugin_cfg->param("MAIN.UDPPORT") || "7000"));
 	$plugin_cfg->param("VZLOGGER.UDPINTERVAL", clean_udp_interval($q->{vzlogger_udpinterval}, $plugin_cfg->param("VZLOGGER.UDPINTERVAL") || "5"));
-	$plugin_cfg->param("VZLOGGER.DEBUG", clean_config_value($q->{vzlogger_debug}, qr/\A[01]\z/, $plugin_cfg->param("VZLOGGER.DEBUG") || "0"));
 	$plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG", clean_config_value($q->{vzlogger_service_debug}, qr/\A[01]\z/, $plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0"));
 	$plugin_cfg->param("VZLOGGER.LOGLEVEL", clean_log_level($q->{vzlogger_loglevel}, $plugin_cfg->param("VZLOGGER.LOGLEVEL") || "0"));
 	$plugin_cfg->save;
@@ -1218,7 +1234,6 @@ sub save_vzlogger_form
 	$plugin_cfg->param("VZLOGGER.LOCALTIMEOUT", clean_config_value($q->{vzlogger_localtimeout}, qr/\A\d+\z/, defined($plugin_cfg->param("VZLOGGER.LOCALTIMEOUT")) ? $plugin_cfg->param("VZLOGGER.LOCALTIMEOUT") : "30"));
 	$plugin_cfg->param("VZLOGGER.LOCALBUFFER", clean_config_value($q->{vzlogger_localbuffer}, qr/\A-?\d+\z/, defined($plugin_cfg->param("VZLOGGER.LOCALBUFFER")) ? $plugin_cfg->param("VZLOGGER.LOCALBUFFER") : "-1"));
 	$plugin_cfg->param("VZLOGGER.UDPINTERVAL", clean_udp_interval($q->{vzlogger_udpinterval}, $plugin_cfg->param("VZLOGGER.UDPINTERVAL") || "5"));
-	$plugin_cfg->param("VZLOGGER.DEBUG", clean_config_value($q->{vzlogger_debug}, qr/\A[01]\z/, $plugin_cfg->param("VZLOGGER.DEBUG") || "0"));
 	$plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG", clean_config_value($q->{vzlogger_service_debug}, qr/\A[01]\z/, $plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0"));
 	$plugin_cfg->param("VZLOGGER.LOGLEVEL", clean_log_level($q->{vzlogger_loglevel}, $plugin_cfg->param("VZLOGGER.LOGLEVEL") || "0"));
 	$plugin_cfg->param("VZLOGGER.MQTTENABLED", clean_config_value($q->{vzlogger_mqttenabled}, qr/\A[01]\z/, defined($plugin_cfg->param("VZLOGGER.MQTTENABLED")) ? $plugin_cfg->param("VZLOGGER.MQTTENABLED") : "1"));
@@ -2747,39 +2762,36 @@ sub run_control_result
 	return ($output, $exit);
 }
 
+# Lazily opened LoxBerry log session for web interface actions. Fixed file with
+# append so the many short CGI requests share one log-manager session; the log
+# level comes from PLUGINDB_LOGLEVEL (plugin management widget).
+my $webui_log;
+sub webui_logger
+{
+	return $webui_log if ($webui_log);
+	my $dir = "$lbhomedir/log/plugins/$lbpplugindir";
+	make_path($dir) if (!-d $dir);
+	$webui_log = LoxBerry::Log->new(
+		name     => "webui",
+		filename => "$dir/webui.log",
+		package  => $lbpplugindir,
+		append   => 1,
+	);
+	return $webui_log;
+}
+
 sub write_control_log
 {
 	my ($action, $output) = @_;
-	my $plugin_log_dir = "$lbhomedir/log/plugins/$lbpplugindir";
-	my $control_log = "$plugin_log_dir/vzlogger_control.log";
-	make_path($plugin_log_dir) if (!-d $plugin_log_dir);
-	if (-e $control_log && -s $control_log >= 512 * 1024) {
-		unlink("$control_log.1") if (-e "$control_log.1");
-		rename($control_log, "$control_log.1");
-	}
-	open(my $fh, ">>", $control_log) or return;
-	print $fh timestamp() . " web-action=$action\n";
-	print $fh $output;
-	print $fh "\n" if ($output !~ /\n\z/);
-	close($fh);
+	my $logger = webui_logger();
+	$logger->LOGINF("web-action=$action");
+	$logger->LOGINF($output) if (defined($output) && $output ne "");
 }
 
 sub write_apply_log
 {
 	my ($output, $display_output) = @_;
-	my $apply_log = "$lbhomedir/log/plugins/$lbpplugindir/vzlogger_apply.log";
-	make_path("$lbhomedir/log/plugins/$lbpplugindir") if (!-d "$lbhomedir/log/plugins/$lbpplugindir");
-	return if (!open(my $apply_fh, ">", $apply_log));
-	print $apply_fh $output;
-	close($apply_fh);
-	my $notice = "\nApply log: $apply_log\n";
-	${$display_output} .= $notice if ($display_output);
-}
-
-sub timestamp
-{
-	my ($sec, $min, $hour, $mday, $mon, $year) = localtime();
-	return sprintf("%04d%02d%02d-%02d%02d%02d", $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
+	webui_logger()->LOGINF("apply result:\n$output");
 }
 
 sub read_loxberry_mqtt_settings

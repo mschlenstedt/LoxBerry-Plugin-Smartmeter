@@ -435,7 +435,6 @@
 					<button id="bridge_start_button" class="service-control-button" type="button" onclick="run_service_action('start-bridge');" title="<TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="power" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING>style="display:none"</TMPL_IF>><TMPL_VAR NAME=VZLOGGER.START_SERVICE></button>
 					<button id="bridge_stop_button" class="service-control-button" type="button" onclick="run_service_action('stop-bridge');" title="<TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="delete" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING><TMPL_ELSE>style="display:none"</TMPL_IF>><TMPL_VAR NAME=VZLOGGER.STOP_SERVICE></button>
 					<a href="<TMPL_VAR BRIDGE_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR BRIDGE_LOG_DISABLED>"><TMPL_VAR NAME=VZLOGGER.SHOW_LOG></a>
-					<span class="service-inline-setting"><label for="vzlogger_debug"><TMPL_VAR NAME=VZLOGGER.DEBUG_LOG></label><select id="vzlogger_debug" name="vzlogger_debug" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></span>
 				</div>
 				<div id="bridge_service_action_reason" class="service-action-reason" aria-live="polite"></div>
 			</td>
@@ -992,7 +991,6 @@
 			} else {
 				data.append("implementation", $("#implementation").val());
 				data.append("read", $("#read").val());
-				data.append("vzlogger_debug", $("#vzlogger_debug").val());
 			}
 			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
 				.then(function (response) {
@@ -1708,7 +1706,6 @@
 		$("#rescan_ir_heads, #http_cache_link, #vzlogger_live_link, #vzlogger_rendered_link").off("click.smartmeterDisabled").on("click.smartmeterDisabled", function (event) {
 			if ($(this).attr("aria-disabled") == "true") event.preventDefault();
 		});
-		$("#vzlogger_debug").val("<TMPL_VAR VZLOGGER_DEBUG>");
 		$("#vzlogger_service_debug").val("<TMPL_VAR VZLOGGER_SERVICE_DEBUG>");
 		$("#vzlogger_loglevel").val("<TMPL_VAR VZLOGGER_LOGLEVEL>");
 		$("#vzlogger_localenabled").val("<TMPL_VAR VZLOGGER_LOCALENABLED>");
@@ -1830,7 +1827,7 @@
 
 			set_control_disabled("#read", !ui.bridge_available);
 			$("#bridge_configuration_section").toggleClass("configuration-disabled", !ui.bridge);
-			set_control_disabled("#vzlogger_debug, #vzlogger_udpinterval, #sendudp", !ui.bridge);
+			set_control_disabled("#vzlogger_udpinterval, #sendudp", !ui.bridge);
 			$("#bridge_settings_panel > p").toggleClass("setting-disabled-inline", !ui.bridge);
 			$("#bridge_settings_panel h4").closest("tr").toggleClass("setting-disabled", !ui.bridge);
 			$("#http_cache_status_row").toggleClass("setting-disabled", !ui.bridge);

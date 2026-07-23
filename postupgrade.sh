@@ -63,13 +63,19 @@ migrate_config()
 		echo "<WARNING> Open the plugin page and activate vzLogger to resume reading."
 	fi
 
+	# The bridge debug switch (VZLOGGER.DEBUG) was replaced by the central
+	# LoxBerry log level, so drop it on upgrade.
+	if grep -q '^DEBUG=' "$configfile"; then
+		sed -i '/^DEBUG=/d' "$configfile"
+		echo "<INFO> Removed obsolete bridge debug setting (now controlled by the log level)"
+	fi
+
 	if ! grep -q '^\[VZLOGGER\]' "$configfile"; then
 		cat >> "$configfile" <<'EOF'
 
 [VZLOGGER]
 LOCALPORT=18080
 UDPINTERVAL=5
-DEBUG=0
 VZLOGGERDEBUG=0
 LOGLEVEL=0
 EOF
@@ -82,10 +88,6 @@ EOF
 		if ! grep -q '^UDPINTERVAL=' "$configfile"; then
 			sed -i '/^\[VZLOGGER\]/a UDPINTERVAL=5' "$configfile"
 			echo "<INFO> Added default bridge update interval"
-		fi
-		if ! grep -q '^DEBUG=' "$configfile"; then
-			sed -i '/^\[VZLOGGER\]/a DEBUG=0' "$configfile"
-			echo "<INFO> Added default vzLogger debug setting"
 		fi
 		if ! grep -q '^VZLOGGERDEBUG=' "$configfile"; then
 			sed -i '/^\[VZLOGGER\]/a VZLOGGERDEBUG=0' "$configfile"

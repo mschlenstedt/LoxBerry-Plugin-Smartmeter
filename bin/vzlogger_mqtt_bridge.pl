@@ -10,6 +10,7 @@ use FindBin;
 use IO::Socket;
 use JSON::PP;
 use LoxBerry::System;
+use LoxBerry::Log;
 use lib $FindBin::Bin;
 use SmartMeterVZLoggerChannels qw(output_order_mapping ordered_output_names read_json);
 use SmartMeterVZLoggerBridge qw(parse_reading channel_mapping identifier_mapping clean_scalar_payload normalize_mapping_keys);
@@ -22,13 +23,13 @@ my $mapping_file = "$home/config/plugins/$psubfolder/vzlogger_channels.json";
 my $vzlogger_config_file = "$home/config/plugins/$psubfolder/vzlogger.conf";
 my $runtime_dir = "/var/run/shm/$psubfolder";
 my $plugin_log_dir = "$home/log/plugins/$psubfolder";
-my $log_file = "$plugin_log_dir/vzlogger_mqtt_bridge.log";
 my $pid_file = "$runtime_dir/vzlogger_mqtt_bridge.pid";
 my $foreground = grep { $_ eq "--foreground" } @ARGV;
 
 make_path($runtime_dir) if (!-d $runtime_dir);
 make_path($plugin_log_dir) if (!-d $plugin_log_dir);
 
+# Control-only invocations do not open a service log.
 if (grep { $_ eq "--stop" } @ARGV) {
 	stop_bridge();
 	exit 0;
@@ -38,8 +39,18 @@ if (grep { $_ eq "--status" } @ARGV) {
 	exit(bridge_running() ? 0 : 1);
 }
 
+# Each bridge start opens a fresh LoxBerry log session. The log level comes from
+# the plugin management widget (PLUGINDB_LOGLEVEL); log_maint.pl rotates old
+# files. LOG* functions act on this session.
+my $log = LoxBerry::Log->new(
+	name    => "bridge",
+	package => $psubfolder,
+);
+LOGSTART("MQTT bridge starting (PID $$)");
+
 if (!$foreground && bridge_running()) {
-	log_line("Bridge already running.");
+	LOGINF("Bridge already running.");
+	LOGEND("MQTT bridge stopping.");
 	exit 0;
 }
 
@@ -48,10 +59,12 @@ print $pid_fh "$$\n";
 close($pid_fh);
 
 $SIG{TERM} = sub {
+	LOGEND("MQTT bridge stopped.");
 	unlink($pid_file);
 	exit 0;
 };
 $SIG{INT} = sub {
+	LOGEND("MQTT bridge stopped.");
 	unlink($pid_file);
 	exit 0;
 };
@@ -66,7 +79,6 @@ my $base_topic = sanitize_topic(ref($expert_mqtt) eq "HASH" ? ($expert_mqtt->{to
 my $subscribe_topic = "$base_topic/vzlogger/#";
 my $update_interval = clean_number($plugin_cfg->param("VZLOGGER.UDPINTERVAL"), 5);
 my $send_udp = $plugin_cfg->param("MAIN.SENDUDP") ? 1 : 0;
-my $debug_enabled = ($plugin_cfg->param("VZLOGGER.DEBUG") || "0") eq "1";
 my $udp_port = clean_number($plugin_cfg->param("MAIN.UDPPORT"), 7000);
 my $mqtt = read_mqtt_settings();
 my %uuid_by_channel = channel_mapping($mapping);
@@ -74,7 +86,6 @@ my %uuid_by_identifier = identifier_mapping($mapping);
 my $output_order_by_serial = output_order_mapping($mapping);
 
 log_line("Starting MQTT bridge. Topic=$subscribe_topic Host=$mqtt->{host}:$mqtt->{port}");
-log_line("Debug logging is enabled.") if ($debug_enabled);
 debug_line("UDP output is disabled in plugin config.") if (!$send_udp);
 
 my @command = (
@@ -146,6 +157,7 @@ while (my $line = <$mqtt_fh>) {
 }
 
 log_line("mosquitto_sub ended.");
+LOGEND("MQTT bridge stopped.");
 unlink($pid_file);
 exit 0;
 
@@ -371,25 +383,10 @@ sub stop_bridge
 
 sub log_line
 {
-	my ($message) = @_;
-	bound_log_file($log_file, 2 * 1024 * 1024);
-	open(my $fh, ">>", $log_file) or return;
-	my ($sec, $min, $hour, $mday, $mon, $year) = localtime();
-	printf $fh "%04d-%02d-%02d %02d:%02d:%02d %s\n", $year + 1900, $mon + 1, $mday, $hour, $min, $sec, $message;
-	close($fh);
-}
-
-sub bound_log_file
-{
-	my ($file, $max_bytes) = @_;
-	return if (!-e $file || -s $file < $max_bytes);
-	unlink("$file.1") if (-e "$file.1");
-	rename($file, "$file.1");
+	LOGINF($_[0]);
 }
 
 sub debug_line
 {
-	my ($message) = @_;
-	return if (!$debug_enabled);
-	log_line("DEBUG $message");
+	LOGDEB($_[0]);
 }

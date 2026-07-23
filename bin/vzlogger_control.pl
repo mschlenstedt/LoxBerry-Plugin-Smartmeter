@@ -10,6 +10,7 @@ use File::Path qw(make_path);
 use File::Temp qw(tempdir);
 use JSON::PP;
 use LoxBerry::System;
+use LoxBerry::Log;
 use FindBin;
 use lib $FindBin::Bin;
 use SmartMeterVZLoggerExpert qw(read_text write_text_atomic update_expert_log_settings format_expert_validation);
@@ -27,7 +28,6 @@ my $runtime_dir = "/var/run/shm/$psubfolder";
 my $obis_watchdog_pid_file = "$runtime_dir/vzlogger_obis_watchdog.pid";
 my $obis_status_file = "$runtime_dir/vzlogger_obis_status.json";
 my $plugin_log_dir = "$home/log/plugins/$psubfolder";
-my $control_log_file = "$plugin_log_dir/vzlogger_control.log";
 my $vzlogger_log_file = "$plugin_log_dir/vzlogger.log";
 my $bridge_service = "smartmeter-ng-vzlogger-bridge";
 my $vzlogger_override_file = "/etc/systemd/system/vzlogger.service.d/smartmeter-ng.conf";
@@ -36,6 +36,16 @@ my $action = shift @ARGV || "status";
 make_path($runtime_dir) if (!-d $runtime_dir);
 make_path($plugin_log_dir) if (!-d $plugin_log_dir);
 chmod(0750, $runtime_dir);
+
+# Each control invocation opens a fresh LoxBerry log session (timestamped file,
+# rotated by log_maint.pl). The log level comes from PLUGINDB_LOGLEVEL, i.e. the
+# plugin management widget. LOG* functions act on this session.
+my $log = LoxBerry::Log->new(
+	name    => "control",
+	package => $psubfolder,
+);
+LOGSTART("control action=$action");
+
 my %mutating_action = map { $_ => 1 } qw(
 	generate apply apply-expert activate-vzlogger restart-vzlogger start-vzlogger stop-vzlogger
 	restart-bridge start-bridge stop-bridge disable-vzlogger
@@ -416,9 +426,11 @@ sub start_bridge
 	my $pid = fork();
 	die "Could not fork bridge process: $!\n" if (!defined($pid));
 	if ($pid == 0) {
+		# The bridge writes its own LoxBerry log session, so its standard streams
+		# are discarded in this fork fallback (the systemd unit is the normal path).
 		open STDIN, "</dev/null";
-		open STDOUT, ">>$home/log/plugins/$psubfolder/vzlogger_mqtt_bridge.log";
-		open STDERR, ">>$home/log/plugins/$psubfolder/vzlogger_mqtt_bridge.log";
+		open STDOUT, ">/dev/null";
+		open STDERR, ">/dev/null";
 		exec($^X, "$bindir/vzlogger_mqtt_bridge.pl");
 		exit 1;
 	}
@@ -889,8 +901,8 @@ sub create_debug_log
 	print_file($fh, "Plugin config", $plugin_config_file, 1);
 	print_file($fh, "Generated vzLogger config", $config_file, 1);
 	print_file($fh, "Channel mapping", $mapping_file, 0);
-	print_file($fh, "Control action log", $control_log_file, 0, 200);
-	print_file($fh, "Bridge log tail", "$home/log/plugins/$psubfolder/vzlogger_mqtt_bridge.log", 0, 200);
+	print_file($fh, "Control action log", latest_plugin_log("control"), 0, 200);
+	print_file($fh, "Bridge log tail", latest_plugin_log("bridge"), 0, 200);
 	print_loxberry_logs($fh, $debug_file);
 	print_runtime_cache($fh);
 	print_mqtt_capture($fh);
@@ -942,6 +954,10 @@ sub print_file
 {
 	my ($fh, $label, $file, $redact, $tail_lines) = @_;
 	print_section($fh, $label);
+	if (!defined($file) || $file eq "") {
+		print $fh "Not available\n";
+		return;
+	}
 	if (!-e $file) {
 		print $fh "Missing: $file\n";
 		return;
@@ -1105,14 +1121,17 @@ sub run_privileged
 
 sub log_control
 {
-	my ($message) = @_;
-	if (-e $control_log_file && -s $control_log_file >= 512 * 1024) {
-		unlink("$control_log_file.1") if (-e "$control_log_file.1");
-		rename($control_log_file, "$control_log_file.1");
-	}
-	open(my $fh, ">>", $control_log_file) or return;
-	print $fh timestamp() . " $message\n";
-	close($fh);
+	LOGINF($_[0]);
+}
+
+# Returns the newest LoxBerry log file for a given base name (e.g. "control",
+# "bridge"), or undef if none exists. Timestamped names are sorted lexically,
+# which matches chronological order for the LoxBerry high-resolution prefix.
+sub latest_plugin_log
+{
+	my ($name) = @_;
+	my @files = sort glob("$plugin_log_dir/*_$name.log");
+	return @files ? $files[-1] : undef;
 }
 
 sub message_exit
