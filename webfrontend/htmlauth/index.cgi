@@ -41,7 +41,6 @@ use SmartMeterVZLoggerChannels qw(parse_obis compose_obis normalize_obis default
 use SmartMeterVZLoggerExpert qw(read_text write_text_atomic validate_expert_text format_expert_validation localize_expert_validation build_expert_mapping update_expert_log_settings expert_configs_equal);
 use SmartMeterVZLoggerRuntime qw(acquire_config_lock promote_files_atomic);
 use SmartMeterVZLoggerConfig qw(protocol_for_meter normalized_meter_mode serial_mode clean_qos set_implementation_mode);
-use SmartMeterLegacyRuntime qw(initialize_legacy_heads acquire_legacy_fetch_lock synchronize_legacy_runtime remove_legacy_cronjobs);
 
 ##########################################################################
 # Variables
@@ -169,11 +168,9 @@ if( $q->{ajax} ) {
 
 } else {
 	
-	# Default is the active implementation. Explicit tab clicks pass form=...
 	$q->{form} = "vzlogger" if !$q->{form};
 
 	if ($q->{form} eq "vzlogger") { &form_vzlogger() }
-	elsif ($q->{form} eq "log") { &form_log() }
 
 	# Print the form
 	&form_print();
@@ -197,12 +194,7 @@ sub form_vzlogger
 		die "$lock_error\n" if (!$initialization_lock);
 		ensure_vzlogger_defaults();
 		ensure_head_defaults(@heads);
-		ensure_legacy_meter_state(@heads);
 		load_or_migrate_channel_document(@heads);
-	}
-	if ($initial_request && implementation_mode() eq "legacy") {
-		print $cgi->redirect(-url => "./index_legacy.cgi?form=legacy");
-		exit;
 	}
 
 	if ($q->{saveformdata}) {
@@ -234,8 +226,6 @@ sub form_vzlogger
 		} else {
 		my $implementation_before_save = implementation_mode();
 		my $replace_expert_runtime = !expert_mode_enabled() && expert_configuration_applied();
-		my $legacy_transition_lock = guard_vzlogger_activation($implementation_before_save);
-		local $ENV{SMARTMETER_LEGACY_LOCK_HELD} = "1" if ($legacy_transition_lock);
 		my $save_output = "";
 		if ($action =~ /\A(?:start|stop|restart)-(?:vzlogger|bridge)\z/) {
 			save_service_log_settings($action);
@@ -296,9 +286,7 @@ sub form_vzlogger
 	$template->param("IMPLEMENTATION" => $implementation);
 	$template->param("IMPLEMENTATION_SWITCH_VALUE" => ($implementation eq "vzlogger" ? "vzlogger" : "none"));
 	$template->param("VZLOGGER_IMPLEMENTATION_ACTIVE" => ($implementation eq "vzlogger"));
-	$template->param("LEGACY_IMPLEMENTATION_ACTIVE" => ($implementation eq "legacy"));
 	$template->param("READ" => $plugin_cfg->param("MAIN.READ") || 0);
-	$template->param("CRON" => $plugin_cfg->param("MAIN.CRON") || 5);
 	$template->param("SENDUDP" => $plugin_cfg->param("MAIN.SENDUDP") || 0);
 	$template->param("UDPPORT" => $plugin_cfg->param("MAIN.UDPPORT") || 7000);
 	$template->param("MQTTTOPIC" => $mqtttopic);
@@ -359,10 +347,10 @@ sub add_service_template_params
 	my $mqtt_enabled = effective_vzlogger_mqtt_enabled();
 	my $bridge_expected_active = $vzlogger_expected_active && $mqtt_enabled && (($plugin_cfg->param("MAIN.READ") || "0") eq "1");
 	my $vzlogger_state = service_state("vzlogger");
-	my $bridge_state = service_state("smartmeter-v2-vzlogger-bridge");
+	my $bridge_state = service_state("smartmeter-ng-vzlogger-bridge");
 
 	$template->param("VZLOGGER_SERVICE_STATUS" => service_summary("vzlogger"));
-	$template->param("BRIDGE_SERVICE_STATUS" => service_summary("smartmeter-v2-vzlogger-bridge"));
+	$template->param("BRIDGE_SERVICE_STATUS" => service_summary("smartmeter-ng-vzlogger-bridge"));
 	$template->param("BRIDGE_AVAILABILITY_HELP" => ($L{'VZLOGGER.BRIDGE_SERVICE_CONTROL_HELP'} || "Manual control of the SmartMeter bridge."));
 	$template->param("VZLOGGER_SERVICE_STATUS_CLASS" => service_status_class($vzlogger_state, $vzlogger_expected_active));
 	$template->param("BRIDGE_SERVICE_STATUS_CLASS" => service_status_class($bridge_state, $bridge_expected_active));
@@ -533,7 +521,7 @@ sub service_status_response
 		},
 		services => {
 			vzlogger => service_status_data("vzlogger", $vzlogger_expected, $vzlogger_startable),
-			bridge => service_status_data("smartmeter-v2-vzlogger-bridge", $bridge_expected, $bridge_startable),
+			bridge => service_status_data("smartmeter-ng-vzlogger-bridge", $bridge_expected, $bridge_startable),
 		},
 	};
 }
@@ -653,11 +641,8 @@ sub run_form_ajax_action
 
 	my @heads = detect_heads();
 	ensure_head_defaults(@heads);
-	ensure_legacy_meter_state(@heads);
 	my $implementation_before_save = implementation_mode();
 	my $replace_expert_runtime = !expert_mode_enabled() && expert_configuration_applied();
-	my $legacy_transition_lock = guard_vzlogger_activation($implementation_before_save);
-	local $ENV{SMARTMETER_LEGACY_LOCK_HELD} = "1" if ($legacy_transition_lock);
 	my $output = save_vzlogger_form(@heads);
 	my $exit = 0;
 
@@ -717,7 +702,6 @@ sub run_draft_validation_ajax
 		ensure_vzlogger_defaults();
 		my @heads = detect_heads();
 		ensure_head_defaults(@heads);
-		ensure_legacy_meter_state(@heads);
 		save_vzlogger_form("__draft__", @heads);
 		my $draft_channels = submitted_channel_document(@heads);
 		write_json_atomic("$draft_dir/vzlogger_channel_definitions.json", $draft_channels) if ($draft_channels);
@@ -892,7 +876,6 @@ sub ensure_vzlogger_defaults
 	};
 	$set_default->("MAIN.READ", "0", 0);
 	$set_default->("MAIN.IMPLEMENTATION", implementation_mode(), 1);
-	$set_default->("MAIN.CRON", "5", 1);
 	$set_default->("MAIN.SENDUDP", "0", 0);
 	$set_default->("MAIN.UDPPORT", "7000", 1);
 	$set_default->("MAIN.MQTTTOPIC", "smartmeter", 1);
@@ -1199,13 +1182,6 @@ sub ensure_head_defaults
 	$plugin_cfg->save if ($changed);
 }
 
-sub ensure_legacy_meter_state
-{
-	my (@heads) = @_;
-	my $changed = initialize_legacy_heads($plugin_cfg, @heads);
-	$plugin_cfg->save if ($changed);
-}
-
 sub save_vzlogger_form
 {
 	my $draft_only = (@_ && $_[0] eq "__draft__") ? shift : "";
@@ -1232,7 +1208,6 @@ sub save_vzlogger_form
 	$plugin_cfg->param("MAIN.READ", clean_config_value($q->{read}, qr/\A[01]\z/, defined($plugin_cfg->param("MAIN.READ")) ? $plugin_cfg->param("MAIN.READ") : "0"));
 	# Disabled form controls are not submitted. Preserve their saved values while
 	# meter reading is off instead of silently restoring defaults.
-	$plugin_cfg->param("MAIN.CRON", clean_config_value($q->{cron}, qr/\A(M|1|3|5|10|15|30|60)\z/, $plugin_cfg->param("MAIN.CRON") || "5"));
 	$plugin_cfg->param("MAIN.SENDUDP", clean_config_value($q->{sendudp}, qr/\A[01]\z/, $plugin_cfg->param("MAIN.SENDUDP") || "0"));
 	$plugin_cfg->param("MAIN.UDPPORT", clean_config_value($q->{udpport}, qr/\A\d+\z/, $plugin_cfg->param("MAIN.UDPPORT") || "7000"));
 	$plugin_cfg->param("MAIN.MQTTTOPIC", clean_config_value($q->{mqtttopic}, qr/\A[^#+]+\z/, $plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter"));
@@ -1311,8 +1286,6 @@ sub save_vzlogger_form
 		if (!$draft_only && $mode eq "user" && defined($q->{"$serial\_userjson"})) {
 			save_user_meter_source($serial, $q->{"$serial\_userjson"});
 		}
-		# Legacy keys remain as a rollback fallback. Structured definitions are the
-		# authoritative source and may contain duplicate identifiers.
 		unlink(pending_obis_channels_file($serial)) if (!$draft_only && ($q->{submitaction} || "") eq "apply" && -e pending_obis_channels_file($serial));
 		unlink(pending_meter_draft_file($serial)) if (!$draft_only && ($q->{submitaction} || "") eq "apply" && -e pending_meter_draft_file($serial));
 	}
@@ -1321,7 +1294,7 @@ sub save_vzlogger_form
 		my %removed_heads = map { $_ => 1 } config_list_values("VZLOGGER.REMOVEDHEADS");
 		foreach my $serial (@removed_serials) {
 			foreach my $key ($plugin_cfg->param()) {
-				next if ($key =~ /\A\Q$serial\E\.(?:NAME|SERIAL|DEVICE|LEGACY_.+)\z/);
+				next if ($key =~ /\A\Q$serial\E\.(?:NAME|SERIAL|DEVICE)\z/);
 				$plugin_cfg->delete($key) if ($key =~ /\A\Q$serial\E\./);
 			}
 			$removed_heads{$serial} = 1;
@@ -1778,13 +1751,6 @@ sub apply_selected_implementation
 sub apply_selected_implementation_result
 {
 	my ($activating_vzlogger, $previous_implementation, $replace_expert_runtime) = @_;
-	if (implementation_mode() eq "legacy") {
-		my ($output, $exit) = run_control_result("disable-vzlogger");
-		$output .= synchronize_legacy_runtime($lbhomedir, $lbpplugindir, $plugin_cfg);
-		return ($output, $exit);
-	}
-
-	remove_legacy_cronjobs($lbhomedir, $lbpplugindir);
 	return run_control_result("disable-vzlogger") if (implementation_mode() ne "vzlogger");
 	# A dormant standard configuration is normally reactivated unchanged. If the
 	# current runtime still is the explicitly disabled Expert draft, regenerate it
@@ -1800,16 +1766,11 @@ sub apply_selected_implementation_result
 sub rollback_failed_vzlogger_activation
 {
 	my ($previous_implementation) = @_;
-	$previous_implementation = "none" if (!defined($previous_implementation) || $previous_implementation !~ /\A(?:legacy|none)\z/);
+	$previous_implementation = "none";
 	set_implementation_mode($plugin_cfg, $previous_implementation);
 	$plugin_cfg->save;
 	my ($disable_output, $disable_exit) = run_control_result("disable-vzlogger");
 	my $output = "\nRestored implementation mode '$previous_implementation' after failed vzLogger activation.\n" . $disable_output;
-	if ($previous_implementation eq "legacy") {
-		$output .= synchronize_legacy_runtime($lbhomedir, $lbpplugindir, $plugin_cfg);
-	} else {
-		remove_legacy_cronjobs($lbhomedir, $lbpplugindir);
-	}
 	$output .= "Could not completely stop the partially activated vzLogger runtime during rollback.\n" if ($disable_exit != 0);
 	return $output;
 }
@@ -2328,16 +2289,6 @@ sub saved_implementation_mode
 {
 	my $saved = Config::Simple->new("$lbpconfigdir/smartmeter.cfg");
 	return $saved ? SmartMeterVZLoggerConfig::implementation_mode($saved) : "none";
-}
-
-sub guard_vzlogger_activation
-{
-	my ($current) = @_;
-	my $requested = (($q->{implementation_changed} || "") eq "1") ? ($q->{implementation} || "") : $current;
-	return undef if ($current eq "vzlogger" || $requested ne "vzlogger");
-	my ($lock, $error) = acquire_legacy_fetch_lock("/var/run/shm/$lbpplugindir");
-	die "$error Cannot activate vzLogger until Legacy polling has finished.\n" if (!$lock);
-	return $lock;
 }
 
 sub build_head_rows
@@ -2932,13 +2883,6 @@ sub udp_interval_options
 	} @options ];
 }
 
-sub form_log
-{
-	print $cgi->redirect(-url => "./logfiles.cgi");
-	exit;
-}
-
-
 ##########################################################################
 # Print Form
 ##########################################################################
@@ -2947,7 +2891,7 @@ sub form_print
 {
 	
 	# Template
-	my $title = $L{'COMMON.PLUGIN_TITLE'} || "Smartmeter v2";
+	my $title = $L{'COMMON.PLUGIN_TITLE'} || "Smartmeter-NG";
 	LoxBerry::Web::lbheader("$title V$version", "https://www.loxwiki.eu/x/mA-L", "");
 	print $template->output();
 	LoxBerry::Web::lbfooter();

@@ -1,4 +1,4 @@
-# SmartMeter v2 Documentation
+# Smartmeter-NG Documentation
 
 Choose your language:
 

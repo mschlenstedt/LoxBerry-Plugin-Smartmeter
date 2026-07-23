@@ -1,6 +1,6 @@
 # Developer Requirements
 
-This document records the product and engineering contracts that must remain true when SmartMeter v2 is changed. It consolidates decisions from the vzLogger migration plan, user guides, lifecycle tests, review findings, and project discussions. Detailed procedures remain in the linked specialist documents.
+This document records the product and engineering contracts that must remain true when Smartmeter-NG is changed. It consolidates decisions from the vzLogger migration plan, user guides, lifecycle tests, review findings, and project discussions. Detailed procedures remain in the linked specialist documents.
 
 ## Using Project History
 
@@ -13,21 +13,21 @@ This document records the product and engineering contracts that must remain tru
 
 - vzLogger is the standard implementation and is installed as an external apt package; it must not be bundled with the plugin.
 - vzLogger reads meters and publishes MQTT. The SmartMeter bridge consumes MQTT and provides the plugin HTTP cache and optional UDP output. The bridge must not read serial devices directly.
-- Legacy remains an independent, reversible fallback. Legacy and vzLogger must never run simultaneously; both may be inactive.
-- Switching configuration tabs must not switch the active implementation. Activation changes take effect only after an explicit save/apply action.
+- vzLogger is the only meter implementation. It may be inactive; the former Legacy Perl reader was removed and is only maintained in the `Version1` branch.
+- Activation changes take effect only after an explicit save/apply.
 - The existing LoxBerry plugin identity fields (`AUTHOR`, `PLUGIN.NAME`, and `PLUGIN.FOLDER`) are stable update identifiers and must not change.
 
 ## 2. Compatibility And Mode Switching
 
 - Existing `smartmeter.cfg`, MQTT topic structure, HTTP-cache keys, UDP value names, custom JSONC files, and generated-config locations are compatibility contracts. Change them only with an explicit migration and documented upgrade path.
-- A valid generated `vzlogger.conf` must survive Legacy activation, a fully inactive state, upgrades, and later vzLogger reactivation. Reactivation validates and reuses it; Legacy settings are migrated only when no valid generated configuration exists.
-- Legacy meter settings remain isolated in `LEGACY_*` values. Saving vzLogger must not alter the selected Legacy preset or manual serial settings.
-- Ordinary read-only page loads must not rewrite configuration files, cron entries, or services.
-- Meter or channel removal is staged in the browser and becomes persistent only on Save/Apply. Applying a meter removal also removes only that meter's owned sidecars, mappings, discovery/test artifacts, logs, and runtime cache.
+- A valid generated `vzlogger.conf` must survive a fully inactive state, upgrades, and later vzLogger reactivation.
+- Ordinary read-only page loads must not rewrite configuration files or services.
+- Meter or channel removal is staged in the browser and becomes persistent only on Save/Apply. Applying a meter removal also removes its runtime artifacts.
+
 
 ## 3. Save, Apply, And Service Safety
 
-- Every mutating CGI, CLI, Legacy, service, and lifecycle action uses the same non-blocking exclusive configuration lock. Status and other read-only actions stay lock-free. A busy action is rejected with an actionable message and no state change.
+- Every mutating CGI, CLI, service, and lifecycle action uses the same non-blocking exclusive configuration lock. Status and other read-only actions stay lock-free.
 - Generated runtime artifacts are created in a protected staging directory on the same filesystem, validated as one coherent set, and then promoted atomically with backups. Any promotion failure must roll back the complete set and preserve the last valid runtime configuration.
 - Submitted user settings may remain saved after a failed Apply so they can be corrected; invalid generated runtime files must never replace the active valid set.
 - Validate Config is non-mutating: it uses a temporary draft and must not change saved settings, generated files, custom meter sources, cron, or services.
@@ -35,22 +35,9 @@ This document records the product and engineering contracts that must remain tru
 - Start and Restart validate the existing generated configuration and change only the requested service activation and its dedicated log settings. They must not save unrelated form fields. Stop remains available for a running service even when configuration is invalid.
 - Service controls and lifecycle hooks must report the observed final service state, not only a successful command invocation.
 
-## 4. Legacy Contract And Validation
-
-- Legacy readers, parsers, and `sm_logger.pl` are functionally frozen. Do not add Legacy features or perform an object-oriented rewrite; make only compatibility, validation, security, or critical defect fixes.
-- A Legacy save is atomic: if any general value is invalid, reject the complete save before changing configuration, cron, or services, and identify the affected fields in German and English.
-- General Legacy inputs use these exact constraints:
-  - `IMPLEMENTATION`: `none|legacy`
-  - `READ`, `SENDUDP`, `SENDMQTT`: `0|1`
-  - `CRON`: `M|1|3|5|10|15|30|60`
-  - `UDPPORT`: `1..65535`
-  - `MQTTTOPIC`: 1–256 characters, without control characters or MQTT wildcards `+` and `#`
-  - meter selection: `0`, `manual`, or an installed template ID
-  - manual baud rates: `1..4000000`; timeout/delay: `0..3600`; data bits: `5..8`; stop bits: `1..2`; parity: `none|even|odd`
-
 ## 5. Meter And Channel Model
 
-- Legacy and vzLogger use one neutral meter-template catalog. Maintain meter models and serial defaults once. SML uses the operating/read baud rate; D0 retains separate initial and read baud rates.
+- The neutral meter-template catalog holds meter models and serial defaults once. SML uses the operating/reading baud rate.
 - The standard editor supports SML, D0, and OMS. Protocol-specific fields must not leak into generated objects for another protocol. Unsupported behavior must be reported rather than silently approximated.
 - Active vzLogger mode requires at least one active meter. A meter without channels may remain valid for discovery with a warning; a configuration without meters is valid only as a disabled state and must stop vzLogger/bridge and remove the plugin override.
 - OBIS discovery uses the reader's current browser settings, runs independently of the page request, survives navigation/reload, supports cancellation, and restores the regular vzLogger service afterwards. Discovered identifiers remain available for user selection; a restoration warning must not discard successful discovery results.
@@ -92,8 +79,8 @@ This document records the product and engineering contracts that must remain tru
 
 ## 9. Lifecycle And Ownership Boundaries
 
-- Fresh installation defaults to vzLogger mode, with the bridge and optional debug logs disabled. Installation over an existing version preserves the previous `vzlogger`, `legacy`, or `none` mode.
-- Applying vzLogger removes Legacy polling cron entries. Applying an enabled Legacy mode stops vzLogger/bridge and restores the configured polling cron. Upgrade success includes removing stale cron entries before restoring the intended polling state.
+- Fresh installation defaults to an inactive implementation, with the bridge and optional debug logs disabled. An upgrade over an existing installation preserves the user configuration.
+- Upgrades remove obsolete Legacy polling cron entries and turn a stored `IMPLEMENTATION=legacy` into `none`, so the user has to activate vzLogger explicitly.
 - The plugin-managed systemd drop-in points vzLogger to the plugin-owned configuration. Never overwrite an unrelated `/etc/vzlogger.conf`.
 - Uninstall removes plugin-owned services, drop-ins, runtime/cache artifacts, udev rules, apt source/key, and only packages proven by an ownership marker to have been introduced by the plugin.
 - Broader platform or meter support must not be claimed without matching target-system or representative-hardware evidence. Current limits remain in `KNOWN-ISSUES.md`.
@@ -113,7 +100,7 @@ This document records the product and engineering contracts that must remain tru
 
 - Regression tests belong under `tests/`, must be deterministic and reusable, and should test shared modules without requiring a live MQTT broker or production filesystem where possible.
 - Run the repository Perl/PHP/shell checks appropriate to changed files. Installed behavior must additionally be deployed and verified on the disposable LoxBerry according to `docs/test-device-workflow.md`.
-- UI changes require authenticated desktop and mobile browser checks on both vzLogger and Legacy pages. Lifecycle changes require the install/upgrade/uninstall evidence in `docs/lifecycle-test-expectations.md`.
+- UI changes require authenticated desktop and mobile browser checks on the vzLogger page. Lifecycle changes require validation against a real install log.
 - Preserve remote configuration and service state during tests. Verify checksums around failed, concurrent, or read-only actions.
 - Update both user guides and `CHANGELOG.md` when behavior, configuration, dependencies, compatibility, or upgrade steps change. Record confirmed limitations in `KNOWN-ISSUES.md` rather than presenting them as supported.
 - Local packages and official releases follow `docs/local-builds.md` and `docs/release-process.md`; suffixless release archives are produced only by the GitHub release workflow.

@@ -1,10 +1,10 @@
-# SmartMeter v2 for LoxBerry
+# Smartmeter-NG for LoxBerry
 
-SmartMeter v2 is a LoxBerry plugin for reading smart meters with optical I/R reading heads. It provides meter values through the plugin web frontend and can forward them by HTTP, UDP, and MQTT depending on the selected configuration.
+Smartmeter-NG is a LoxBerry plugin for reading smart meters with optical I/R reading heads. It provides meter values through the plugin web frontend and can forward them by HTTP, UDP, and MQTT depending on the selected configuration.
 
 The standard implementation uses the external `vzlogger` package. The plugin generates `vzlogger.conf`, enables vzLogger MQTT publishing, and maintains a local cache from the MQTT stream. HTTP and UDP output are served from this cache.
 
-The legacy reader remains available for existing installations and meter setups that are not covered by vzLogger yet.
+The former legacy Perl reader has been removed; it is only maintained in the `Version1` branch.
 
 ## Documentation
 

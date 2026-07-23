@@ -32,7 +32,7 @@ Smartmeter-V<version>
 Example:
 
 ```text
-Smartmeter-V2.0.0.10
+smartmeter-ng.0.0.10
 ```
 
 ## Checklist
@@ -43,7 +43,7 @@ Smartmeter-V2.0.0.10
    - Use the release asset URL for `ARCHIVEURL`, not the automatic GitHub source archive:
 
 ```text
-https://github.com/Miraculix2050/LoxBerry-Plugin-Smartmeter-v2/releases/download/Smartmeter-V<version>/Smartmeter-V<version>.zip
+https://github.com/mschlenstedt/LoxBerry-Plugin-Smartmeter/releases/download/Smartmeter-V<version>/Smartmeter-V<version>.zip
 ```
 
 4. Confirm user documentation is current for changed behavior, setup, configuration, dependencies, and upgrade steps. Check `docs/Readme.md`, `docs/User-Guide.de.md`, and `docs/User-Guide.en.md` when user-facing behavior changed.

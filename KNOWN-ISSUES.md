@@ -10,7 +10,7 @@ Confirmed coverage:
 - Debian 13/trixie
 - arm64
 - vzLogger 0.8.9 from the configured Cloudsmith repository
-- Upgrade, disable/reactivate, uninstall, fresh install, service operation, SML/MQTT data flow, calculated power, HTTP cache, and UDP delivery were verified with SmartMeter v2 2.0.0.32.
+- Upgrade, disable/reactivate, uninstall, fresh install, service operation, SML/MQTT data flow, calculated power, HTTP cache, and UDP delivery were verified with Smartmeter-NG 2.0.0.32.
 
 Limitation:
 
@@ -41,7 +41,7 @@ Limitation:
 Impact:
 
 - Untested templates may require manual serial settings or custom configuration.
-- `limited` templates may depend on Legacy pre-command or parser behavior that the standard vzLogger form cannot express.
+- `limited` templates may depend on pre-command or parser behavior that the standard vzLogger form cannot express.
 
 Follow-up:
 

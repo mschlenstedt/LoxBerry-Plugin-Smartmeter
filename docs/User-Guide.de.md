@@ -1,39 +1,39 @@
-# SmartMeter v2 Benutzerdokumentation
+# Smartmeter-NG Benutzerdokumentation
 
 ## Überblick
 
-SmartMeter v2 liest Zählerdaten auf dem LoxBerry. Die Standardimplementierung verwendet das externe Paket `vzlogger`. vzLogger liest den Zähler und veröffentlicht Werte per MQTT; das Plugin pflegt daraus einen lokalen Cache und stellt HTTP- und UDP-Ausgabe aus diesem Cache bereit.
+Smartmeter-NG liest Zählerdaten auf dem LoxBerry über das externe Paket `vzlogger`. vzLogger liest den Zähler und veröffentlicht Werte per MQTT; das Plugin pflegt daraus einen lokalen Cache und stellt HTTP- und UDP-Ausgabe aus diesem Cache bereit.
 
-Die Legacy-Implementierung bleibt weiterhin verfügbar. Verwende sie, wenn eine bestehende Installation auf dem alten Reader basiert oder wenn vzLogger eine benötigte Zählerkonfiguration noch nicht abdeckt.
+Die frühere Legacy-Implementierung mit eigenem Perl-Reader wurde entfernt. Sie wird nur noch im Branch `Version1` gepflegt.
 
 ## Voraussetzungen
 
-- LoxBerry mit installiertem SmartMeter v2 Plugin.
+- LoxBerry mit installiertem Smartmeter-NG Plugin.
 - Mindestens ein unterstützter optischer I/R-Lesekopf unter `/dev/serial/smartmeter/`.
 - Für die Standardimplementierung: installiertes `vzlogger`-Paket und `mosquitto-clients`. Beide Pakete werden während der Plugin-Installation über LoxBerry installiert.
 - Für MQTT-Transport: Die LoxBerry MQTT-Broker-Einstellungen müssen in LoxBerry verfügbar sein.
 
 ## Standardkonfiguration mit vzLogger
 
-Öffne SmartMeter v2 im LoxBerry-Webinterface und nutze die Seite **Smartmeter Konfiguration (vzLogger)**.
+Öffne Smartmeter-NG im LoxBerry-Webinterface.
 
-Die Tabs **Smartmeter Konfiguration (vzLogger)** und **Smartmeter Konfiguration (Legacy)** wechseln nur zwischen den Konfigurationsansichten. Ein weißes Badge mit grünem Häkchen markiert die aktive Implementierung, ein weißes Badge mit dunkelgrauem Minus eine inaktive. Legacy und vzLogger können nicht gleichzeitig aktiv sein, dürfen aber beide inaktiv sein. Das Einschalten einer Implementierung deaktiviert beim Speichern die andere; das Ausschalten aktiviert die andere nicht automatisch. Der Zustand wird erst beim Speichern angewendet. Nach einer Änderung zeigen die Aktiv-Schalter von vzLogger, SmartMeter-Bridge und Legacy deshalb den Hinweis **Änderung noch nicht gespeichert**.
+Ein weißes Badge mit grünem Häkchen markiert die aktive Implementierung, ein weißes Badge mit dunkelgrauem Minus eine inaktive. Der Zustand wird erst beim Speichern angewendet. Nach einer Änderung zeigen die Aktiv-Schalter von vzLogger und SmartMeter-Bridge deshalb den Hinweis **Änderung noch nicht gespeichert**.
 
-Wähle oben bei **Implementierung** den Modus **vzLogger**. Beim Speichern entfernt das Plugin die Legacy-Cronjobs, damit nicht beide Reader parallel laufen.
+Wähle oben bei **Implementierung** den Modus **vzLogger**, um das Auslesen zu aktivieren.
 
-Beim Wechsel zwischen den Implementierungen bleibt eine bereits vorhandene gültige `vzlogger.conf` erhalten. Das Aktivieren oder Deaktivieren von Legacy und der Zustand, in dem beide Implementierungen inaktiv sind, überschreiben diese Datei nicht. Wird vzLogger später wieder aktiviert, validiert und verwendet das Plugin die bestehende Konfiguration unverändert. Nur wenn keine gültige erzeugte vzLogger-Konfiguration vorhanden ist, werden die aktuellen Legacy-/Formwerte einmalig in eine neue `vzlogger.conf` migriert. Ein normales **Speichern und anwenden** innerhalb des bereits aktiven vzLogger-Modus erzeugt die Datei dagegen weiterhin bewusst aus den angezeigten vzLogger-Einstellungen neu.
+Eine bereits vorhandene gültige `vzlogger.conf` bleibt beim Deaktivieren und erneuten Aktivieren erhalten und wird unverändert weiterverwendet. Nur wenn keine gültige erzeugte vzLogger-Konfiguration vorhanden ist, wird sie einmalig aus den aktuellen Formwerten erzeugt. Ein normales **Speichern und anwenden** erzeugt die Datei dagegen weiterhin bewusst aus den angezeigten vzLogger-Einstellungen neu.
 
 Konfigurations- und Dienstaktionen werden serialisiert. Läuft bereits eine Aktion, wird eine weitere Anfrage ohne Änderungen an Dateien oder Diensten abgewiesen. **Speichern und anwenden** erzeugt und prüft zunächst einen geschützten Staging-Satz; erst danach werden `vzlogger.conf` und Channel-Mapping ersetzt. Schlägt Prüfung oder Übernahme fehl, bleiben die letzten gültigen Laufzeitdateien erhalten, während die eingegebenen Einstellungen zur Korrektur gespeichert bleiben.
 
 Die benutzerdefinierte JSONC-Quelle bleibt unverändert. Fehlende Channel-UUIDs werden intern in einer versionierten Datei `vzlogger_user_channel_uuids_<lesekopf>.json` gespeichert. Bei der ersten Migration bleiben bisher erzeugte UUIDs erhalten; unveränderte Channels behalten ihre UUID auch nach einer Umordnung. Wenn die Identität zusätzlich inhaltliche Änderungen am Channel überstehen muss, ist eine explizite UUID anzugeben.
 
-Auch die Legacy-Zählerkonfiguration bleibt unabhängig erhalten. Zählerauswahl, manuelles Protokoll, Baudraten, Timeout, Delay, Handshake, Datenbits, Stoppbits, Parität und CRC werden intern in eigenen `LEGACY_*`-Schlüsseln gespeichert. Beim ersten Aufruf nach dem Update übernimmt das Plugin vorhandene Legacy-Werte einmalig in diesen Bereich. Danach verändert das Speichern einer vzLogger-Konfiguration diese Legacy-Werte nicht mehr. Beim Zurückschalten auf Legacy verwendet sowohl die Oberfläche als auch der Legacy-Abfrageprozess wieder die unveränderten Legacy-Einstellungen.
+
 
 ### Paketinstallation
 
 Das Plugin richtet während der Installation bzw. beim Upgrade die Volkszaehler/Cloudsmith apt-Quelle ein. LoxBerry installiert danach `vzlogger` und `mosquitto-clients` über die normale `dpkg/apt`-Paketliste des Plugins. Wenn `vzlogger` bereits installiert ist, bleibt die bestehende Paketinstallation erhalten und wird durch apt auf die verfügbare aktuelle Version gebracht.
 
-Nach der Installation stoppt und deaktiviert das Plugin den `vzlogger`-Dienst wieder, solange Legacy aktiv ist. vzLogger wird mit **Speichern und anwenden** im vzLogger-Modus gestartet; die MQTT-Bridge kann unabhaengig davon deaktiviert bleiben.
+Nach der Installation bleibt der `vzlogger`-Dienst gestoppt und deaktiviert, solange das Auslesen nicht aktiviert ist. vzLogger wird mit **Speichern und anwenden** im vzLogger-Modus gestartet; die MQTT-Bridge kann unabhängig davon deaktiviert bleiben.
 
 ### Zählereinrichtung
 
@@ -49,7 +49,7 @@ Für SML, D0 und OMS können außerdem die allgemeinen Meter-Parameter `enabled`
 
 Nach der Auswahl von SML oder D0 steht **Aus Vorlage initialisieren** zur Verfügung. Das Dropdown zeigt nur zum gewählten Protokoll passende Zählermodelle. Eine SML-Vorlage setzt ausschließlich Baudrate und seriellen Modus. Eine D0-Vorlage setzt die anfängliche Kommunikationsbaudrate, die Lesebaudrate, den seriellen Modus und das Lese-Timeout. Name, Aktivierung, Gerät, Intervalle, Sequenzen, OBIS-Kanäle und alle weiteren Meter-Einstellungen bleiben unverändert. Die übernommenen Werte sind zunächst nur im Browser geändert und müssen mit **Speichern und anwenden** gespeichert werden. Bei Zählermodellen, deren frühere Implementierung zusätzliche Sondersequenzen verwendet, weist die Oberfläche darauf hin, dass nur die verfügbaren Basiswerte übernommen werden.
 
-Legacy und vzLogger verwenden denselben zentralen Zählervorlagenkatalog. Darin sind die Baudraten neutral als anfängliche Kommunikationsbaudrate und Betriebs-/Lesebaudrate hinterlegt. Legacy bildet diese Werte auf `STARTBAUDRATE` und `BAUDRATE` ab. Bei vzLogger verwendet SML die Betriebs-/Lesebaudrate als `baudrate`; D0 verwendet die anfängliche Kommunikationsbaudrate als `baudrate` und die Lesebaudrate als `baudrate_read`. Zählermodelle, serielle Einstellungen und Legacy-Sondersequenzen müssen dadurch nur noch an einer Stelle gepflegt werden.
+Der zentrale Zählervorlagenkatalog enthält die Baudraten und Protokolleinstellungen der unterstützten Zähler.
 
 **Benutzerdefiniert (JSON)** ist nur der GUI-Modus. Der Editor enthält genau ein vollständiges vzLogger-Meter-Objekt; dessen echtes `protocol`, beispielsweise `exec` oder `s0`, muss im Objekt stehen. Root-Sektionen wie `meters`, `mqtt` oder `local` sind nicht erlaubt. Die Eingabe wird mit Kommentaren und Formatierung unverändert als `vzlogger_meter_<lesekopf>.jsonc` gespeichert (maximal 64 KiB). Für `vzlogger.conf` werden Kommentare entfernt und gültiges JSON erzeugt. Meter-Defaults werden dabei nicht ergänzt. Nur innerhalb vorhandener `channels` ergänzt das Plugin eine fehlende stabile UUID und ein fehlendes `api` mit `"null"`; die JSONC-Quelldatei bleibt unverändert.
 
@@ -69,7 +69,7 @@ Der Bridge-Service fuer HTTP-Cache und UDP ist optional und bei Neuinstallatione
 
 In der mobilen vzLogger-Ansicht stehen Einstellungsname und Eingabefeld als zusammengehörige Gruppe enger beieinander; Hilfstexte sind grau und durch eine dezente Linie abgesetzt, danach folgt ein größerer Abstand zur nächsten Einstellung. Textfelder, Auswahllisten und Schalter beginnen einheitlich an derselben linken Kante; dies gilt auch innerhalb der Konfigurationsgruppen auf dem Desktop.
 
-Pro Lesekopf verwaltet der Editor jede Channel-Instanz mit Aktivierung, OBIS-Identifier, Herkunft, API und optionaler SmartMeter-Ausgabe. Die Channel-Karten nutzen die gesamte Breite des aufgeklappten Lesekopfbereichs; auf Smartphones bleiben Konfigurationsbereiche, Collapsibles, Tabellen und Eingabefelder innerhalb der verfügbaren Displaybreite. Nur der tatsächlich geöffnete Einstellungsinhalt wird durch einen sehr hellen pastellgelben Hintergrund und einen feinen Rand hervorgehoben. Kurze, dauerhaft sichtbare Hilfstexte stehen direkt unter den allgemeinen und API-spezifischen Eingabefeldern. Beim Ändern eines Feldes bleibt der Offen-/Geschlossen-Zustand der erweiterten Einstellungen je Channel erhalten. Der interne OBIS-Katalog zeigt einen deutschen oder englischen Kurznamen, Langbeschreibung, erwartete Einheit und eine fachliche Kategorie; bei unbekannten oder herstellerspezifischen Codes bleibt der Channel vollständig konfigurierbar und die A–F-Gruppen werden lesbar zerlegt. Ein eigener fachlicher Anzeigename überschreibt nur die Darstellung. Er wird ebenso wenig wie der technische **Ausgabeschlüssel (Cache/UDP)** in `vzlogger.conf` geschrieben, denn vzLogger kennt keinen allgemeinen Channel-Namen. Neue Ausgabeschlüssel werden unabhängig von der Legacy-Implementierung aus technischen Metadaten des OBIS-Katalogs als `<Klar_Name>_OBIS_<OBIS-Kurzcode>` vorbelegt, beispielsweise `Delivery_Total_OBIS_2.8.0`; ein vorhandener Speicherindex bleibt wie in `Delivery_Total_OBIS_2.8.0*5` sichtbar. Bereits gespeicherte Schlüssel werden nicht umbenannt. Der Schlüssel ist die einzige über HTTP-Cache und UDP veröffentlichte Kennung, kann geändert werden und muss pro Lesekopf unter aktiven Plugin-Ausgaben ohne Beachtung der Groß-/Kleinschreibung eindeutig sein. Zulässig sind 1 bis 64 Buchstaben, Ziffern, Leerzeichen sowie `_ # | ( ) [ ] / ' % $ ! . * -`; `:` und `;` bleiben als Cache-/UDP-Trennzeichen ausgeschlossen. Browser- und Backend-Fehler nennen das geforderte Format vollständig.
+Pro Lesekopf verwaltet der Editor jede Channel-Instanz mit Aktivierung, OBIS-Identifier, Herkunft, API und optionaler SmartMeter-Ausgabe. Die Channel-Karten nutzen die gesamte Breite des aufgeklappten Lesekopfbereichs; auf Smartphones bleiben Konfigurationsbereiche, Collapsibles, Tabellen und Eingabefelder innerhalb der verfügbaren Displaybreite. Nur der tatsächlich geöffnete Einstellungsinhalt wird durch einen sehr hellen pastellgelben Hintergrund und einen feinen Rand hervorgehoben. Kurze, dauerhaft sichtbare Hilfstexte stehen direkt unter den allgemeinen und API-spezifischen Eingabefeldern. Beim Ändern eines Feldes bleibt der Offen-/Geschlossen-Zustand der erweiterten Einstellungen je Channel erhalten. Der interne OBIS-Katalog zeigt einen deutschen oder englischen Kurznamen, Langbeschreibung, erwartete Einheit und eine fachliche Kategorie; bei unbekannten oder herstellerspezifischen Codes bleibt der Channel vollständig konfigurierbar und die A–F-Gruppen werden lesbar zerlegt. Ein eigener fachlicher Anzeigename überschreibt nur die Darstellung. Er wird ebenso wenig wie der technische **Ausgabeschlüssel (Cache/UDP)** in `vzlogger.conf` geschrieben, denn vzLogger kennt keinen allgemeinen Channel-Namen. Neue Ausgabeschlüssel werden aus technischen Metadaten des OBIS-Katalogs als `<Klar_Name>_OBIS_<OBIS-Kurzcode>` vorbelegt, beispielsweise `Delivery_Total_OBIS_2.8.0`; ein vorhandener Speicherindex bleibt wie in `Delivery_Total_OBIS_2.8.0*5` sichtbar. Bereits gespeicherte Schlüssel werden nicht umbenannt. Der Schlüssel ist die einzige über HTTP-Cache und UDP veröffentlichte Kennung, kann geändert werden und muss pro Lesekopf unter aktiven Plugin-Ausgaben ohne Beachtung der Groß-/Kleinschreibung eindeutig sein. Zulässig sind 1 bis 64 Buchstaben, Ziffern, Leerzeichen sowie `_ # | ( ) [ ] / ' % $ ! . * -`; `:` und `;` bleiben als Cache-/UDP-Trennzeichen ausgeschlossen. Browser- und Backend-Fehler nennen das geforderte Format vollständig.
 
 Jede Channel-Zeile zeigt den aktuell angewendeten vzLogger-/MQTT-DATA-Index als **Kanal N**. Die Nummer wird aus der erzeugten `vzlogger.conf` gelesen und entspricht damit der Kanalnummer auf der Live-Daten-Seite; nicht angewendete oder inaktive Definitionen erscheinen als **Kanal –**. Im Kopf der erweiterten Einstellungen steht zusätzlich die persistente UUID in Grau. Nach erfolgreichem **Speichern und anwenden** aktualisiert die Seite die angewendeten Nummern ohne Neuladen.
 
@@ -81,11 +81,11 @@ Die APIs schalten ausschließlich ihre eigenen Parameter frei. `null` besitzt ke
 
 ### Anwenden
 
-Mit **Speichern und anwenden** wird die Konfiguration erzeugt und geprüft. Das Plugin richtet fuer den `vzlogger`-Dienst einen systemd-Drop-in ein, der vzLogger direkt mit `/opt/loxberry/config/plugins/smartmeter-v2/vzlogger.conf` startet. Danach wird der Dienst fuer den Start nach einem LoxBerry-Neustart aktiviert und neu gestartet. Wenn **Bridge-Service aktiv** eingeschaltet ist, wird zusätzlich die MQTT-Bridge als systemd-Service installiert und gestartet; andernfalls wird nur die Bridge gestoppt.
+Mit **Speichern und anwenden** wird die Konfiguration erzeugt und geprüft. Das Plugin richtet fuer den `vzlogger`-Dienst einen systemd-Drop-in ein, der vzLogger direkt mit `/opt/loxberry/config/plugins/smartmeter-ng/vzlogger.conf` startet. Danach wird der Dienst fuer den Start nach einem LoxBerry-Neustart aktiviert und neu gestartet. Wenn **Bridge-Service aktiv** eingeschaltet ist, wird zusätzlich die MQTT-Bridge als systemd-Service installiert und gestartet; andernfalls wird nur die Bridge gestoppt.
 
 Die erzeugte `vzlogger.conf` ordnet Sektionen und Parameter entsprechend der vzLogger-Dokumentation an. Die Root-Parameter beginnen mit `retry`, `verbosity` und `log`; anschließend folgen `local`, `mqtt` und `meters` mit jeweils fester Parameterreihenfolge.
 
-Wenn der Legacy-Modus aktiv ist, stoppt das Anwenden vzLogger und die Bridge und entfernt den Plugin-Drop-in wieder. Eine fremde `/etc/vzlogger.conf` wird dabei nicht veraendert.
+
 
 ### Expert Mode
 
@@ -97,7 +97,7 @@ Die Bridge liest MQTT-Verbindung und Topic aus der gültigen, übernommenen Expe
 
 ### Dienststeuerung
 
-Die vzLogger-Seite zeigt oben im Bereich **Betrieb** zwei getrennte Dienst-Panels. Das erste Panel steuert den eigentlichen `vzlogger`-Dienst und enthält Status, Start/Stop/Restart, Log, Debug-Log, Log-Level und Live-Daten. Start, Stop und Restart besitzen jeweils einen eigenen Tooltip; beim automatischen Wechsel zwischen Start und Stop wechselt damit auch der angezeigte Hinweis. Die Aktionshinweise für diese Dienstschalter, die Lesekopf-Suche, die OBIS-Suche und **Generierte Konfiguration anzeigen** stehen zusätzlich in der rechten Hilfsspalte. **Generierte Konfiguration anzeigen** steht unten direkt vor dem Pfad zur erzeugten Konfiguration und öffnet `/opt/loxberry/config/plugins/smartmeter-v2/vzlogger.conf` schreibgeschützt und mit Zeilennummern in einem neuen Browser-Tab; `pass` und `keypass` werden dabei maskiert. Das zweite Panel steuert die **SmartMeter-Bridge**, einen Plugin-Zusatzdienst für HTTP-Cache und UDP; dessen Debug-Log-Schalter steht direkt neben der Loganzeige. Die Bridge-Einstellungen können im Formular vorbereitet werden; Start und Restart werden jedoch erst nach erfolgreichem **Speichern und anwenden** der vzLogger- und Bridge-Aktivierung freigegeben. Alle Bridge-Einstellungen einschließlich HTTP-Cache-Status werden erst bei aktiver Bridge freigegeben; der UDP-Port benötigt zusätzlich **UDP senden**. Stop bleibt für einen bereits laufenden Dienst verfügbar. Der Offen-/Geschlossen-Zustand aller aufklappbaren Bereiche wird lokal im Browser gespeichert und nach einem manuellen Reload wiederhergestellt.
+Die vzLogger-Seite zeigt oben im Bereich **Betrieb** zwei getrennte Dienst-Panels. Das erste Panel steuert den eigentlichen `vzlogger`-Dienst und enthält Status, Start/Stop/Restart, Log, Debug-Log, Log-Level und Live-Daten. Start, Stop und Restart besitzen jeweils einen eigenen Tooltip; beim automatischen Wechsel zwischen Start und Stop wechselt damit auch der angezeigte Hinweis. Die Aktionshinweise für diese Dienstschalter, die Lesekopf-Suche, die OBIS-Suche und **Generierte Konfiguration anzeigen** stehen zusätzlich in der rechten Hilfsspalte. **Generierte Konfiguration anzeigen** steht unten direkt vor dem Pfad zur erzeugten Konfiguration und öffnet `/opt/loxberry/config/plugins/smartmeter-ng/vzlogger.conf` schreibgeschützt und mit Zeilennummern in einem neuen Browser-Tab; `pass` und `keypass` werden dabei maskiert. Das zweite Panel steuert die **SmartMeter-Bridge**, einen Plugin-Zusatzdienst für HTTP-Cache und UDP; dessen Debug-Log-Schalter steht direkt neben der Loganzeige. Die Bridge-Einstellungen können im Formular vorbereitet werden; Start und Restart werden jedoch erst nach erfolgreichem **Speichern und anwenden** der vzLogger- und Bridge-Aktivierung freigegeben. Alle Bridge-Einstellungen einschließlich HTTP-Cache-Status werden erst bei aktiver Bridge freigegeben; der UDP-Port benötigt zusätzlich **UDP senden**. Stop bleibt für einen bereits laufenden Dienst verfügbar. Der Offen-/Geschlossen-Zustand aller aufklappbaren Bereiche wird lokal im Browser gespeichert und nach einem manuellen Reload wiederhergestellt.
 
 Die Dienstzustaende werden im sichtbaren Browser-Tab alle drei Sekunden aktualisiert. Waehrend Start/Stop/Restart pausiert dieses Polling; ein Overlay benennt die laufende Aktion, und ihre AJAX-Antwort aktualisiert den echten Dienststatus direkt nach Abschluss. Bei Erfolg schliesst das Overlay automatisch. Dauert die Aktion laenger als 15 Sekunden, weist das Overlay darauf hin. **Ausblenden** schliesst nur das Overlay, waehrend der bereits gestartete Systemvorgang im Hintergrund weiterlaeuft; ein Fehler oeffnet das Overlay wieder und kann mit **Schliessen** bestaetigt werden. Start/Stop/Restart laufen ohne Seiten-Reload. Start/Restart werden erst freigegeben, wenn die zugehoerige Aktivierung erfolgreich mit **Speichern und anwenden** gespeichert wurde und eine gueltige erzeugte Konfiguration vorhanden ist; fuer die Bridge muss MQTT zusaetzlich gespeichert und in der erzeugten `vzlogger.conf` aktiv sein. Die Dienstschalter führen selbst keinen Implementierungswechsel durch. Beim vzLogger werden außerdem Debug-Log und Log-Level dauerhaft gespeichert und in der vorhandenen `vzlogger.conf` aktualisiert, bei der Bridge nur ihr Debug-Log-Schalter. Andere noch nicht gespeicherte Eingaben bleiben im Browser erhalten und werden erst mit **Speichern und anwenden** uebernommen. Stop bleibt bei einem laufenden Dienst unabhaengig von Aktiv-Schaltern und Konfigurationsfehlern verfuegbar. Start/Restart pruefen die vorhandene Konfiguration, erzeugen sie aber nicht neu; fehlt sie oder ist sie ungueltig, muss zuerst **Speichern und anwenden** ausgefuehrt werden. **Live-Daten (JSON) öffnen** ruft den integrierten vzLogger-HTTP-Dienst auf; `/` liefert wegen der aktivierten Indexfunktion alle konfigurierten Kanäle, `/<UUID>` einen einzelnen Kanal.
 
@@ -121,12 +121,12 @@ Verlauf und Sitzungskennzahlen existieren nur im Arbeitsspeicher des Tabs und be
 
 Wenn der Zaehler keinen Momentanleistungswert liefert, berechnet die MQTT-Bridge zusaetzlich `Consumption_CalculatedPower_OBIS_1.99.0` aus `1.8.0` und `Delivery_CalculatedPower_OBIS_2.99.0` aus `2.8.0`, sobald zwei unterschiedliche Zaehlerstaende vorliegen. Die Einheit folgt der Einheit des vom Zaehler gelieferten Zaehlerstands pro Stunde.
 
-Das Bridge-Log liegt unter `/opt/loxberry/log/plugins/smartmeter-v2/vzlogger_mqtt_bridge.log` und wird bei 2 MB rotiert. Das Control-Log liegt unter `/opt/loxberry/log/plugins/smartmeter-v2/vzlogger_control.log`, wird bei 512 KB rotiert und kann über **Control-Log anzeigen** direkt unter den beiden Dienstbereichen geöffnet werden. Erfolgreiche Start-, Stop- und Restart-Aktionen werden kurz grün bestätigt; Warnungen und Fehler bleiben mit ihren Details im Aktionsfenster geöffnet. Apply- und Diagnose-Logs werden ebenfalls im Plugin-Logverzeichnis abgelegt; von `vzlogger_debug_*.log` bleiben die letzten fuenf Dateien erhalten. Das separate vzLogger-Debug-Log `/opt/loxberry/log/plugins/smartmeter-v2/vzlogger.log` wird nur bei aktivierter vzLogger-Debugoption geschrieben. Im Normalbetrieb schreibt vzLogger kein Dateilog.
+Das Bridge-Log liegt unter `/opt/loxberry/log/plugins/smartmeter-ng/vzlogger_mqtt_bridge.log` und wird bei 2 MB rotiert. Das Control-Log liegt unter `/opt/loxberry/log/plugins/smartmeter-ng/vzlogger_control.log`, wird bei 512 KB rotiert und kann über **Control-Log anzeigen** direkt unter den beiden Dienstbereichen geöffnet werden. Erfolgreiche Start-, Stop- und Restart-Aktionen werden kurz grün bestätigt; Warnungen und Fehler bleiben mit ihren Details im Aktionsfenster geöffnet. Apply- und Diagnose-Logs werden ebenfalls im Plugin-Logverzeichnis abgelegt; von `vzlogger_debug_*.log` bleiben die letzten fuenf Dateien erhalten. Das separate vzLogger-Debug-Log `/opt/loxberry/log/plugins/smartmeter-ng/vzlogger.log` wird nur bei aktivierter vzLogger-Debugoption geschrieben. Im Normalbetrieb schreibt vzLogger kein Dateilog.
 
 Der Service heißt:
 
 ```text
-smartmeter-v2-vzlogger-bridge
+smartmeter-ng-vzlogger-bridge
 ```
 
 ## MQTT-, HTTP- und UDP-Datenfluss
@@ -143,7 +143,7 @@ Die MQTT-Bridge abonniert:
 <Basis-Topic>/vzlogger/#
 ```
 
-Die Bridge sammelt erkannte vzLogger-Nachrichten im Arbeitsspeicher und schreibt sie im Aktualisierungsintervall als Legacy-kompatible `.data`-Cachedateien:
+Die Bridge sammelt erkannte vzLogger-Nachrichten im Arbeitsspeicher und schreibt sie im Aktualisierungsintervall als `.data`-Cachedateien:
 
 ```text
 /var/run/shm/<Plugin-Ordner>/
@@ -168,48 +168,6 @@ Mit **Debug-Log erstellen** wird ein Diagnose-Log im Plugin-Logverzeichnis erzeu
 - begrenzten MQTT-Mitschnitt von `<Basis-Topic>/vzlogger/#`, wenn `timeout` und `mosquitto_sub` verfügbar sind
 
 Dieses Debug-Log enthält die Informationen, die benötigt werden, um das reale vzLogger-MQTT-Topic- und Payload-Format zu prüfen und den MQTT-Parser final anzupassen.
-
-## Legacy-Konfiguration
-
-Auch in der mobilen Legacy-Ansicht sind Einstellungsname und Eingabefeld enger gruppiert; Hilfstexte werden grau mit dezenter Trennlinie dargestellt und lassen mehr Abstand zur nächsten Einstellung. Die unterschiedlichen Eingabetypen sind horizontal einheitlich ausgerichtet.
-
-Die Legacy-Implementierung bleibt über **Smartmeter Konfiguration (Legacy)** verfügbar. Sie unterstützt optische I/R-Leseköpfe unter `/dev/serial/smartmeter/` und kann Zähler weiterhin mit den älteren SmartMeter-Skripten zyklisch auslesen. Auf Smartphones werden allgemeine Einstellungen, Zählerfelder, manuelle serielle Einstellungen und Hilfstexte untereinander angeordnet; Auswahl- und Eingabefelder bleiben innerhalb der verfügbaren Displaybreite. Die beiden Implementierungs-Tabs behalten auch bei umgebrochenen Beschriftungen dieselbe Höhe.
-
-Legacy bleibt eine unterstützte Ausweichlösung für bestehende Installationen und Zählerkonfigurationen, die vzLogger nicht abdeckt. Steht der Schalter **Aktiv** auf Aus, sind alle darunterliegenden Legacy-Aktionen und Einstellungen deaktiviert; Implementierungs-Tabs, Aktivierungsschalter, Abbrechen und Speichern bleiben verfügbar. Beim Einschalten werden die erhaltenen Einstellungen sofort bedienbar, während der Tab-Status bis zum erfolgreichen Speichern weiterhin den zuletzt gespeicherten Modus zeigt.
-
-Bei Auswahl einer Zählervorlage zeigt der weiterhin deaktivierte Bereich **Manuelle Einstellung** die tatsächlich von der Vorlage verwendeten Werte. Diese Vorschau überschreibt die gespeicherte manuelle Konfiguration nicht. Nach erneuter Auswahl von **Manuelle Konfiguration** werden deshalb wieder die zuvor gespeicherten manuellen Werte angezeigt.
-
-Beim Aktivieren und Speichern der Legacy-Seite setzt das Plugin den Modus auf **Legacy**, stoppt vzLogger und die MQTT-Bridge und stellt den Legacy-Cronjob wieder her, wenn **Zähler lesen** aktiviert ist. Wird Legacy ausgeschaltet und gespeichert, bleibt auch vzLogger inaktiv, bis es ausdrücklich auf seiner eigenen Seite aktiviert und gespeichert wird.
-
-Eine manuelle Abfrage darf bei ausgeschaltetem zyklischem Lesen verwendet werden, jedoch nur, wenn Legacy gespeichert aktiv und der `vzlogger`-Dienst tatsächlich gestoppt ist. **Zähler manuell abfragen** bleibt während eines noch nicht gespeicherten Wechsels deshalb deaktiviert; CGI und Abfrageprozess prüfen dieselben Bedingungen erneut. Das Aktivieren oder Starten von vzLogger wird abgelehnt, solange eine Legacy-Abfrage den Lesekopf verwendet. **Cache löschen** entfernt ausschließlich Legacy-Daten-, Dump- und Logdateien; Konfigurationssperren und der vzLogger-Erkennungs-/Laufzeitstatus bleiben erhalten.
-
-Der Legacy-Pfad kann Werte über mehrere Ausgänge bereitstellen:
-
-- HTTP: Werte können über das Plugin-Webfrontend gelesen werden.
-- UDP: Werte werden an alle konfigurierten Miniservers gesendet.
-- MQTT: Werte werden über das LoxBerry MQTT Gateway veröffentlicht.
-
-Für Legacy-MQTT kann das MQTT-Basis-Topic in den Plugin-Einstellungen gesetzt werden.
-
-Standard:
-
-```text
-smartmeter
-```
-
-Topic-Struktur:
-
-```text
-<Basis-Topic>/<Zähler>/<WertName>
-```
-
-Beispiel:
-
-```text
-smartmeter/ABC123/Consumption_Total_OBIS_1.8.0
-```
-
-Der Legacy-MQTT-Payload enthält nur den Wert. Die Nachrichten werden mit Retain-Flag veröffentlicht.
 
 ## Zählerwerte
 
@@ -244,15 +202,6 @@ Prüfe folgende Punkte:
 
 Prüfe im Bereich **HTTP-Cache**, ob eine `.data`-Datei und eine aktuelle letzte Aktualisierung angezeigt werden. Alternativ prüfe direkt, ob `.data`-Dateien unter `/var/run/shm/<Plugin-Ordner>/` existieren. HTTP und UDP verwenden diesen Cache und fragen vzLogger nicht direkt ab.
 
-### Legacy-Auslesen liefert keine Zählerdaten
-
-Prüfe folgende Punkte:
-
-- Der I/R-Lesekopf ist angeschlossen.
-- Das Gerät existiert unter `/dev/serial/smartmeter/`.
-- Die Legacy-Zählerkonfiguration ist vollständig.
-- Manuelles Auslesen über die Legacy-Oberfläche funktioniert.
-
 ### Logdateien
 
-Das Plugin schreibt Laufzeitlogs in das LoxBerry-Plugin-Logverzeichnis und nach `/var/run/shm/<Plugin-Ordner>/`. In der Legacy-Oberfläche können die Legacy-Lese- und Veröffentlichungslogs über die Logansicht geprüft werden.
+Das Plugin schreibt Laufzeitlogs in das LoxBerry-Plugin-Logverzeichnis und nach `/var/run/shm/<Plugin-Ordner>/`.

@@ -1,26 +1,26 @@
 # Plugin Lifecycle Test Expectations
 
-This document defines expected behavior for SmartMeter v2 plugin lifecycle operations. It is intentionally independent from a specific implementation plan and applies to fresh installation, installation over an existing version, and uninstall behavior.
+This document defines expected behavior for Smartmeter-NG plugin lifecycle operations. It is intentionally independent from a specific implementation plan and applies to fresh installation, installation over an existing version, and uninstall behavior.
 
 ## Uninstall
 
 Precondition:
 
-- SmartMeter v2 is installed.
+- Smartmeter-NG is installed.
 
 Expected:
 
 - Uninstall completes successfully.
 - All plugin-owned folders and files are removed.
 - Plugin-owned services are stopped and removed.
-- The `vzlogger` package installed for SmartMeter v2 is removed.
-- The vzLogger apt source list configured by SmartMeter v2 is removed.
+- The `vzlogger` package installed for Smartmeter-NG is removed.
+- The vzLogger apt source list configured by Smartmeter-NG is removed.
 
 ## Fresh Install
 
 Precondition:
 
-- No previous SmartMeter v2 plugin installation exists.
+- No previous Smartmeter-NG plugin installation exists.
 
 Expected:
 
@@ -34,14 +34,13 @@ Expected:
 
 Precondition:
 
-- A previous SmartMeter v2 plugin installation exists.
+- A previous Smartmeter-NG plugin installation exists.
 
 Expected:
 
 - Installation completes successfully.
 - The active implementation follows the previous configuration:
   - previous `vzlogger` remains `vzlogger`;
-  - previous `legacy` remains `legacy`;
   - previous `none` remains `none`.
 
 ## Implementation Switching
@@ -52,14 +51,8 @@ Precondition:
 
 Expected:
 
-- Activating Legacy stops vzLogger but does not overwrite the generated configuration.
 - Deactivating either implementation without activating the other stops the corresponding runtime but does not regenerate `vzlogger.conf`.
-- Reactivating vzLogger validates and applies the existing generated configuration without migrating the current Legacy meter settings.
-- Legacy meter settings are migrated only when no valid generated vzLogger configuration exists.
 - Saving while vzLogger is already active remains an explicit request to regenerate and apply its configuration.
 - Concurrent configuration or service actions are rejected without partial writes.
 - Failed generation, validation, promotion, override installation, or service restart returns a non-zero control result and preserves the last valid generated runtime files.
 - Runtime, log, generated configuration, and serial-device permissions use only the existing `loxberry` and `_vzlogger` identities and do not require world-writable modes.
-- Existing Legacy meter selection and manual serial settings are copied once into isolated `LEGACY_*` keys.
-- Saving and activating vzLogger does not change the isolated Legacy meter settings.
-- Reactivating Legacy restores the same selected preset or manual protocol and serial settings in both the UI and polling runtime.

@@ -8,7 +8,7 @@ ARGV3=$3
 ARGV5=$5
 
 CONFIG_FILE="$ARGV5/config/plugins/$ARGV3/smartmeter.cfg"
-BRIDGE_SERVICE="smartmeter-v2-vzlogger-bridge.service"
+BRIDGE_SERVICE="smartmeter-ng-vzlogger-bridge.service"
 BRIDGE_INSTALLER="$ARGV5/bin/plugins/$ARGV3/install_vzlogger_bridge_service.sh"
 VZLOGGER_CONTROL="$ARGV5/bin/plugins/$ARGV3/vzlogger_control.pl"
 VZLOGGER_OVERRIDE_INSTALLER="$ARGV5/bin/plugins/$ARGV3/install_vzlogger_service_override.sh"
@@ -130,7 +130,7 @@ if command -v systemctl >/dev/null 2>&1; then
 		if [ "$implementation" = "vzlogger" ]; then
 			echo "<INFO> vzLogger mode is active but no meter is configured. Stopping and disabling vzLogger service."
 		else
-			echo "<INFO> Legacy mode is active. Stopping and disabling vzLogger service."
+			echo "<INFO> Meter reading is inactive. Stopping and disabling vzLogger service."
 		fi
 		systemctl stop vzlogger.service >/dev/null 2>&1 || true
 		systemctl disable vzlogger.service >/dev/null 2>&1 || true

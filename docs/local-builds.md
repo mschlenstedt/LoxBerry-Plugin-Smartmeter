@@ -29,9 +29,9 @@ Smartmeter-V<version>-local[-<purpose>]-<short-git-hash>[-dirty].zip
 Examples:
 
 ```text
-Smartmeter-V2.0.0.33-local-781af34.zip
-Smartmeter-V2.0.0.33-local-mapping-test-781af34.zip
-Smartmeter-V2.0.0.33-local-mapping-test-781af34-dirty.zip
+smartmeter-ng.0.0.33-local-781af34.zip
+smartmeter-ng.0.0.33-local-mapping-test-781af34.zip
+smartmeter-ng.0.0.33-local-mapping-test-781af34-dirty.zip
 ```
 
 The purpose is normalized to lowercase ASCII words separated by hyphens. `dirty` means the package contains tracked modifications or non-ignored untracked files that were not part of the named commit. Build only after reviewing `git status --short`, because non-ignored untracked files are included so newly added plugin files can be tested before commit.
@@ -41,7 +41,7 @@ The purpose is normalized to lowercase ASCII words separated by hyphens. `dirty`
 The suffixless name is reserved for official GitHub release assets:
 
 ```text
-Smartmeter-V2.0.0.33.zip
+smartmeter-ng.0.0.33.zip
 ```
 
 Official release ZIPs are created only by the GitHub Actions `Release asset` workflow from a pushed `Smartmeter-V<version>` tag. Developers must not create, rename, or publish an official-looking ZIP locally. Follow `docs/release-process.md` for releases.

@@ -3,11 +3,11 @@ use strict;
 use warnings;
 
 our $lbhomedir = '/opt/loxberry';
-our $lbpplugindir = 'smartmeter-v2';
-our $lbpbindir = '/opt/loxberry/bin/plugins/smartmeter-v2';
-our $lbpconfigdir = '/opt/loxberry/config/plugins/smartmeter-v2';
-our $lbptemplatedir = '/opt/loxberry/templates/plugins/smartmeter-v2';
-our $lbplogdir = '/opt/loxberry/log/plugins/smartmeter-v2';
+our $lbpplugindir = 'smartmeter-ng';
+our $lbpbindir = '/opt/loxberry/bin/plugins/smartmeter-ng';
+our $lbpconfigdir = '/opt/loxberry/config/plugins/smartmeter-ng';
+our $lbptemplatedir = '/opt/loxberry/templates/plugins/smartmeter-ng';
+our $lbplogdir = '/opt/loxberry/log/plugins/smartmeter-ng';
 
 sub import {
 	my $caller = caller;

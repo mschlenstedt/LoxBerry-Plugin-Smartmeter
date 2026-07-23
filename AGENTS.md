@@ -1,6 +1,6 @@
 # Project Instructions
 
-This repository contains the LoxBerry SmartMeter v2 plugin. Keep changes small, compatible with the LoxBerry plugin layout, and focused on the existing shell, Perl, PHP, CGI, template, and configuration files.
+This repository contains the LoxBerry Smartmeter-NG plugin. Keep changes small, compatible with the LoxBerry plugin layout, and focused on the existing shell, Perl, PHP, CGI, template, and configuration files.
 
 The normative product and engineering contracts are consolidated in `docs/developer-requirements.md`. Read the relevant sections before changing configuration behavior, mode switching, data models, outputs, permissions, lifecycle handling, or UI behavior.
 
@@ -37,7 +37,7 @@ The normative product and engineering contracts are consolidated in `docs/develo
 - Never store or print test-device passwords or private keys. Use a local SSH configuration or PuTTY saved-session name.
 - Resolve the test target through `tools/TestDeviceSettings.ps1`; developers configure it outside the repository with `tools/configure-test-device.ps1`.
 - Preserve remote user configuration and runtime data. Back up affected remote files, preserve their modes, and restore the initial configuration and service state after destructive tests.
-- After UI, template, CSS, navigation, or user-facing text changes, test both the vzLogger and Legacy pages in an authenticated desktop browser and with mobile viewport emulation on the disposable LoxBerry. Use the viewport matrix and checks in `docs/test-device-workflow.md`.
+- After UI, template, CSS, navigation, or user-facing text changes, test the vzLogger page in an authenticated desktop browser and with mobile viewport emulation on the disposable LoxBerry. Use the viewport matrix and checks in `docs/test-device-workflow.md`.
 - Before committing, check `git status --short` and avoid reverting unrelated local changes.
 
 ## Release Work

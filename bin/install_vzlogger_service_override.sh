@@ -17,15 +17,15 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 DROPIN_DIR="/etc/systemd/system/vzlogger.service.d"
-DROPIN_FILE="$DROPIN_DIR/smartmeter-v2.conf"
+DROPIN_FILE="$DROPIN_DIR/smartmeter-ng.conf"
 CONFIG_FILE="$LBHOMEDIR/config/plugins/$PLUGINFOLDER/vzlogger.conf"
-LEGACY_CONFIG="/etc/vzlogger.conf"
-LEGACY_MARKER="/etc/vzlogger.conf.smartmeter-v2"
+SYSTEM_CONFIG="/etc/vzlogger.conf"
+SYSTEM_CONFIG_MARKER="/etc/vzlogger.conf.smartmeter-ng"
 
-remove_legacy_config_copy()
+remove_SYSTEM_CONFIG_copy()
 {
-	if [ -f "$LEGACY_MARKER" ]; then
-		rm -f "$LEGACY_CONFIG" "$LEGACY_MARKER"
+	if [ -f "$SYSTEM_CONFIG_MARKER" ]; then
+		rm -f "$SYSTEM_CONFIG" "$SYSTEM_CONFIG_MARKER"
 		echo "<INFO> Removed previous SmartMeter-managed /etc/vzlogger.conf copy"
 	fi
 }
@@ -33,7 +33,7 @@ remove_legacy_config_copy()
 if [ "$ACTION" = "remove" ]; then
 	rm -f "$DROPIN_FILE"
 	rmdir "$DROPIN_DIR" >/dev/null 2>&1 || true
-	remove_legacy_config_copy
+	remove_SYSTEM_CONFIG_copy
 	if command -v systemctl >/dev/null 2>&1; then
 		systemctl daemon-reload
 	fi
@@ -105,7 +105,7 @@ mkdir -p "$DROPIN_DIR"
 	echo "RestartSec=5s"
 } > "$DROPIN_FILE"
 chmod 0644 "$DROPIN_FILE"
-remove_legacy_config_copy
+remove_SYSTEM_CONFIG_copy
 
 if command -v systemctl >/dev/null 2>&1; then
 	systemctl daemon-reload

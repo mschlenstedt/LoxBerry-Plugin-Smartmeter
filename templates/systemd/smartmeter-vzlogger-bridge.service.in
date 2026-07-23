@@ -1,5 +1,5 @@
 [Unit]
-Description=SmartMeter v2 vzLogger MQTT bridge
+Description=Smartmeter-NG vzLogger MQTT bridge
 After=network-online.target mosquitto.service
 Wants=network-online.target
 

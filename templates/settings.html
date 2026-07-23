@@ -365,12 +365,6 @@
 <!-- ****************************************************************************************** -->
 
 <TMPL_IF FORM_VZLOGGER>
-	<div data-role="navbar" class="ui-navbar implementation-tabs" role="navigation" style="margin: 0 0 12px 0;">
-		<ul>
-			<li><a href="./index.cgi?form=vzlogger" class="ui-btn-active"><span id="vzlogger_tab_state" class="implementation-state <TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE>is-active<TMPL_ELSE>is-inactive</TMPL_IF>" data-active-label="<TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE>" data-inactive-label="<TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE>" title="<TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE></TMPL_IF>" aria-label="<TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE></TMPL_IF>"><span class="implementation-state-icon" aria-hidden="true"><TMPL_IF VZLOGGER_IMPLEMENTATION_ACTIVE>✓<TMPL_ELSE>–</TMPL_IF></span></span><span class="implementation-tab-label"><TMPL_VAR NAME=COMMON.MENU_VZLOGGER></span></a></li>
-			<li><a href="./index_legacy.cgi?form=legacy"><span id="legacy_tab_state" class="implementation-state <TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE>is-active<TMPL_ELSE>is-inactive</TMPL_IF>" data-active-label="<TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE>" data-inactive-label="<TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE>" title="<TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE></TMPL_IF>" aria-label="<TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_ACTIVE><TMPL_ELSE><TMPL_VAR NAME=COMMON.IMPLEMENTATION_INACTIVE></TMPL_IF>"><span class="implementation-state-icon" aria-hidden="true"><TMPL_IF LEGACY_IMPLEMENTATION_ACTIVE>✓<TMPL_ELSE>–</TMPL_IF></span></span><span class="implementation-tab-label"><TMPL_VAR NAME=COMMON.MENU_LEGACY></span></a></li>
-		</ul>
-	</div>
 	<form method="post" data-ajax="false" name="vzlogger_form" id="vzlogger_form" action="./index.cgi">
 	<input type="hidden" name="saveformdata" value="1">
 	<input type="hidden" id="implementation_changed" name="implementation_changed" value="0">
@@ -446,7 +440,7 @@
 				<div id="bridge_service_action_reason" class="service-action-reason" aria-live="polite"></div>
 			</td>
 			<td class="service-spacer">&nbsp;</td>
-			<td class="service-help"><TMPL_VAR BRIDGE_AVAILABILITY_HELP><br><TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.DEBUG_LOG_HELP><br>/opt/loxberry/log/plugins/smartmeter-v2/vzlogger_mqtt_bridge.log</td>
+			<td class="service-help"><TMPL_VAR BRIDGE_AVAILABILITY_HELP><br><TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.DEBUG_LOG_HELP><br>/opt/loxberry/log/plugins/smartmeter-ng/vzlogger_mqtt_bridge.log</td>
 		</tr>
 		</table>
 	</div>
@@ -1957,7 +1951,6 @@
 
 		function set_implementation_tab_states(mode) {
 			set_implementation_tab_state("vzlogger_tab_state", mode == "vzlogger");
-			set_implementation_tab_state("legacy_tab_state", mode == "legacy");
 		}
 
 		function update_activation_dirty_hints() {

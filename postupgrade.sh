@@ -31,25 +31,36 @@ migrate_config()
 {
 	configfile="$ARGV5/config/plugins/$ARGV3/smartmeter.cfg"
 
-	if ! grep -q '^SENDMQTT=' "$configfile"; then
-		sed -i '/^UDPPORT=/a SENDMQTT=0' "$configfile"
-		echo "<INFO> Added default MQTT send setting"
-	fi
-
 	if ! grep -q '^MQTTTOPIC=' "$configfile"; then
-		sed -i '/^SENDMQTT=/a MQTTTOPIC=smartmeter' "$configfile"
+		sed -i '/^UDPPORT=/a MQTTTOPIC=smartmeter' "$configfile"
 		echo "<INFO> Added default MQTT topic"
 	fi
 
+	# The Legacy implementation was removed. Settings that only drove Legacy
+	# polling are dropped, and a stored Legacy mode becomes inactive so the user
+	# has to activate vzLogger explicitly.
+	if grep -q '^SENDMQTT=' "$configfile"; then
+		sed -i '/^SENDMQTT=/d' "$configfile"
+		echo "<INFO> Removed obsolete Legacy MQTT send setting"
+	fi
+
+	if grep -q '^CRON=' "$configfile"; then
+		sed -i '/^CRON=/d' "$configfile"
+		echo "<INFO> Removed obsolete Legacy polling interval"
+	fi
+
+	if grep -q '^LEGACY_' "$configfile"; then
+		sed -i '/^LEGACY_/d' "$configfile"
+		echo "<INFO> Removed obsolete Legacy meter settings"
+	fi
+
 	if ! grep -q '^IMPLEMENTATION=' "$configfile"; then
-		read_enabled=$(sed -n 's/^READ=//p' "$configfile")
-		if [ "$read_enabled" = "1" ]; then
-			sed -i '/^READ=/a IMPLEMENTATION=legacy' "$configfile"
-			echo "<INFO> Added default implementation mode: legacy"
-		else
-			sed -i '/^READ=/a IMPLEMENTATION=vzlogger' "$configfile"
-			echo "<INFO> Added default implementation mode: vzlogger"
-		fi
+		sed -i '/^READ=/a IMPLEMENTATION=none' "$configfile"
+		echo "<INFO> Added default implementation mode: none"
+	elif grep -q '^IMPLEMENTATION=legacy$' "$configfile"; then
+		sed -i 's/^IMPLEMENTATION=legacy$/IMPLEMENTATION=none/' "$configfile"
+		echo "<WARNING> The Legacy implementation was removed. Meter reading is now inactive."
+		echo "<WARNING> Open the plugin page and activate vzLogger to resume reading."
 	fi
 
 	if ! grep -q '^\[VZLOGGER\]' "$configfile"; then
@@ -101,7 +112,6 @@ chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_config.pl" 2>/dev/null || true
 chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_validate.pl" 2>/dev/null || true
 chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_control.pl" 2>/dev/null || true
 chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_mqtt_bridge.pl" 2>/dev/null || true
-chmod +x "$ARGV5/bin/plugins/$ARGV3/smartmeter_legacy_runtime.pl" 2>/dev/null || true
 chmod +x "$ARGV5/bin/plugins/$ARGV3/install_vzlogger_bridge_service.sh" 2>/dev/null || true
 chmod +x "$ARGV5/bin/plugins/$ARGV3/install_vzlogger_service_override.sh" 2>/dev/null || true
 chmod +x "$ARGV5/webfrontend/htmlauth/plugins/$ARGV3/vzlogger_live.cgi" 2>/dev/null || true
@@ -117,13 +127,15 @@ if [ -d "/tmp/$ARGV1"_upgrade/log/"$ARGV3" ]; then
 	done
 fi
 
-echo "<INFO> Restore automatic meter polling cronjob"
-configfile="$ARGV5/config/plugins/$ARGV3/smartmeter.cfg"
-if "$ARGV5/bin/plugins/$ARGV3/smartmeter_legacy_runtime.pl" synchronize "$ARGV5" "$ARGV2" "$ARGV3" "$configfile"; then
-	echo "<INFO> Synchronized Legacy polling runtime after upgrade"
-else
-	echo "<WARNING> Could not synchronize Legacy polling runtime after upgrade"
-fi
+echo "<INFO> Remove obsolete Legacy polling cronjobs"
+for cronfolder in cron.01min cron.03min cron.05min cron.10min cron.15min cron.30min cron.hourly cron.reboot
+do
+	cronjob="$ARGV5/system/cron/$cronfolder/$ARGV2"
+	if [ -e "$cronjob" ] || [ -L "$cronjob" ]; then
+		rm -f "$cronjob"
+		echo "<INFO> Removed obsolete cronjob: $cronjob"
+	fi
+done
 
 echo "<INFO> Remove temporary folders"
 rm -r "/tmp/$ARGV1"_upgrade

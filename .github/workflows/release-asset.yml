@@ -56,7 +56,7 @@ jobs:
 
           tag="${{ steps.release.outputs.tag }}"
           version="${{ steps.release.outputs.version }}"
-          prefix="LoxBerry-Plugin-Smartmeter-v2-$tag/"
+          prefix="LoxBerry-Plugin-Smartmeter-$tag/"
           zip="dist/Smartmeter-V$version.zip"
 
           mkdir -p dist

@@ -16,7 +16,7 @@ if [ "$(id -u)" != "0" ]; then
 	exit 2
 fi
 
-SERVICE_NAME="smartmeter-v2-vzlogger-bridge.service"
+SERVICE_NAME="smartmeter-ng-vzlogger-bridge.service"
 UNIT_FILE="/etc/systemd/system/$SERVICE_NAME"
 TEMPLATE="$LBHOMEDIR/templates/plugins/$PLUGINFOLDER/systemd/smartmeter-vzlogger-bridge.service.in"
 

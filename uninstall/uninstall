@@ -4,14 +4,14 @@
 # Remove only the UDEV rule created by this plugin's daemon.
 
 UDEV_RULE="/etc/udev/rules.d/99-smartmeter.rules"
-BRIDGE_SERVICE="smartmeter-v2-vzlogger-bridge.service"
+BRIDGE_SERVICE="smartmeter-ng-vzlogger-bridge.service"
 BRIDGE_UNIT="/etc/systemd/system/$BRIDGE_SERVICE"
 CONFIG_DIR="$5/config/plugins/$3"
 VZLOGGER_MARKER="$CONFIG_DIR/vzlogger.installed-by-plugin"
 VZLOGGER_CONFIG="/etc/vzlogger.conf"
-VZLOGGER_CONFIG_MARKER="/etc/vzlogger.conf.smartmeter-v2"
+VZLOGGER_CONFIG_MARKER="/etc/vzlogger.conf.smartmeter-ng"
 VZLOGGER_DROPIN_DIR="/etc/systemd/system/vzlogger.service.d"
-VZLOGGER_DROPIN="$VZLOGGER_DROPIN_DIR/smartmeter-v2.conf"
+VZLOGGER_DROPIN="$VZLOGGER_DROPIN_DIR/smartmeter-ng.conf"
 RUNTIME_DIR="/var/run/shm/$3"
 SOURCE_LIST="/etc/apt/sources.list.d/volkszaehler-volkszaehler-org-project.list"
 KEYRING="/usr/share/keyrings/volkszaehler-volkszaehler-org-project-archive-keyring.gpg"

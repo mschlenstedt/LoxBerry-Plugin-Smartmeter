@@ -5,7 +5,7 @@
 }(typeof globalThis !== "undefined" ? globalThis : this, function () {
 	"use strict";
 
-	const STORAGE_KEY = "smartmeter-v2.vzloggerLiveCharts.v1";
+	const STORAGE_KEY = "smartmeter-ng.vzloggerLiveCharts.v1";
 	const POLL_INTERVAL = 2000;
 	const GAP_INTERVAL = POLL_INTERVAL * 3;
 	const POWER_CATEGORIES = new Set(["active_power_total", "active_power_import", "active_power_export"]);

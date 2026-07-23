@@ -15,7 +15,6 @@ use lib $FindBin::Bin;
 use SmartMeterVZLoggerExpert qw(read_text write_text_atomic update_expert_log_settings format_expert_validation);
 use SmartMeterVZLoggerRuntime qw(acquire_config_lock promote_files_atomic);
 use SmartMeterVZLoggerConfig qw(clean_number clean_qos sanitize_topic implementation_mode);
-use SmartMeterLegacyRuntime qw(acquire_legacy_fetch_lock);
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
@@ -30,8 +29,8 @@ my $obis_status_file = "$runtime_dir/vzlogger_obis_status.json";
 my $plugin_log_dir = "$home/log/plugins/$psubfolder";
 my $control_log_file = "$plugin_log_dir/vzlogger_control.log";
 my $vzlogger_log_file = "$plugin_log_dir/vzlogger.log";
-my $bridge_service = "smartmeter-v2-vzlogger-bridge";
-my $vzlogger_override_file = "/etc/systemd/system/vzlogger.service.d/smartmeter-v2.conf";
+my $bridge_service = "smartmeter-ng-vzlogger-bridge";
+my $vzlogger_override_file = "/etc/systemd/system/vzlogger.service.d/smartmeter-ng.conf";
 my $action = shift @ARGV || "status";
 
 make_path($runtime_dir) if (!-d $runtime_dir);
@@ -248,10 +247,10 @@ sub generate_validate_and_promote
 sub activate_or_migrate_vzlogger
 {
 	if (current_vzlogger_configuration_is_valid()) {
-		print "Existing valid vzLogger configuration found. Kept it unchanged instead of migrating Legacy meter settings.\n";
+		print "Existing valid vzLogger configuration found. Kept it unchanged instead of regenerating it.\n";
 		return activate_current_vzlogger_configuration();
 	}
-	print "No valid existing vzLogger configuration found. Migrating the current meter settings.\n";
+	print "No valid existing vzLogger configuration found. Generating it from the current meter settings.\n";
 	return apply_generated_configuration();
 }
 
@@ -459,15 +458,6 @@ sub stop_bridge
 
 sub restart_vzlogger
 {
-	my $legacy_lock;
-	if (!$ENV{SMARTMETER_LEGACY_LOCK_HELD}) {
-		my $legacy_error;
-		($legacy_lock, $legacy_error) = acquire_legacy_fetch_lock($runtime_dir);
-		if (!$legacy_lock) {
-			print "$legacy_error Cannot restart vzLogger until Legacy polling has finished.\n";
-			return 1;
-		}
-	}
 	stop_orphaned_obis_discovery_processes();
 	if (!command_exists("systemctl")) {
 		print "systemctl not available. Generated config only.\n";
@@ -522,15 +512,6 @@ sub prepare_vzlogger_log_file
 
 sub start_vzlogger
 {
-	my $legacy_lock;
-	if (!$ENV{SMARTMETER_LEGACY_LOCK_HELD}) {
-		my $legacy_error;
-		($legacy_lock, $legacy_error) = acquire_legacy_fetch_lock($runtime_dir);
-		if (!$legacy_lock) {
-			print "$legacy_error Cannot start vzLogger until Legacy polling has finished.\n";
-			return 1;
-		}
-	}
 	stop_orphaned_obis_discovery_processes();
 	if (!command_exists("systemctl")) {
 		print "systemctl not available.\n";

@@ -1,6 +1,6 @@
 # LoxBerry Test Device Workflow
 
-This workflow applies to implementation tasks that change installed SmartMeter v2 behavior. It does not authorize remote writes for analysis-only or review-only tasks.
+This workflow applies to implementation tasks that change installed Smartmeter-NG behavior. It does not authorize remote writes for analysis-only or review-only tasks.
 
 ## Local connection setup
 
@@ -59,14 +59,14 @@ The script accepts only files below these plugin runtime trees:
 
 | Repository path | Test-device path |
 | --- | --- |
-| `bin/` | `/opt/loxberry/bin/plugins/smartmeter-v2/` |
-| `templates/` | `/opt/loxberry/templates/plugins/smartmeter-v2/` |
-| `webfrontend/html/` | `/opt/loxberry/webfrontend/html/plugins/smartmeter-v2/` |
-| `webfrontend/htmlauth/` | `/opt/loxberry/webfrontend/htmlauth/plugins/smartmeter-v2/` |
+| `bin/` | `/opt/loxberry/bin/plugins/smartmeter-ng/` |
+| `templates/` | `/opt/loxberry/templates/plugins/smartmeter-ng/` |
+| `webfrontend/html/` | `/opt/loxberry/webfrontend/html/plugins/smartmeter-ng/` |
+| `webfrontend/htmlauth/` | `/opt/loxberry/webfrontend/htmlauth/plugins/smartmeter-ng/` |
 
 Files below `config/` are protected because they may overwrite user configuration. Deploying one requires both an explicit file path and `-AllowConfig`. Generated configuration, logs, cache files, databases, credentials, and other runtime data must not be copied from the repository or between systems.
 
-Before overwriting a file, the script copies the remote version to a timestamped backup directory below `/tmp/smartmeter-v2-deploy-backups/`. These backups normally disappear on reboot. Existing file modes are retained; new CGI, Perl, and shell files receive mode `0755`, while other new files receive `0644`.
+Before overwriting a file, the script copies the remote version to a timestamped backup directory below `/tmp/smartmeter-ng-deploy-backups/`. These backups normally disappear on reboot. Existing file modes are retained; new CGI, Perl, and shell files receive mode `0755`, while other new files receive `0644`.
 
 After upload, the script runs target-side syntax checks for Perl/CGI, PHP, and shell files. It does not restart services. Restart only the service affected by the change and only when the test requires it.
 
@@ -78,7 +78,7 @@ Record the initial state before a destructive test:
 
 - Expert Mode and active implementation
 - checksums of `vzlogger.conf`, `vzlogger_expert.conf`, and relevant plugin configuration
-- `vzlogger` and `smartmeter-v2-vzlogger-bridge` service states
+- `vzlogger` and `smartmeter-ng-vzlogger-bridge` service states
 
 After deployment:
 
@@ -99,7 +99,7 @@ The browser check complements target-side syntax checks; it is required when exe
 
 ### Desktop and mobile UI acceptance
 
-For UI, template, CSS, navigation, or user-facing text changes, test the installed vzLogger and Legacy pages at these CSS viewport sizes:
+For UI, template, CSS, navigation, or user-facing text changes, test the installed vzLogger page at these CSS viewport sizes:
 
 | Profile | Viewport | Required use |
 | --- | --- | --- |
