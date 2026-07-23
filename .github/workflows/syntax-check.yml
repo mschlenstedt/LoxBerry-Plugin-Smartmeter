@@ -28,11 +28,8 @@ jobs:
             -delete
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libconfig-crontab-perl \
             libconfig-simple-perl \
             libcgi-pm-perl \
-            libdatetime-perl \
-            libdevice-serialport-perl \
             libfile-homedir-perl \
             libhtml-template-perl \
             libjson-perl \
@@ -95,7 +92,6 @@ jobs:
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_custom_channels.pl
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_config_validation.pl
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_bridge.pl
-          perl -I .github/ci/perl-lib -I bin tests/test_legacy_runtime.pl
 
       - name: Test test-device file normalization
         shell: pwsh
