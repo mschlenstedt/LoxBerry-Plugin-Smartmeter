@@ -139,7 +139,11 @@ sub do_stop
 {
 	my ($manual) = @_;
 	if ($manual) {
-		open(my $fh, ">", $stopped_marker) and do { print $fh "1\n"; close($fh); };
+		my $fh;
+		if (open($fh, ">", $stopped_marker)) {
+			print $fh "1\n";
+			close($fh);
+		}
 	}
 	my $pid = read_pid();
 	if (!$pid || !process_is_vzlogger($pid)) {
