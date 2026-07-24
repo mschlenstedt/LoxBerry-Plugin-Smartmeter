@@ -1,0 +1,2 @@
+#!/bin/bash
+REPLACELBPBINDIR/watchdog.pl --action=check

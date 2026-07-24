@@ -9,9 +9,9 @@ ARGV5=$5
 
 CONFIG_FILE="$ARGV5/config/plugins/$ARGV3/smartmeter.json"
 CONFIG_READER="$ARGV5/bin/plugins/$ARGV3/config_value.pl"
+PACKAGE_HELPER="$ARGV5/bin/plugins/$ARGV3/vzlogger_pkg.sh"
 VZLOGGER_CONTROL="$ARGV5/bin/plugins/$ARGV3/vzlogger_control.pl"
-VZLOGGER_OVERRIDE_INSTALLER="$ARGV5/bin/plugins/$ARGV3/install_vzlogger_service_override.sh"
-PREUPGRADE_ACTIVE_FILE="$ARGV5/config/plugins/$ARGV3/vzlogger.preupgrade-service-active"
+WATCHDOG="$ARGV5/bin/plugins/$ARGV3/watchdog.pl"
 SMARTMETER_LOG_DIR="$ARGV5/log/plugins/$ARGV3"
 SMARTMETER_LOG_FILE="$SMARTMETER_LOG_DIR/smartmeter.log"
 SMARTMETER_UDEV_RULE="/etc/udev/rules.d/99-smartmeter.rules"
@@ -21,6 +21,18 @@ PLUGIN_CONFIG_DIR="$ARGV5/config/plugins/$ARGV3"
 if [ "$(id -u)" != "0" ]; then
 	echo "<ERROR> postroot.sh must run as root."
 	exit 2
+fi
+
+# vzlogger is installed here rather than through dpkg/apt so the plugin owns
+# the apt call: the packaged service is kept from starting and is disabled
+# afterwards, because the plugin runs vzlogger from its own watchdog.
+if [ -x "$PACKAGE_HELPER" ]; then
+	chmod +x "$PACKAGE_HELPER" 2>/dev/null || true
+	if ! "$PACKAGE_HELPER" install; then
+		echo "<WARNING> Could not install vzlogger. Use the update button on the plugin page to retry."
+	fi
+else
+	echo "<ERROR> vzlogger package helper is missing: $PACKAGE_HELPER"
 fi
 
 implementation=""
@@ -76,21 +88,12 @@ do
 done
 
 if [ "$implementation" = "vzlogger" ] && has_configured_vzlogger_meter; then
-	was_active_before_upgrade=0
-	if [ -f "$PREUPGRADE_ACTIVE_FILE" ]; then
-		was_active_before_upgrade=1
-	fi
-	rm -f "$PREUPGRADE_ACTIVE_FILE"
 	if [ -x "$VZLOGGER_CONTROL" ]; then
-		if [ "$was_active_before_upgrade" = "1" ]; then
-			echo "<INFO> vzLogger was active before upgrade. Applying configuration and restarting configured services."
+		echo "<INFO> vzLogger mode is active. Applying the configuration and starting vzlogger."
+		if su loxberry -c "$VZLOGGER_CONTROL apply"; then
+			echo "<INFO> Applied the active vzLogger configuration."
 		else
-			echo "<INFO> vzLogger mode is active. Applying configuration and restarting configured services."
-		fi
-		if "$VZLOGGER_CONTROL" apply; then
-			echo "<INFO> Applied active vzLogger configuration after install or upgrade."
-		else
-			echo "<WARNING> Could not apply active vzLogger configuration after install or upgrade."
+			echo "<WARNING> Could not apply the active vzLogger configuration."
 		fi
 	else
 		echo "<WARNING> vzLogger control helper is missing or not executable."
@@ -98,28 +101,10 @@ if [ "$implementation" = "vzlogger" ] && has_configured_vzlogger_meter; then
 	exit 0
 fi
 
-rm -f "$PREUPGRADE_ACTIVE_FILE"
-
-if [ -f "$VZLOGGER_OVERRIDE_INSTALLER" ]; then
-	/bin/sh "$VZLOGGER_OVERRIDE_INSTALLER" "$ARGV5" "$ARGV3" remove || \
-		echo "<WARNING> Could not remove SmartMeter vzLogger service override"
-fi
-
-if command -v systemctl >/dev/null 2>&1; then
-	if systemctl list-unit-files vzlogger.service >/dev/null 2>&1; then
-		if [ "$implementation" = "vzlogger" ]; then
-			echo "<INFO> vzLogger mode is active but no meter is configured. Stopping and disabling vzLogger service."
-		else
-			echo "<INFO> Meter reading is inactive. Stopping and disabling vzLogger service."
-		fi
-		systemctl stop vzlogger.service >/dev/null 2>&1 || true
-		systemctl disable vzlogger.service >/dev/null 2>&1 || true
-		systemctl reset-failed vzlogger.service >/dev/null 2>&1 || true
-	else
-		echo "<INFO> vzLogger service is not installed."
-	fi
-else
-	echo "<INFO> systemctl is not available. Skipping vzLogger service handling."
+# Meter reading is inactive: make sure no vzlogger process is left running.
+if [ -x "$WATCHDOG" ]; then
+	su loxberry -c "$WATCHDOG --action=stop" >/dev/null 2>&1 || true
+	echo "<INFO> Meter reading is inactive. vzlogger is stopped."
 fi
 
 exit 0

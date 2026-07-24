@@ -30,7 +30,14 @@ else
     echo "<INFO> Smartmeter vzLogger bridge service not found"
 fi
 
+WATCHDOG="$5/bin/plugins/$3/watchdog.pl"
+if [ -x "$WATCHDOG" ]; then
+    echo "<INFO> Stopping vzlogger through the plugin watchdog"
+    su loxberry -c "$WATCHDOG --action=stop" >/dev/null 2>&1 || true
+fi
+
 if command -v systemctl >/dev/null 2>&1; then
+    systemctl unmask vzlogger.service >/dev/null 2>&1 || true
     systemctl stop vzlogger.service >/dev/null 2>&1 || true
     systemctl disable vzlogger.service >/dev/null 2>&1 || true
     systemctl reset-failed vzlogger.service >/dev/null 2>&1 || true
@@ -80,6 +87,8 @@ fi
 if command -v apt-get >/dev/null 2>&1; then
     apt-get update >/dev/null 2>&1 || true
 fi
+
+rm -f /usr/sbin/policy-rc.d.smartmeter-ng
 
 if [ -f "$UDEV_RULE" ] && grep -q "LoxBerry SML-eMon Plugin device rule file" "$UDEV_RULE"; then
     echo "<INFO> Removing Smartmeter UDEV rule"

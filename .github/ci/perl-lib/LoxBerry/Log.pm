@@ -38,6 +38,7 @@ sub new {
 }
 
 sub filename { return $_[0]->{filename}; }
+sub stdout { my $self = shift; $self->{stdout} = shift if (@_); return $self->{stdout}; }
 sub loglevel { my $self = shift; $self->{loglevel} = shift if (@_); return $self->{loglevel}; }
 sub dbkey { return $_[0]->{dbkey}; }
 sub open { return 1; }

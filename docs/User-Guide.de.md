@@ -2,7 +2,7 @@
 
 ## Überblick
 
-Smartmeter-NG liest ZÃ¤hlerdaten auf dem LoxBerry Ã¼ber das externe Paket `vzlogger`. vzLogger liest den ZÃ¤hler und verÃ¶ffentlicht die Werte direkt per MQTT; die Weitergabe an den Miniserver Ã¼bernimmt das LoxBerry MQTT Gateway.
+Smartmeter-NG liest Zählerdaten auf dem LoxBerry über das externe Paket `vzlogger`. vzLogger liest den Zähler und veröffentlicht die Werte direkt per MQTT; die Weitergabe an den Miniserver übernimmt das LoxBerry MQTT Gateway.
 
 Die frühere Legacy-Implementierung mit eigenem Perl-Reader wurde entfernt. Sie wird nur noch im Branch `Version1` gepflegt.
 
@@ -17,7 +17,7 @@ Die frühere Legacy-Implementierung mit eigenem Perl-Reader wurde entfernt. Sie 
 
 Öffne Smartmeter-NG im LoxBerry-Webinterface.
 
-Ein weiÃes Badge mit grÃ¼nem HÃ¤kchen markiert die aktive Implementierung, ein weiÃes Badge mit dunkelgrauem Minus eine inaktive. Der Zustand wird erst beim Speichern angewendet. Nach einer Ãnderung zeigt der Aktiv-Schalter deshalb den Hinweis **Ãnderung noch nicht gespeichert**.
+Ein weißes Badge mit grünem Häkchen markiert die aktive Implementierung, ein weißes Badge mit dunkelgrauem Minus eine inaktive. Der Zustand wird erst beim Speichern angewendet. Nach einer Änderung zeigt der Aktiv-Schalter deshalb den Hinweis **Änderung noch nicht gespeichert**.
 
 Wähle oben bei **Implementierung** den Modus **vzLogger**, um das Auslesen zu aktivieren.
 
@@ -31,9 +31,13 @@ Die benutzerdefinierte JSONC-Quelle bleibt unverändert. Fehlende Channel-UUIDs 
 
 ### Paketinstallation
 
-Das Plugin richtet während der Installation bzw. beim Upgrade die Volkszaehler/Cloudsmith apt-Quelle ein. LoxBerry installiert danach `vzlogger` und `mosquitto-clients` über die normale `dpkg/apt`-Paketliste des Plugins. Wenn `vzlogger` bereits installiert ist, bleibt die bestehende Paketinstallation erhalten und wird durch apt auf die verfügbare aktuelle Version gebracht.
+Das Plugin richtet die Volkszaehler/Cloudsmith apt-Quelle ein und installiert daraus ausschließlich das Paket `vzlogger`. Das Repository enthält nur vzlogger sowie die Bibliotheken libsml und libmbus; weitere Volkszaehler-Bestandteile werden nicht installiert. Der Repository-Schlüssel wird bei jeder Installation und jedem Update neu geschrieben, damit ein Schlüsselwechsel das Plugin nicht aussperrt.
 
-Nach der Installation bleibt der `vzlogger`-Dienst gestoppt, solange das Auslesen nicht aktiviert ist. vzLogger wird mit **Speichern und anwenden** im vzLogger-Modus gestartet.
+Das Paket bringt eine systemd-Unit mit und startet sie im postinst. Das Plugin unterbindet diesen Start und deaktiviert die Unit anschließend, denn vzlogger wird vom plugin-eigenen Watchdog im Vordergrund gestartet (`vzlogger -f -c ... -o ...`). Nach jedem Paket-Update wird das erneut angewendet, weil das postinst eine maskierte Unit wieder freigibt.
+
+Auf der Plugin-Seite zeigt der Bereich **vzLogger-Paket** die installierte und die verfügbare Version und bietet **vzLogger aktualisieren** an.
+
+Nach der Installation bleibt vzlogger gestoppt, solange das Auslesen nicht aktiviert ist. Beim Booten startet das Daemon-Skript den Watchdog, der vzlogger startet, sofern der vzLogger-Modus aktiv ist; alle fünf Minuten prüft der Watchdog per Cron, ob der Prozess noch läuft, und startet ihn nach einem unerwarteten Ende neu. Ein manueller Stopp wird dabei respektiert. vzLogger wird mit **Speichern und anwenden** im vzLogger-Modus gestartet.
 
 ### Zählereinrichtung
 
@@ -91,7 +95,7 @@ Der Schalter **Expert Mode** rechts neben der Überschrift der vzLogger-Konfigur
 
 **vzLogger-Konfiguration bearbeiten** öffnet das vollständige, unmaskierte JSON in einem authentifizierten Browser-Tab. **Abbrechen** verwirft die Änderungen im Browser. **Speichern & Schließen** speichert den Expert-Entwurf immer und validiert ihn. Ein gültiger Entwurf wird ohne automatischen Dienstneustart zur laufzeitrelevanten `vzlogger.conf`; ein ungültiger Entwurf bleibt zur Korrektur erhalten, während die letzte gültige Laufzeitdatei unverändert bleibt. Ist ein reaktivierter Expert-Entwurf noch nicht identisch mit der aktiven `vzlogger.conf`, bleiben Start und Restart gesperrt, bis er über **Speichern & Schließen** oder **Speichern und anwenden** übernommen wurde. Bei einem ungültigen Entwurf bleibt zusätzlich Anwenden gesperrt; Stop bleibt immer möglich. Unbekannte vzLogger-Erweiterungen werden als Warnung gemeldet und nicht entfernt. Vorhandene SmartMeter-Ausgaben bleiben über identische Kanal-UUIDs zugeordnet; neue UUIDs werden gemeldet, aber nicht automatisch von der Bridge veröffentlicht.
 
-Aktivierung, Debug und Log-Level stammen weiterhin aus der normalen UI. Das Ausschalten des Expert Mode verÃ¤ndert weder `vzlogger.conf` noch `vzlogger_expert.conf`.
+Aktivierung, Debug und Log-Level stammen weiterhin aus der normalen UI. Das Ausschalten des Expert Mode verändert weder `vzlogger.conf` noch `vzlogger_expert.conf`.
 
 ### Dienststeuerung
 
@@ -99,7 +103,7 @@ Die vzLogger-Seite zeigt oben im Bereich **Betrieb** ein Dienst-Panel. Es steuer
 
 Die Dienstzustaende werden im sichtbaren Browser-Tab alle drei Sekunden aktualisiert. Waehrend Start/Stop/Restart pausiert dieses Polling; ein Overlay benennt die laufende Aktion, und ihre AJAX-Antwort aktualisiert den echten Dienststatus direkt nach Abschluss. Bei Erfolg schliesst das Overlay automatisch. Dauert die Aktion laenger als 15 Sekunden, weist das Overlay darauf hin. **Ausblenden** schliesst nur das Overlay, waehrend der bereits gestartete Systemvorgang im Hintergrund weiterlaeuft; ein Fehler oeffnet das Overlay wieder und kann mit **Schliessen** bestaetigt werden. Start/Stop/Restart laufen ohne Seiten-Reload. Start/Restart werden erst freigegeben, wenn die zugehoerige Aktivierung erfolgreich mit **Speichern und anwenden** gespeichert wurde und eine gueltige erzeugte Konfiguration vorhanden ist; fuer die Bridge muss MQTT zusaetzlich gespeichert und in der erzeugten `vzlogger.conf` aktiv sein. Die Dienstschalter führen selbst keinen Implementierungswechsel durch. Beim vzLogger werden außerdem Debug-Log und Log-Level dauerhaft gespeichert und in der vorhandenen `vzlogger.conf` aktualisiert, die Bridge hat keinen eigenen Debug-Schalter mehr; ihre Ausführlichkeit steuert der zentrale Log-Level. Andere noch nicht gespeicherte Eingaben bleiben im Browser erhalten und werden erst mit **Speichern und anwenden** uebernommen. Stop bleibt bei einem laufenden Dienst unabhaengig von Aktiv-Schaltern und Konfigurationsfehlern verfuegbar. Start/Restart pruefen die vorhandene Konfiguration, erzeugen sie aber nicht neu; fehlt sie oder ist sie ungueltig, muss zuerst **Speichern und anwenden** ausgefuehrt werden. **Live-Daten (JSON) öffnen** ruft den integrierten vzLogger-HTTP-Dienst auf; `/` liefert wegen der aktivierten Indexfunktion alle konfigurierten Kanäle, `/<UUID>` einen einzelnen Kanal.
 
-Unterhalb der Dienststeuerung stehen die Einstellungen der **vzLogger-Konfiguration**. ZÃ¤hler und I/R-LesekÃ¶pfe gehÃ¶ren ebenfalls dorthin.
+Unterhalb der Dienststeuerung stehen die Einstellungen der **vzLogger-Konfiguration**. Zähler und I/R-Leseköpfe gehören ebenfalls dorthin.
 
 Zähler, Leseköpfe, Protokolle und OBIS-Kanäle gehören ausschließlich zur vzLogger-Konfiguration. vzLogger liest die Geräte und veröffentlicht die Messwerte über MQTT. Die Bridge greift nicht direkt auf Zähler oder serielle Geräte zu.
 
@@ -117,9 +121,9 @@ Kanäle derselben Einheit teilen eine Achse; höchstens zwei Einheitengruppen k�
 
 Verlauf und Sitzungskennzahlen existieren nur im Arbeitsspeicher des Tabs und beginnen nach Reload oder erneutem Öffnen von vorn. Die Kanalauswahl, der Energiemodus und die Option zur Hintergrund-Erfassung werden dagegen lokal im Browser gespeichert; entfernte Kanal-UUIDs werden beim nächsten Öffnen aus dieser Auswahl entfernt. Standardmäßig pausieren die Datenabfragen bei einem verborgenen Tab. **Datenerfassung im Hintergrund versuchen** lässt die Abfragen ohne sichtbares Neuzeichnen bestmöglich weiterlaufen, kann aber von Browser oder Betriebssystem gedrosselt beziehungsweise angehalten werden und benötigt besonders auf Mobilgeräten zusätzliche Leistung und Akkukapazität. Die Seite verwendet die mit dem Plugin lokal ausgelieferte Chart.js-Version und lädt keine Bibliothek, Schrift oder Telemetrie von einem Drittanbieter.
 
-Liefert der ZÃ¤hler keinen Momentanleistungswert, steht `1-0:16.7.0` nicht zur VerfÃ¼gung. Das Plugin berechnet keine Leistung aus ZÃ¤hlerdifferenzen; das kann bei Bedarf im Miniserver erfolgen.
+Liefert der Zähler keinen Momentanleistungswert, steht `1-0:16.7.0` nicht zur Verfügung. Das Plugin berechnet keine Leistung aus Zählerdifferenzen; das kann bei Bedarf im Miniserver erfolgen.
 
-Das Control-Log wird bei jeder Aktion neu angelegt und kann Ã¼ber **Control-Log anzeigen** direkt unter dem Dienstbereich geÃ¶ffnet werden. Erfolgreiche Start-, Stop- und Restart-Aktionen werden kurz grÃ¼n bestÃ¤tigt.
+Das Control-Log wird bei jeder Aktion neu angelegt und kann über **Control-Log anzeigen** direkt unter dem Dienstbereich geöffnet werden. Erfolgreiche Start-, Stop- und Restart-Aktionen werden kurz grün bestätigt.
 
 Der Service heißt:
 
@@ -186,14 +190,14 @@ Prüfe das LoxBerry-Installationslog. Entscheidend sind die Schritte `PREROOT`, 
 Prüfe folgende Punkte:
 
 - `vzlogger` läuft.
-- Der `vzlogger`-Dienst lÃ¤uft.
+- Der `vzlogger`-Dienst läuft.
 - `mosquitto_sub` ist installiert.
 - `vzlogger_channels.json` existiert und validiert erfolgreich.
 - Das Debug-Log enthält reale MQTT-Nachrichten unter `<Basis-Topic>/vzlogger/#`.
 
 ### Es kommen keine MQTT-Werte an
 
-PrÃ¼fe mit einem MQTT-Client, ob unter `<Basis-Topic>/<Lesekopf>/` Werte erscheinen. Erscheint nichts, prÃ¼fe im Bereich **MQTT**, ob MQTT aktiviert und gespeichert ist, und ob der vzLogger-Dienst lÃ¤uft. FÃ¼r die Weitergabe an den Miniserver muss zusÃ¤tzlich das LoxBerry MQTT Gateway den Broker abonnieren.
+Prüfe mit einem MQTT-Client, ob unter `<Basis-Topic>/<Lesekopf>/` Werte erscheinen. Erscheint nichts, prüfe im Bereich **MQTT**, ob MQTT aktiviert und gespeichert ist, und ob der vzLogger-Dienst läuft. Für die Weitergabe an den Miniserver muss zusätzlich das LoxBerry MQTT Gateway den Broker abonnieren.
 
 ### Logdateien
 

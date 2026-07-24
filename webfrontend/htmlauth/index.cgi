@@ -101,7 +101,7 @@ if( $q->{ajax} ) {
 	my $request_lock;
 	eval {
 		my $action = $q->{ajaxaction} || "";
-		my %mutating = map { $_ => 1 } qw(obis-start obis-cancel service-action form-action ir-scan expert-mode expert-reset);
+		my %mutating = map { $_ => 1 } qw(obis-start obis-cancel service-action form-action ir-scan expert-mode expert-reset package-update);
 		if ($mutating{$action}) {
 			my ($lock, $error) = acquire_config_lock("/var/run/shm/$lbpplugindir");
 			die "$error\n" if (!$lock);
@@ -138,6 +138,11 @@ if( $q->{ajax} ) {
 		} elsif ($action eq "debug-log") {
 			die $L{'VZLOGGER.UI_DEBUG_LOG_POST'} if (($ENV{REQUEST_METHOD} || "") ne "POST");
 			$response = run_debug_log_ajax();
+		} elsif ($action eq "package-version") {
+			$response = package_version_ajax();
+		} elsif ($action eq "package-update") {
+			die $L{'VZLOGGER.UI_PACKAGE_UPDATE_POST'} if (($ENV{REQUEST_METHOD} || "") ne "POST");
+			$response = package_update_ajax();
 		} elsif ($action eq "ir-scan") {
 			die $L{'VZLOGGER.UI_IR_SCAN_POST'} if (($ENV{REQUEST_METHOD} || "") ne "POST");
 			load_service_ajax_config();
@@ -334,7 +339,7 @@ sub form_vzlogger
 sub add_service_template_params
 {
 	my $vzlogger_expected_active = implementation_mode() eq "vzlogger";
-	my $vzlogger_state = service_state("vzlogger");
+	my $vzlogger_state = service_state();
 
 	$template->param("VZLOGGER_SERVICE_STATUS" => service_summary("vzlogger"));
 	$template->param("VZLOGGER_SERVICE_STATUS_CLASS" => service_status_class($vzlogger_state, $vzlogger_expected_active));
@@ -348,6 +353,12 @@ sub add_service_template_params
 	$template->param("VZLOGGER_LOG_URL" => log_url("plugins/$lbpplugindir/vzlogger.log"));
 	$template->param("VZLOGGER_LOG_DISABLED" => (-e $vzlogger_log ? "" : "ui-disabled"));
 
+	# Installed and available vzlogger version for the package update row.
+	my $versions = package_version_ajax();
+	$template->param("VZLOGGER_VERSION_CURRENT" => ($versions->{current} || $L{'VZLOGGER.UI_NOT_INSTALLED'}));
+	$template->param("VZLOGGER_VERSION_AVAILABLE" => ($versions->{available} || "-"));
+	$template->param("VZLOGGER_UPDATE_AVAILABLE" => ($versions->{update_available} ? 1 : 0));
+
 	my $control_log = latest_plugin_log_name("control");
 	$template->param("CONTROL_LOG_URL" => $control_log ? log_url("plugins/$lbpplugindir/$control_log") : "#");
 	$template->param("CONTROL_LOG_DISABLED" => ($control_log ? "" : "ui-disabled"));
@@ -355,12 +366,6 @@ sub add_service_template_params
 
 
 
-sub html_escape
-{
-	my ($value) = @_;
-	$value = "" if (!defined($value));
-	return CGI::escapeHTML($value);
-}
 
 sub service_status_class
 {
@@ -397,37 +402,38 @@ sub log_redirect_url
 
 sub service_summary
 {
-	my ($service) = @_;
-	my $state = service_state($service);
-	my $pid = service_pid($service);
-	my $installed = service_installed($service) ? $L{'VZLOGGER.UI_INSTALLED'} : $L{'VZLOGGER.UI_NOT_INSTALLED'};
-	return "$state | PID: " . ($pid || "-") . " | Service: $service | $installed";
+	my $state = service_state();
+	my $pid = service_pid();
+	my $installed = vzlogger_installed() ? $L{"VZLOGGER.UI_INSTALLED"} : $L{"VZLOGGER.UI_NOT_INSTALLED"};
+	return "$state | PID: " . ($pid || "-") . " | $installed";
 }
 
+# vzlogger is supervised by the plugin watchdog, not by systemd.
 sub service_state
 {
-	my ($service) = @_;
-	return "unknown" if (!command_exists("systemctl"));
-	my $state = `systemctl is-active $service 2>/dev/null`;
-	chomp($state);
-	return $state || "inactive";
+	my $pid = service_pid();
+	return $pid ? "active" : "inactive";
 }
 
+sub vzlogger_installed
+{
+	foreach my $candidate ("/usr/bin/vzlogger", "/usr/local/bin/vzlogger") {
+		return 1 if (-x $candidate);
+	}
+	return command_exists("vzlogger") ? 1 : 0;
+}
+
+# The watchdog writes the PID of the vzlogger process it started.
 sub service_pid
 {
-	my ($service) = @_;
-	return "" if (!command_exists("systemctl"));
-	my $pid = `systemctl show -p MainPID --value $service 2>/dev/null`;
-	chomp($pid);
-	return ($pid && $pid ne "0") ? $pid : "";
-}
-
-sub service_installed
-{
-	my ($service) = @_;
-	return 1 if (-e "/etc/systemd/system/$service.service");
-	return 1 if (-e "/lib/systemd/system/$service.service");
-	return 0;
+	my $pid_file = "/var/run/shm/$lbpplugindir/vzlogger.pid";
+	return "" if (!-e $pid_file);
+	open(my $fh, "<", $pid_file) or return "";
+	my $pid = <$fh>;
+	close($fh);
+	chomp($pid) if (defined($pid));
+	return "" if (!defined($pid) || $pid !~ /Ad+z/);
+	return (-d "/proc/$pid") ? $pid : "";
 }
 
 sub load_service_ajax_config
@@ -475,9 +481,9 @@ sub service_status_response
 sub service_status_data
 {
 	my ($service, $expected_active, $startable) = @_;
-	my $state = service_state($service);
-	my $pid = service_pid($service);
-	my $installed = service_installed($service);
+	my $state = service_state();
+	my $pid = service_pid();
+	my $installed = vzlogger_installed();
 	my $running = $state eq "active";
 	return {
 		state => $state,
@@ -1468,7 +1474,7 @@ sub read_obis_channels
 	} @heads;
 	return ui_text($L{'VZLOGGER.UI_UNKNOWN_IR_HEAD'}, serial => $target_serial) . "\n" if (!$known_heads{$target_serial});
 
-	my $was_active = service_state("vzlogger") eq "active";
+	my $was_active = service_state() eq "active";
 	my $output = "Read OBIS channels for $target_serial.\n";
 
 	if (!command_exists("vzlogger")) {
@@ -1535,7 +1541,7 @@ sub start_obis_discovery_background
 	write_obis_discovery_status_file($status);
 	unlink(obis_discovery_cancel_file()) if (-e obis_discovery_cancel_file());
 
-	my $was_active = service_state("vzlogger") eq "active";
+	my $was_active = service_state() eq "active";
 	my $launch_output = run_vzlogger_obis_test($test_config, $test_log, $was_active, $target_serial, $job_id, 1);
 	if ($launch_output !~ /\Astarted:/) {
 		$status->{ok} = JSON::PP::false;
@@ -2797,3 +2803,41 @@ sub ajax_header
 	);
 	return();
 }	
+
+# Reports the installed and the available vzlogger version. The available
+# version needs an apt index refresh, which only root can do, so it is read
+# from the cached index here and refreshed by the update action.
+sub package_version_ajax
+{
+	my $helper = "$lbpbindir/vzlogger_pkg.sh";
+	return { ok => JSON::PP::false, message => $L{'VZLOGGER.UI_PACKAGE_HELPER_MISSING'} } if (!-x $helper);
+	my $current = `"$helper" current 2>/dev/null`;
+	my $available = `"$helper" available 2>/dev/null`;
+	chomp($current); chomp($available);
+	return {
+		ok => JSON::PP::true,
+		current => $current,
+		available => $available,
+		update_available => ($current && $available && $current ne $available) ? JSON::PP::true : JSON::PP::false,
+	};
+}
+
+# Runs the package helper as root through the single sudoers rule.
+sub package_update_ajax
+{
+	my $helper = "$lbpbindir/vzlogger_pkg.sh";
+	return { ok => JSON::PP::false, message => $L{'VZLOGGER.UI_PACKAGE_HELPER_MISSING'} } if (!-x $helper);
+	my $before = `"$helper" current 2>/dev/null`;
+	chomp($before);
+	my $output = `sudo -n "$helper" upgrade 2>&1`;
+	my $exit = $? >> 8;
+	my $after = `"$helper" current 2>/dev/null`;
+	chomp($after);
+	write_control_log("package-update", $output);
+	return {
+		ok => $exit == 0 ? JSON::PP::true : JSON::PP::false,
+		current => $after,
+		message => $output,
+		changed => ($before ne $after) ? JSON::PP::true : JSON::PP::false,
+	};
+}

@@ -417,6 +417,24 @@
 	</div>
 
 	</div>
+	<div class="service-panel">
+		<h3><TMPL_VAR NAME=VZLOGGER.PACKAGE_SECTION></h3>
+		<table border="0">
+		<tr>
+			<td class="service-label"><TMPL_VAR NAME=VZLOGGER.PACKAGE_VERSION></td>
+			<td class="service-controls">
+				<span id="vzlogger_version_current"><TMPL_VAR VZLOGGER_VERSION_CURRENT></span>
+				<span id="vzlogger_version_available" class="service-action-reason"><TMPL_IF VZLOGGER_UPDATE_AVAILABLE><TMPL_VAR NAME=VZLOGGER.PACKAGE_UPDATE_AVAILABLE>: <TMPL_VAR VZLOGGER_VERSION_AVAILABLE><TMPL_ELSE><TMPL_VAR NAME=VZLOGGER.PACKAGE_UP_TO_DATE></TMPL_IF></span>
+				<div class="service-action-line">
+					<button id="vzlogger_update_button" class="service-control-button" type="button" onclick="update_vzlogger_package();" data-role="button" data-inline="true" data-mini="true" data-icon="refresh"><TMPL_VAR NAME=VZLOGGER.PACKAGE_UPDATE></button>
+				</div>
+			</td>
+			<td class="service-spacer">&nbsp;</td>
+			<td class="service-help"><TMPL_VAR NAME=VZLOGGER.PACKAGE_UPDATE_HELP></td>
+		</tr>
+		</table>
+	</div>
+
 	<div class="service-control-log"><span><TMPL_VAR NAME=VZLOGGER.SERVICE_CONTROL_LOG_LABEL></span> <a href="<TMPL_VAR CONTROL_LOG_URL>" target="log" class="<TMPL_VAR CONTROL_LOG_DISABLED>"><TMPL_VAR NAME=VZLOGGER.SHOW_CONTROL_LOG></a></div>
 
 	<div id="vzlogger_configuration_section" class="configuration-section <TMPL_IF VZLOGGER_EXPERT_MODE>configuration-disabled</TMPL_IF>">
@@ -1854,6 +1872,27 @@
 		}
 
 		function update_vzlogger_controls() { update_activation_dirty_hints(); update_all_control_states(); }
+		function update_vzlogger_package() {
+			var button = $("#vzlogger_update_button");
+			if (button.hasClass("ui-disabled")) return;
+			set_anchor_disabled("#vzlogger_update_button", true);
+			button.addClass("ui-disabled");
+			var data = new FormData();
+			data.append("ajax", "1");
+			data.append("ajaxaction", "package-update");
+			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin" })
+				.then(function (response) { return response.json(); })
+				.then(function (result) {
+					button.removeClass("ui-disabled");
+					if (result.current) $("#vzlogger_version_current").text(result.current);
+					$("#vzlogger_version_available").text(result.message || "");
+				})
+				.catch(function (error) {
+					button.removeClass("ui-disabled");
+					$("#vzlogger_version_available").text(String(error));
+				});
+		}
+
 		function update_local_controls() { update_all_control_states(); }
 		function update_mqtt_controls() { update_all_control_states(); }
 

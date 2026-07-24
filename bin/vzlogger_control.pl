@@ -29,7 +29,6 @@ my $obis_watchdog_pid_file = "$runtime_dir/vzlogger_obis_watchdog.pid";
 my $obis_status_file = "$runtime_dir/vzlogger_obis_status.json";
 my $plugin_log_dir = "$home/log/plugins/$psubfolder";
 my $vzlogger_log_file = "$plugin_log_dir/vzlogger.log";
-my $vzlogger_override_file = "/etc/systemd/system/vzlogger.service.d/smartmeter-ng.conf";
 my $action = shift @ARGV || "status";
 
 make_path($runtime_dir) if (!-d $runtime_dir);
@@ -110,8 +109,6 @@ if ($action eq "apply-expert") {
 
 if ($action eq "disable-vzlogger") {
 	my $rc = stop_vzlogger(1);
-	my $override_rc = install_vzlogger_service_override("remove");
-	$rc = $override_rc if ($rc == 0 && $override_rc != 0);
 	print "Stopped vzLogger.\n";
 	exit $rc;
 }
@@ -122,9 +119,8 @@ if ($action eq "status") {
 	print "vzlogger package: " . package_state("vzlogger") . "\n";
 	print "Volkszaehler apt source: " . (-e "/etc/apt/sources.list.d/volkszaehler-volkszaehler-org-project.list" ? "configured" : "missing") . "\n";
 	print "vzlogger config: " . (-e $config_file ? $config_file : "missing") . "\n";
-	print "vzlogger service config: " . (-e $vzlogger_override_file ? $config_file : "system default") . "\n";
 	print "config validation: " . validation_state() . "\n";
-	print "vzlogger service: " . service_summary("vzlogger") . "\n";
+	print "vzlogger process: " . service_summary() . "\n";
 	exit 0;
 }
 
@@ -156,8 +152,6 @@ sub apply_generated_configuration
 	return $rc if ($rc != 0);
 	if (vzlogger_mode_enabled() && generated_meter_count() == 0) {
 		my $stop_rc = stop_vzlogger(1);
-		my $override_rc = install_vzlogger_service_override("remove");
-		$stop_rc = $override_rc if ($stop_rc == 0 && $override_rc != 0);
 		print "No meter is configured. Stopped vzLogger.\n";
 		return $stop_rc;
 	}
@@ -188,19 +182,17 @@ sub generate_validate_and_promote
 		$rc = run_perl("$bindir/vzlogger_validate.pl");
 		return $rc if ($rc != 0);
 	}
-	my (@private_owner, @vzlogger_owner);
+	# vzlogger runs as loxberry from the watchdog, so the generated files stay
+	# owned by loxberry and are not readable for anyone else.
+	my @private_owner;
 	my $config_mode = 0600;
 	if ($> == 0) {
 		my @loxberry = getpwnam("loxberry");
-		my @vzlogger = getpwnam("_vzlogger");
-		return message_exit("Could not resolve loxberry or _vzlogger ownership for generated configuration.", 1)
-			if (!@loxberry || !@vzlogger);
+		return message_exit("Could not resolve loxberry ownership for the generated configuration.", 1) if (!@loxberry);
 		@private_owner = ($loxberry[2], $loxberry[3]);
-		@vzlogger_owner = ($loxberry[2], $vzlogger[3]);
-		$config_mode = 0640;
 	}
 	my @pairs = (
-		[$stage_config, $config_file, $config_mode, @vzlogger_owner],
+		[$stage_config, $config_file, $config_mode, @private_owner],
 		[$stage_mapping, $mapping_file, 0600, @private_owner],
 	);
 	push @pairs, [$stage_definitions, "$config_dir/vzlogger_channel_definitions.json", 0600, @private_owner]
@@ -235,8 +227,6 @@ sub activate_current_vzlogger_configuration
 {
 	if (!vzlogger_mode_enabled()) {
 		my $rc = stop_vzlogger(1);
-		my $override_rc = install_vzlogger_service_override("remove");
-		$rc = $override_rc if ($rc == 0 && $override_rc != 0);
 		print "vzLogger mode is disabled. Stopped vzLogger.\n";
 		return $rc;
 	}
@@ -363,105 +353,9 @@ sub write_vzlogger_config_atomic
 
 
 
-sub restart_vzlogger
-{
-	stop_orphaned_obis_discovery_processes();
-	if (!command_exists("systemctl")) {
-		print "systemctl not available. Generated config only.\n";
-		return 1;
-	}
 
-	if (!-d $runtime_dir) {
-		make_path($runtime_dir);
-	}
-	chmod(0750, $runtime_dir);
-	prepare_vzlogger_log_file();
 
-	my $override_rc = install_vzlogger_service_override("install");
-	if ($override_rc != 0) {
-		print "Could not configure vzlogger to use $config_file.\n";
-		print "Skipped vzlogger restart to avoid running with a different configuration.\n";
-		return $override_rc;
-	}
 
-	my $enable_rc = enable_vzlogger_autostart();
-	return $enable_rc if ($enable_rc != 0);
-	my $restart_rc = run_privileged("restart vzlogger", systemctl_command(), "restart", "vzlogger");
-	print "Restarted vzlogger service.\n" if ($restart_rc == 0);
-	$restart_rc = 1 if ($restart_rc == 0 && !wait_for_service_state("vzlogger", 1));
-	return $restart_rc;
-}
-
-sub prepare_vzlogger_log_file
-{
-	return if (!vzlogger_debug_enabled());
-	make_path($plugin_log_dir) if (!-d $plugin_log_dir);
-
-	if (!-e $vzlogger_log_file) {
-		open(my $fh, ">>", $vzlogger_log_file) or do {
-			print "Could not create $vzlogger_log_file: $!\n";
-			return;
-		};
-		close($fh);
-	}
-
-	if ($> == 0) {
-		my $vzlogger_uid = getpwnam("_vzlogger");
-		my $loxberry_gid = getgrnam("loxberry");
-		chown($vzlogger_uid, $loxberry_gid, $vzlogger_log_file) if (defined($vzlogger_uid) && defined($loxberry_gid));
-		chmod(0640, $vzlogger_log_file);
-		return;
-	}
-
-	# Ownership is established by the privileged service-override helper.
-	chmod(0640, $vzlogger_log_file);
-}
-
-sub start_vzlogger
-{
-	stop_orphaned_obis_discovery_processes();
-	if (!command_exists("systemctl")) {
-		print "systemctl not available.\n";
-		return 1;
-	}
-	if (!service_installed("vzlogger")) {
-		print "vzlogger service is not installed.\n";
-		return 1;
-	}
-	prepare_vzlogger_log_file();
-	my $override_rc = install_vzlogger_service_override("install");
-	if ($override_rc != 0) {
-		print "Could not configure vzlogger to use $config_file.\n";
-		print "Skipped vzlogger start to avoid running with a different configuration.\n";
-		return $override_rc;
-	}
-	my $enable_rc = enable_vzlogger_autostart();
-	return $enable_rc if ($enable_rc != 0);
-	my $start_rc = run_privileged("start vzlogger", systemctl_command(), "start", "vzlogger");
-	print "Started vzlogger service.\n" if ($start_rc == 0);
-	$start_rc = 1 if ($start_rc == 0 && !wait_for_service_state("vzlogger", 1));
-	return $start_rc;
-}
-
-sub stop_vzlogger
-{
-	my ($disable) = @_;
-	stop_orphaned_obis_discovery_processes();
-	return 1 if (!command_exists("systemctl"));
-	if (!service_installed("vzlogger")) {
-		print "vzlogger service is not installed.\n";
-		return 0;
-	}
-	my $rc = run_privileged("stop vzlogger", systemctl_command(), "stop", "vzlogger");
-	run_privileged("reset failed state for vzlogger", systemctl_command(), "reset-failed", "vzlogger") if ($rc == 0);
-	$rc = 1 if ($rc == 0 && !wait_for_service_state("vzlogger", 0));
-	if ($disable && $rc == 0) {
-		my $disable_rc = run_privileged("disable vzlogger autostart", systemctl_command(), "disable", "vzlogger");
-		print "Disabled vzlogger autostart.\n" if ($disable_rc == 0);
-		return $disable_rc;
-	}
-	return $rc;
-}
 
 sub stop_orphaned_obis_discovery_processes
 {
@@ -568,25 +462,8 @@ sub obis_watchdog_running
 	return ($cmdline || "") =~ /\A\Q$psubfolder-vzlogger-obis-watchdog\E(?:\0|\s|\z)/ ? 1 : 0;
 }
 
-sub enable_vzlogger_autostart
-{
-	return 1 if (!command_exists("systemctl"));
-	if (!service_installed("vzlogger")) {
-		print "vzlogger service is not installed.\n";
-		return 1;
-	}
-	my $enable_rc = run_privileged("enable vzlogger autostart", systemctl_command(), "enable", "vzlogger");
-	print "Enabled vzlogger autostart.\n" if ($enable_rc == 0);
-	return $enable_rc;
-}
 
 
-sub vzlogger_debug_enabled
-{
-	my $cfg = SmartMeterConfig->new($plugin_config_file);
-	return 0 if (!$cfg);
-	return ($cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0") eq "1";
-}
 
 sub vzlogger_mode_enabled
 {
@@ -596,87 +473,13 @@ sub vzlogger_mode_enabled
 
 
 
-sub install_vzlogger_service_override
-{
-	my ($action) = @_;
-	my $script = "$bindir/install_vzlogger_service_override.sh";
-	return message_exit("vzLogger service override helper not found: $script", 1) if (!-e $script);
-
-	if ($> == 0) {
-		system("sh", $script, $home, $psubfolder, $action);
-		my $exit = $? >> 8;
-		log_control("exit=$exit: sh $script $home $psubfolder $action");
-		return $exit;
-	}
-
-	if (command_exists("sudo")) {
-		system("sudo", "-n", "/bin/sh", $script, $home, $psubfolder, $action);
-		my $exit = $? >> 8;
-		log_control("exit=$exit: sudo -n /bin/sh $script $home $psubfolder $action");
-		return $exit if ($exit == 0);
-		print "Could not run sudo non-interactively. Run as root: sh $script $home $psubfolder $action\n";
-		return $exit || 1;
-	}
-
-	print "Root privileges are required. Run as root: sh $script $home $psubfolder $action\n";
-	log_control("root required: sh $script $home $psubfolder $action");
-	return 2;
-}
 
 
-sub service_state
-{
-	my ($service) = @_;
-	return "unknown" if (!command_exists("systemctl"));
-	my $state = `systemctl is-active $service 2>/dev/null`;
-	chomp($state);
-	return $state || "inactive";
-}
 
-sub wait_for_service_state
-{
-	my ($service, $running) = @_;
-	for (1 .. 20) {
-		my $active = service_state($service) eq "active" ? 1 : 0;
-		return 1 if ($active == ($running ? 1 : 0));
-		select(undef, undef, undef, 0.1);
-	}
-	print "Service $service did not reach the requested " . ($running ? "running" : "stopped") . " state.\n";
-	return 0;
-}
 
-sub service_summary
-{
-	my ($service) = @_;
-	my $state = service_state($service);
-	my $pid = service_pid($service);
-	my $installed = service_installed($service) ? "installed" : "not installed";
-	return "$state | PID: " . ($pid || "-") . " | Service: $service | $installed";
-}
 
-sub service_pid
-{
-	my ($service) = @_;
-	return "" if (!command_exists("systemctl"));
-	my $pid = `systemctl show -p MainPID --value $service 2>/dev/null`;
-	chomp($pid);
-	return ($pid && $pid ne "0") ? $pid : "";
-}
 
-sub service_installed
-{
-	my ($service) = @_;
-	return 1 if (-e "/etc/systemd/system/$service.service");
-	return 1 if (-e "/lib/systemd/system/$service.service");
-	return 0;
-}
 
-sub systemctl_command
-{
-	return "/bin/systemctl" if (-x "/bin/systemctl");
-	return "/usr/bin/systemctl" if (-x "/usr/bin/systemctl");
-	return "systemctl";
-}
 
 sub package_state
 {
@@ -716,14 +519,12 @@ sub create_debug_log
 	print $fh "vzlogger package: " . package_state("vzlogger") . "\n";
 	print $fh "Volkszaehler apt source: " . (-e "/etc/apt/sources.list.d/volkszaehler-volkszaehler-org-project.list" ? "configured" : "missing") . "\n";
 	print $fh "vzlogger config: " . (-e $config_file ? $config_file : "missing") . "\n";
-	print $fh "vzlogger service config: " . (-e $vzlogger_override_file ? $config_file : "system default") . "\n";
 	print $fh "config validation: " . validation_state() . "\n";
-	print $fh "vzlogger service: " . service_summary("vzlogger") . "\n";
+	print $fh "vzlogger process: " . service_summary() . "\n";
 
 	print_section($fh, "Command Output");
 	print_command($fh, "vzlogger --version", "vzlogger", "--version");
-	print_command($fh, "systemctl status vzlogger", "systemctl", "status", "vzlogger", "--no-pager");
-	print_command($fh, "systemctl cat vzlogger", "systemctl", "cat", "vzlogger", "--no-pager");
+	print_command($fh, "watchdog status", $^X, "$bindir/watchdog.pl", "--action=status");
 	print_command($fh, "journalctl -u vzlogger", "journalctl", "-u", "vzlogger", "-n", "80", "--no-pager");
 
 	print_file($fh, "Plugin config", $plugin_config_file, 1);
@@ -924,27 +725,6 @@ sub shell_quote
 	return "'$value'";
 }
 
-sub run_privileged
-{
-	my ($label, @command) = @_;
-	log_control("privileged: $label");
-	if ($> == 0) {
-		system(@command);
-		my $exit = $? >> 8;
-		log_control("exit=$exit: " . join(" ", @command));
-		return $exit;
-	}
-	if (command_exists("sudo")) {
-		system("sudo", "-n", @command);
-		my $exit = $? >> 8;
-		print "Could not $label via sudo non-interactively.\n" if ($exit != 0);
-		log_control("exit=$exit: sudo -n " . join(" ", @command));
-		return $exit;
-	}
-	print "Root privileges are required to $label.\n";
-	log_control("root required: " . join(" ", @command));
-	return 2;
-}
 
 sub log_control
 {
@@ -975,4 +755,35 @@ sub command_exists
 		return 1 if (-x "$dir/$command");
 	}
 	return 0;
+}
+
+# vzlogger is not a systemd service: the plugin watchdog owns its lifecycle.
+sub watchdog
+{
+	my ($watchdog_action) = @_;
+	my $script = "$bindir/watchdog.pl";
+	return message_exit("Watchdog helper not found: $script", 1) if (!-e $script);
+	return run_perl($script, "--action=$watchdog_action");
+}
+
+sub start_vzlogger { stop_orphaned_obis_discovery_processes(); return watchdog("start"); }
+sub restart_vzlogger { stop_orphaned_obis_discovery_processes(); return watchdog("restart"); }
+
+sub stop_vzlogger
+{
+	stop_orphaned_obis_discovery_processes();
+	return watchdog("stop");
+}
+
+sub vzlogger_running
+{
+	my $script = "$bindir/watchdog.pl";
+	return 0 if (!-e $script);
+	system($^X, $script, "--action=status");
+	return ($? >> 8) == 0 ? 1 : 0;
+}
+
+sub service_summary
+{
+	return vzlogger_running() ? "running" : "stopped";
 }

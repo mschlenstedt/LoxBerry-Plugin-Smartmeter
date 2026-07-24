@@ -20,7 +20,9 @@ sub import {
 	*{"${caller}::lbplogdir"} = \$lbplogdir;
 }
 
-sub pluginversion { return '0.0.0'; }
+sub pluginversion { return "0.0.0"; }
+sub lock { return undef; }
+sub unlock { return 1; }
 sub readlanguage { return (); }
 
 1;

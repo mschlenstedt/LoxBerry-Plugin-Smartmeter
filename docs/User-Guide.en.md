@@ -31,9 +31,13 @@ Custom JSONC source remains unchanged. Missing channel UUIDs are recorded in an 
 
 ### Package Installation
 
-During installation or upgrade, the plugin configures the Volkszaehler/Cloudsmith apt repository. LoxBerry then installs `vzlogger` and `mosquitto-clients` through the plugin's normal `dpkg/apt` package list. If `vzlogger` is already installed, the existing package ownership is preserved and apt updates it to the available current version.
+The plugin configures the Volkszaehler/Cloudsmith apt repository and installs only the `vzlogger` package from it. The repository contains nothing but vzlogger and the two libraries libsml and libmbus, so no other Volkszaehler component is pulled in. The repository key is rewritten on every install and update so a rotated key cannot lock the plugin out.
 
-After installation the `vzlogger` service stays stopped and disabled while meter reading is not enabled. vzLogger is started with **Save and apply** in vzLogger mode.
+The package ships a systemd unit and starts it from its postinst. The plugin prevents that start and disables the unit afterwards, because vzlogger is started in the foreground by the plugin watchdog (`vzlogger -f -c ... -o ...`). This is reapplied after every package update because the postinst unmasks the unit again.
+
+The **vzLogger package** section on the plugin page shows the installed and available version and offers **Update vzLogger**.
+
+After installation vzlogger stays stopped while meter reading is not enabled. At boot the daemon script starts the watchdog, which starts vzlogger when vzLogger mode is active; every five minutes a cron job lets the watchdog verify the process and restart it after an unexpected exit. A manual stop is respected. vzLogger is started with **Save and apply** in vzLogger mode.
 
 ### Meter Setup
 

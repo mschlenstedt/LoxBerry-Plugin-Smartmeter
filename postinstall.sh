@@ -17,12 +17,13 @@ ARGV5=$5 # Fifth argument is Base folder of LoxBerry
 
 /bin/sed -i "s#REPLACEBYSUBFOLDER#$ARGV3#" $ARGV5/config/plugins/$ARGV3/smartmeter.json
 /bin/sed -i "s#REPLACEBYNAME#$ARGV2#" $ARGV5/config/plugins/$ARGV3/smartmeter.json
+/bin/chmod +x $ARGV5/bin/plugins/$ARGV3/vzlogger_pkg.sh
+/bin/chmod +x $ARGV5/bin/plugins/$ARGV3/watchdog.pl
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/vzlogger_config.pl
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/migrate_config.pl
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/config_value.pl
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/vzlogger_validate.pl
 /bin/chmod +x $ARGV5/bin/plugins/$ARGV3/vzlogger_control.pl
-/bin/chmod +x $ARGV5/bin/plugins/$ARGV3/install_vzlogger_service_override.sh
 /bin/chmod +x $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/vzlogger_live.cgi
 /bin/chmod +x $ARGV5/webfrontend/htmlauth/plugins/$ARGV3/vzlogger_config.cgi
 

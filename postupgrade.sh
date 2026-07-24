@@ -39,6 +39,8 @@ migrate_config()
 echo "<INFO> Copy back existing config files"
 cp -v -r "/tmp/$ARGV1"_upgrade/config/"$ARGV3"/* "$ARGV5/config/plugins/$ARGV3/"
 
+chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_pkg.sh" 2>/dev/null || true
+chmod +x "$ARGV5/bin/plugins/$ARGV3/watchdog.pl" 2>/dev/null || true
 chmod +x "$ARGV5/bin/plugins/$ARGV3/migrate_config.pl" 2>/dev/null || true
 chmod +x "$ARGV5/bin/plugins/$ARGV3/config_value.pl" 2>/dev/null || true
 
@@ -52,7 +54,6 @@ echo "<INFO> Ensure executable permissions for vzLogger helper scripts"
 chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_config.pl" 2>/dev/null || true
 chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_validate.pl" 2>/dev/null || true
 chmod +x "$ARGV5/bin/plugins/$ARGV3/vzlogger_control.pl" 2>/dev/null || true
-chmod +x "$ARGV5/bin/plugins/$ARGV3/install_vzlogger_service_override.sh" 2>/dev/null || true
 chmod +x "$ARGV5/webfrontend/htmlauth/plugins/$ARGV3/vzlogger_live.cgi" 2>/dev/null || true
 
 echo "<INFO> Copy back existing log files"

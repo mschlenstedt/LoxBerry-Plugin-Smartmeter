@@ -1,13 +1,27 @@
 #!/bin/bash
 
-logfile=REPLACELBHOMEDIR/log/plugins/REPLACELBPPLUGINDIR/smartmeter.log
+# Runs as root at every LoxBerry boot.
+#
+# Creates the udev rule for the I/R reading heads and hands the vzlogger start
+# over to the plugin watchdog, which runs as the loxberry user. vzlogger is not
+# a systemd service; the watchdog owns its lifecycle.
 
-echo "`date` - Start Init " >>$logfile
-echo "`date` - Creating new UDEV Rules for I/R heads: /etc/udev/rules.d/99-smartmeter.rules " >>$logfile
-echo "# LoxBerry SML-eMon Plugin device rule file - DO NOT EDIT BY HAND!" >/etc/udev/rules.d/99-smartmeter.rules
+LOGFILE=REPLACELBHOMEDIR/log/plugins/REPLACELBPPLUGINDIR/daemon.log
+WATCHDOG=REPLACELBHOMEDIR/bin/plugins/REPLACELBPPLUGINDIR/watchdog.pl
+
+echo "`date` - Start Init " >>$LOGFILE
+echo "`date` - Creating UDEV rule for I/R heads: /etc/udev/rules.d/99-smartmeter.rules " >>$LOGFILE
+echo "# LoxBerry Smartmeter-NG device rule file - DO NOT EDIT BY HAND!" >/etc/udev/rules.d/99-smartmeter.rules
 echo "KERNEL==\"ttyUSB[0-9]*\",GROUP=\"loxberry\",MODE=\"0660\",SYMLINK+=\"serial/smartmeter/\$env{ID_SERIAL_SHORT}\"" >>/etc/udev/rules.d/99-smartmeter.rules
-echo "`date` - New UDEV-Rule for I/R heads created. " >>$logfile
-echo "`date` - Reload rules... " >>$logfile
-udevadm control --reload-rules >>$logfile && udevadm trigger >>$logfile
-echo "`date` - End Init " >>$logfile
+echo "`date` - Reload rules... " >>$LOGFILE
+udevadm control --reload-rules >>$LOGFILE 2>&1 && udevadm trigger >>$LOGFILE 2>&1
+
+if [ -x "$WATCHDOG" ]; then
+	echo "`date` - Starting vzlogger through the plugin watchdog " >>$LOGFILE
+	su loxberry -c "$WATCHDOG --action=start" >>$LOGFILE 2>&1
+else
+	echo "`date` - Watchdog not found: $WATCHDOG " >>$LOGFILE
+fi
+
+echo "`date` - End Init " >>$LOGFILE
 exit 0
