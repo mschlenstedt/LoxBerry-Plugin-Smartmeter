@@ -2,11 +2,11 @@
 use strict;
 use warnings;
 use CGI;
-use Config::Simple;
 use IO::Socket::INET;
 use JSON::PP;
 use LoxBerry::System;
 use lib $lbpbindir;
+use SmartMeterConfig;
 use SmartMeterVZLoggerChannels qw(load_catalog lookup_obis);
 
 require LoxBerry::Web;
@@ -18,11 +18,11 @@ my $template = HTML::Template->new(
 	die_on_bad_params => 0,
 );
 my %L = LoxBerry::System::readlanguage($template, "language.ini");
-my $cfg = Config::Simple->new("$lbpconfigdir/smartmeter.cfg");
+my $cfg = SmartMeterConfig->new("$lbpconfigdir/smartmeter.json");
 my $port = $cfg ? ($cfg->param("VZLOGGER.LOCALPORT") || 18080) : 18080;
 my $mapping_file = "$lbpconfigdir/vzlogger_channels.json";
 my $catalog = load_catalog("$lbptemplatedir/obis_catalog.json");
-my $metadata_version = metadata_version($mapping_file, "$lbpconfigdir/smartmeter.cfg", "$lbptemplatedir/obis_catalog.json");
+my $metadata_version = metadata_version($mapping_file, "$lbpconfigdir/smartmeter.json", "$lbptemplatedir/obis_catalog.json");
 if ($cgi->param("meta")) {
 	print $cgi->header(-type => "application/json", -charset => "utf-8", -expires => "now");
 	print JSON::PP->new->utf8->canonical->encode(read_channel_metadata($mapping_file, $cfg, $metadata_version, $catalog));

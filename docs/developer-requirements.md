@@ -19,7 +19,7 @@ This document records the product and engineering contracts that must remain tru
 
 ## 2. Compatibility And Mode Switching
 
-- Existing `smartmeter.cfg`, MQTT topic structure, HTTP-cache keys, UDP value names, custom JSONC files, and generated-config locations are compatibility contracts. Change them only with an explicit migration and documented upgrade path.
+- Existing `smartmeter.json`, MQTT topic structure, HTTP-cache keys, UDP value names, custom JSONC files, and generated-config locations are compatibility contracts. Change them only with an explicit migration and documented upgrade path.
 - A valid generated `vzlogger.conf` must survive a fully inactive state, upgrades, and later vzLogger reactivation.
 - Ordinary read-only page loads must not rewrite configuration files or services.
 - Meter or channel removal is staged in the browser and becomes persistent only on Save/Apply. Applying a meter removal also removes its runtime artifacts.

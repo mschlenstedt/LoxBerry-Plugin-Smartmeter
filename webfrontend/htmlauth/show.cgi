@@ -22,6 +22,9 @@
 use CGI::Carp qw(fatalsToBrowser);
 use CGI qw/:standard/;
 use Config::Simple;
+use FindBin;
+use lib "$FindBin::Bin/../../bin";
+use SmartMeterConfig;
 use File::HomeDir;
 use Cwd 'abs_path';
 use File::Path qw(make_path);
@@ -67,7 +70,7 @@ $cfg	 	= new Config::Simple("$home/config/system/general.cfg") or die $cfg->erro
 $installfolder	= $cfg->param("BASE.INSTALLFOLDER");
 
 # Read plugin config
-$plugin_cfg 	= new Config::Simple("$installfolder/config/plugins/$psubfolder/smartmeter.cfg") or die $plugin_cfg->error();
+$plugin_cfg	= SmartMeterConfig->new("$installfolder/config/plugins/$psubfolder/smartmeter.json") or die "Could not read plugin configuration";
 $pname          = $plugin_cfg->param("MAIN.SCRIPTNAME");
 $runtime_dir = "/var/run/shm/$psubfolder";
 

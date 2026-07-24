@@ -30,7 +30,7 @@ for service in vzlogger smartmeter-v2-vzlogger-bridge; do
         printf '%s: not installed\n' "`$service"
     fi
 done
-for file in smartmeter.cfg vzlogger.conf vzlogger_expert.conf vzlogger_channels.json; do
+for file in smartmeter.json vzlogger.conf vzlogger_expert.conf vzlogger_channels.json; do
     path="`$plugin_config/`$file"
     if [ -f "`$path" ]; then
         if command -v sha256sum >/dev/null 2>&1; then

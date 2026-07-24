@@ -3,12 +3,12 @@
 use strict;
 use warnings;
 
-use Config::Simple;
 use File::Path qw(make_path);
 use FindBin;
 use JSON::PP;
 use LoxBerry::System;
 use lib $FindBin::Bin;
+use SmartMeterConfig;
 use SmartMeterVZLoggerChannels qw(read_json write_json_atomic load_catalog lookup_obis new_document migrate_legacy_meter validate_document native_channel normalize_obis);
 use SmartMeterVZLoggerCustomChannels qw(assign_custom_channel_uuids);
 use SmartMeterVZLoggerConfig qw(read_mqtt_settings clean_number clean_qos sanitize_topic protocol_for_meter normalized_meter_mode serial_mode implementation_mode);
@@ -16,20 +16,20 @@ use SmartMeterVZLoggerConfig qw(read_mqtt_settings clean_number clean_qos saniti
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
 my $plugin_config_dir = $ENV{SMARTMETER_CONFIG_DIR} || "$home/config/plugins/$psubfolder";
-my $config_file = $ENV{SMARTMETER_CONFIG_FILE} || "$plugin_config_dir/smartmeter.cfg";
+my $config_file = $ENV{SMARTMETER_CONFIG_FILE} || "$plugin_config_dir/smartmeter.json";
 my $target_file = $ENV{SMARTMETER_VZLOGGER_CONFIG_FILE} || "$plugin_config_dir/vzlogger.conf";
 my $mapping_file = $ENV{SMARTMETER_VZLOGGER_MAPPING_FILE} || "$plugin_config_dir/vzlogger_channels.json";
 my $definitions_file = $ENV{SMARTMETER_VZLOGGER_DEFINITIONS_FILE} || "$plugin_config_dir/vzlogger_channel_definitions.json";
 my $uuid_registry_dir = $ENV{SMARTMETER_UUID_REGISTRY_DIR} || $plugin_config_dir;
 my $catalog_file = $ENV{SMARTMETER_OBIS_CATALOG_FILE} || "$home/templates/plugins/$psubfolder/obis_catalog.json";
-my $plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file\n";
+my $plugin_cfg = SmartMeterConfig->new($config_file) or die "Could not read $config_file\n";
 my $obis_catalog = load_catalog($catalog_file);
 my $debug_enabled = ($plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0") eq "1";
 my $log_level = int(clean_log_level($plugin_cfg->param("VZLOGGER.LOGLEVEL"), 0));
 my $log_file = $debug_enabled ? "$home/log/plugins/$psubfolder/vzlogger.log" : "/dev/null";
 
 my %flat_config;
-Config::Simple->import_from($config_file, \%flat_config);
+SmartMeterConfig->import_from($config_file, \%flat_config);
 my $channel_document = read_json($definitions_file);
 die "Invalid channel definitions JSON: $definitions_file\n" if (-e $definitions_file && !defined($channel_document));
 $channel_document ||= new_document();

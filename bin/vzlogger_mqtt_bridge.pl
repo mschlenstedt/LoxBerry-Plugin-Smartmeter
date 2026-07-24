@@ -12,13 +12,14 @@ use JSON::PP;
 use LoxBerry::System;
 use LoxBerry::Log;
 use lib $FindBin::Bin;
+use SmartMeterConfig;
 use SmartMeterVZLoggerChannels qw(output_order_mapping ordered_output_names read_json);
 use SmartMeterVZLoggerBridge qw(parse_reading channel_mapping identifier_mapping clean_scalar_payload normalize_mapping_keys);
 use SmartMeterVZLoggerConfig qw(clean_number clean_qos sanitize_topic);
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
-my $config_file = "$home/config/plugins/$psubfolder/smartmeter.cfg";
+my $config_file = "$home/config/plugins/$psubfolder/smartmeter.json";
 my $mapping_file = "$home/config/plugins/$psubfolder/vzlogger_channels.json";
 my $vzlogger_config_file = "$home/config/plugins/$psubfolder/vzlogger.conf";
 my $runtime_dir = "/var/run/shm/$psubfolder";
@@ -69,7 +70,7 @@ $SIG{INT} = sub {
 	exit 0;
 };
 
-my $plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file: " . Config::Simple->error() . "\n";
+my $plugin_cfg = SmartMeterConfig->new($config_file) or die "Could not read $config_file: " . SmartMeterConfig->error() . "\n";
 my $loaded_mapping = read_json($mapping_file) || {};
 my ($mapping, $mapping_error) = normalize_mapping_keys($loaded_mapping);
 die "$mapping_error\n" if (!$mapping);

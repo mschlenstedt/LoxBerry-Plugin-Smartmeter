@@ -29,79 +29,18 @@ cleanup_obsolete_language_files()
 
 migrate_config()
 {
-	configfile="$ARGV5/config/plugins/$ARGV3/smartmeter.cfg"
-
-	if ! grep -q '^MQTTTOPIC=' "$configfile"; then
-		sed -i '/^UDPPORT=/a MQTTTOPIC=smartmeter' "$configfile"
-		echo "<INFO> Added default MQTT topic"
-	fi
-
-	# The Legacy implementation was removed. Settings that only drove Legacy
-	# polling are dropped, and a stored Legacy mode becomes inactive so the user
-	# has to activate vzLogger explicitly.
-	if grep -q '^SENDMQTT=' "$configfile"; then
-		sed -i '/^SENDMQTT=/d' "$configfile"
-		echo "<INFO> Removed obsolete Legacy MQTT send setting"
-	fi
-
-	if grep -q '^CRON=' "$configfile"; then
-		sed -i '/^CRON=/d' "$configfile"
-		echo "<INFO> Removed obsolete Legacy polling interval"
-	fi
-
-	if grep -q '^LEGACY_' "$configfile"; then
-		sed -i '/^LEGACY_/d' "$configfile"
-		echo "<INFO> Removed obsolete Legacy meter settings"
-	fi
-
-	if ! grep -q '^IMPLEMENTATION=' "$configfile"; then
-		sed -i '/^READ=/a IMPLEMENTATION=none' "$configfile"
-		echo "<INFO> Added default implementation mode: none"
-	elif grep -q '^IMPLEMENTATION=legacy$' "$configfile"; then
-		sed -i 's/^IMPLEMENTATION=legacy$/IMPLEMENTATION=none/' "$configfile"
-		echo "<WARNING> The Legacy implementation was removed. Meter reading is now inactive."
-		echo "<WARNING> Open the plugin page and activate vzLogger to resume reading."
-	fi
-
-	# The bridge debug switch (VZLOGGER.DEBUG) was replaced by the central
-	# LoxBerry log level, so drop it on upgrade.
-	if grep -q '^DEBUG=' "$configfile"; then
-		sed -i '/^DEBUG=/d' "$configfile"
-		echo "<INFO> Removed obsolete bridge debug setting (now controlled by the log level)"
-	fi
-
-	if ! grep -q '^\[VZLOGGER\]' "$configfile"; then
-		cat >> "$configfile" <<'EOF'
-
-[VZLOGGER]
-LOCALPORT=18080
-UDPINTERVAL=5
-VZLOGGERDEBUG=0
-LOGLEVEL=0
-EOF
-		echo "<INFO> Added default vzLogger settings"
-	else
-		if ! grep -q '^LOCALPORT=' "$configfile"; then
-			sed -i '/^\[VZLOGGER\]/a LOCALPORT=18080' "$configfile"
-			echo "<INFO> Added default vzLogger local HTTP port"
-		fi
-		if ! grep -q '^UDPINTERVAL=' "$configfile"; then
-			sed -i '/^\[VZLOGGER\]/a UDPINTERVAL=5' "$configfile"
-			echo "<INFO> Added default bridge update interval"
-		fi
-		if ! grep -q '^VZLOGGERDEBUG=' "$configfile"; then
-			sed -i '/^\[VZLOGGER\]/a VZLOGGERDEBUG=0' "$configfile"
-			echo "<INFO> Added default vzLogger service debug setting"
-		fi
-		if ! grep -q '^LOGLEVEL=' "$configfile"; then
-			sed -i '/^\[VZLOGGER\]/a LOGLEVEL=0' "$configfile"
-			echo "<INFO> Added default vzLogger service log level"
-		fi
+	# The configuration moved from INI to JSON. The Perl helper converts an
+	# existing smartmeter.cfg and applies all key-level migrations.
+	if ! "$ARGV5/bin/plugins/$ARGV3/migrate_config.pl" "$ARGV5/config/plugins/$ARGV3"; then
+		echo "<WARNING> Could not migrate the plugin configuration"
 	fi
 }
 
 echo "<INFO> Copy back existing config files"
 cp -v -r "/tmp/$ARGV1"_upgrade/config/"$ARGV3"/* "$ARGV5/config/plugins/$ARGV3/"
+
+chmod +x "$ARGV5/bin/plugins/$ARGV3/migrate_config.pl" 2>/dev/null || true
+chmod +x "$ARGV5/bin/plugins/$ARGV3/config_value.pl" 2>/dev/null || true
 
 echo "<INFO> Migrate config files"
 migrate_config

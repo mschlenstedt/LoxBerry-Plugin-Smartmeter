@@ -10,26 +10,33 @@ use lib "$FindBin::Bin/../bin";
 use SmartMeterVZLoggerChannels qw(stable_uuid write_json_atomic);
 
 my $dir = tempdir(CLEANUP => 1);
-my $config_file = "$dir/smartmeter.cfg";
+my $config_file = "$dir/smartmeter.json";
 open(my $cfg, ">", $config_file) or die $!;
 print $cfg <<'CFG';
-[MAIN]
-IMPLEMENTATION=vzlogger
-MQTTTOPIC=smartmeter
-[VZLOGGER]
-LOCALENABLED=1
-LOCALPORT=18080
-MQTTENABLED=1
-MQTTHOST=127.0.0.1
-MQTTPORT=1883
-[reader]
-SERIAL=reader
-METER=sml
-PROTOCOL=sml
-DEVICE=/dev/null
-ENABLED=1
-ALLOWSKIP=1
-AGGTIME=30
+{
+   "MAIN" : {
+      "IMPLEMENTATION" : "vzlogger",
+      "MQTTTOPIC" : "smartmeter"
+   },
+   "VZLOGGER" : {
+      "LOCALENABLED" : "1",
+      "LOCALPORT" : "18080",
+      "MQTTENABLED" : "1",
+      "MQTTHOST" : "127.0.0.1",
+      "MQTTPORT" : "1883"
+   },
+   "METERS" : {
+      "reader" : {
+         "SERIAL" : "reader",
+         "METER" : "sml",
+         "PROTOCOL" : "sml",
+         "DEVICE" : "/dev/null",
+         "ENABLED" : "1",
+         "ALLOWSKIP" : "1",
+         "AGGTIME" : "30"
+      }
+   }
+}
 CFG
 close($cfg);
 

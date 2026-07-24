@@ -4,6 +4,8 @@ All notable user-visible changes should be documented in this file. Use the late
 
 ## Unreleased
 
+- Store the plugin configuration as JSON (`config/smartmeter.json`) instead of the previous INI file. Global settings stay in `MAIN` and `VZLOGGER`, while every reader now lives below a `METERS` object instead of sitting next to the global sections. An existing `smartmeter.cfg` is converted automatically on upgrade and kept as `smartmeter.cfg.pre-json`; the same migration drops the settings of removed features and adds missing defaults.
+
 - Move plugin logging to LoxBerry::Log. The control tool, the MQTT bridge, and the web interface now open LoxBerry log sessions instead of writing their own fixed files with home-grown rotation. Each service start and action creates a timestamped log that appears in the central LoxBerry log manager and is cleaned up by `log_maint.pl`. The log level is taken from the plugin management widget (CUSTOM_LOGLEVELS), so it finally has an effect.
 - Remove the separate MQTT-bridge debug switch (`VZLOGGER.DEBUG`). Bridge debug output is now emitted at log level 7 (Debug) through the central log level; the setting is dropped from the configuration on upgrade. The vzLogger service verbosity keeps its own switch because it configures the external `vzlogger` binary. The per-service "Show log" buttons now open the most recent timestamped file; the diagnostic debug-log report is unchanged.
 

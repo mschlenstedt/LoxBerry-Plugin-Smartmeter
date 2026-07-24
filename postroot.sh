@@ -7,7 +7,8 @@
 ARGV3=$3
 ARGV5=$5
 
-CONFIG_FILE="$ARGV5/config/plugins/$ARGV3/smartmeter.cfg"
+CONFIG_FILE="$ARGV5/config/plugins/$ARGV3/smartmeter.json"
+CONFIG_READER="$ARGV5/bin/plugins/$ARGV3/config_value.pl"
 BRIDGE_SERVICE="smartmeter-ng-vzlogger-bridge.service"
 BRIDGE_INSTALLER="$ARGV5/bin/plugins/$ARGV3/install_vzlogger_bridge_service.sh"
 VZLOGGER_CONTROL="$ARGV5/bin/plugins/$ARGV3/vzlogger_control.pl"
@@ -25,8 +26,8 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 implementation=""
-if [ -f "$CONFIG_FILE" ]; then
-	implementation=$(sed -n 's/^IMPLEMENTATION=//p' "$CONFIG_FILE" | tail -n 1)
+if [ -f "$CONFIG_FILE" ] && [ -x "$CONFIG_READER" ]; then
+	implementation=$("$CONFIG_READER" "$CONFIG_FILE" MAIN.IMPLEMENTATION 2>/dev/null)
 fi
 
 install_ir_head_udev_rule()
@@ -67,11 +68,11 @@ refresh_bridge_service()
 
 has_configured_vzlogger_meter()
 {
-	if [ ! -f "$CONFIG_FILE" ]; then
+	if [ ! -f "$CONFIG_FILE" ] || [ ! -x "$CONFIG_READER" ]; then
 		return 1
 	fi
 
-	grep -q '^METER=[^0][^[:space:]]*' "$CONFIG_FILE"
+	"$CONFIG_READER" "$CONFIG_FILE" --has-meter
 }
 
 install_ir_head_udev_rule

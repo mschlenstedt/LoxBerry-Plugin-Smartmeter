@@ -3,24 +3,24 @@
 use strict;
 use warnings;
 
-use Config::Simple;
 use File::Basename qw(dirname);
 use FindBin;
 use JSON::PP;
 use LoxBerry::System;
 use lib $FindBin::Bin;
+use SmartMeterConfig;
 use SmartMeterVZLoggerChannels qw(compose_obis parse_obis validate_document valid_output_key output_key_format);
 use SmartMeterVZLoggerExpert qw(read_text validate_expert_text format_expert_validation);
 
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
 my $plugin_config_dir = $ENV{SMARTMETER_CONFIG_DIR} || "$home/config/plugins/$psubfolder";
-my $plugin_config_file = $ENV{SMARTMETER_CONFIG_FILE} || "$plugin_config_dir/smartmeter.cfg";
+my $plugin_config_file = $ENV{SMARTMETER_CONFIG_FILE} || "$plugin_config_dir/smartmeter.json";
 my $config_file = $ENV{SMARTMETER_VZLOGGER_CONFIG_FILE} || "$plugin_config_dir/vzlogger.conf";
 my $mapping_file = $ENV{SMARTMETER_VZLOGGER_MAPPING_FILE} || "$plugin_config_dir/vzlogger_channels.json";
 my $definitions_file = $ENV{SMARTMETER_VZLOGGER_DEFINITIONS_FILE} || "$plugin_config_dir/vzlogger_channel_definitions.json";
 
-my $plugin_cfg = Config::Simple->new($plugin_config_file);
+my $plugin_cfg = SmartMeterConfig->new($plugin_config_file);
 my $expert_mode = (($ENV{SMARTMETER_EXPERT_MODE} || "") eq "1") ||
 	($plugin_cfg && ($plugin_cfg->param("VZLOGGER.EXPERTMODE") || "0") eq "1");
 if ($expert_mode) {
@@ -507,7 +507,7 @@ sub read_plugin_config
 {
 	my %plugin_config;
 	return \%plugin_config if (!-e $plugin_config_file);
-	Config::Simple->import_from($plugin_config_file, \%plugin_config);
+	SmartMeterConfig->import_from($plugin_config_file, \%plugin_config);
 	return \%plugin_config;
 }
 

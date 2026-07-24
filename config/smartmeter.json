@@ -1,0 +1,41 @@
+{
+   "MAIN" : {
+      "IMPLEMENTATION" : "none",
+      "MQTTTOPIC" : "smartmeter",
+      "READ" : "0",
+      "SCRIPTNAME" : "REPLACEBYNAME",
+      "SENDUDP" : "0",
+      "SUBFOLDER" : "REPLACEBYSUBFOLDER",
+      "UDPPORT" : "7000"
+   },
+   "METERS" : {},
+   "VZLOGGER" : {
+      "EXPERTMODE" : "0",
+      "LOCALBUFFER" : "-1",
+      "LOCALENABLED" : "1",
+      "LOCALINDEX" : "1",
+      "LOCALPORT" : "18080",
+      "LOCALTIMEOUT" : "30",
+      "LOGLEVEL" : "0",
+      "MQTTCAFILE" : "",
+      "MQTTCAPATH" : "",
+      "MQTTCERTFILE" : "",
+      "MQTTENABLED" : "1",
+      "MQTTHOST" : "",
+      "MQTTID" : "",
+      "MQTTKEEPALIVE" : "30",
+      "MQTTKEYFILE" : "",
+      "MQTTKEYPASS" : "",
+      "MQTTPASS" : "",
+      "MQTTPORT" : "",
+      "MQTTQOS" : "0",
+      "MQTTRAWANDAGG" : "0",
+      "MQTTRETAIN" : "1",
+      "MQTTTIMESTAMP" : "1",
+      "MQTTUSER" : "",
+      "REMOVEDHEADS" : "",
+      "RETRY" : "30",
+      "UDPINTERVAL" : "5",
+      "VZLOGGERDEBUG" : "0"
+   }
+}

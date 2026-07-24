@@ -65,13 +65,17 @@ sub run_validator
 	write_json("$dir/vzlogger.conf", $args{config});
 	write_json("$dir/vzlogger_channels.json", $args{mapping});
 	write_json("$dir/vzlogger_channel_definitions.json", $args{definitions});
-	open(my $cfg, ">", "$dir/smartmeter.cfg") or die $!;
-	print $cfg "[MAIN]\nIMPLEMENTATION=" . ($args{implementation} || "vzlogger") . "\nREAD=" . ($args{read} || 0) . "\n";
-	print $cfg "[VZLOGGER]\nEXPERTMODE=1\n" if ($args{expert});
-	close($cfg);
+	write_json("$dir/smartmeter.json", {
+		MAIN => {
+			IMPLEMENTATION => ($args{implementation} || "vzlogger"),
+			READ => "" . ($args{read} || 0),
+		},
+		VZLOGGER => $args{expert} ? { EXPERTMODE => "1" } : {},
+		METERS => {},
+	});
 
 	local $ENV{SMARTMETER_CONFIG_DIR} = $dir;
-	local $ENV{SMARTMETER_CONFIG_FILE} = "$dir/smartmeter.cfg";
+	local $ENV{SMARTMETER_CONFIG_FILE} = "$dir/smartmeter.json";
 	local $ENV{SMARTMETER_VZLOGGER_CONFIG_FILE} = "$dir/vzlogger.conf";
 	local $ENV{SMARTMETER_VZLOGGER_MAPPING_FILE} = "$dir/vzlogger_channels.json";
 	local $ENV{SMARTMETER_VZLOGGER_DEFINITIONS_FILE} = "$dir/vzlogger_channel_definitions.json";

@@ -2,13 +2,13 @@
 use strict;
 use warnings;
 use CGI;
-use Config::Simple;
 use FindBin;
 use File::Temp qw(tempdir);
 use JSON::PP;
 use LoxBerry::System;
 use lib $lbpbindir;
 use lib "$FindBin::Bin/../../bin";
+use SmartMeterConfig;
 use SmartMeterVZLoggerChannels qw(read_json write_json_atomic);
 use SmartMeterVZLoggerExpert qw(read_text write_text_atomic validate_expert_text format_expert_validation localize_expert_validation build_expert_mapping);
 use SmartMeterVZLoggerRuntime qw(acquire_config_lock promote_files_atomic);
@@ -39,7 +39,7 @@ my $cgi = CGI->new;
 my $runtime_file = "$lbpconfigdir/vzlogger.conf";
 my $expert_file = "$lbpconfigdir/vzlogger_expert.conf";
 my $mapping_file = "$lbpconfigdir/vzlogger_channels.json";
-my $plugin_cfg = Config::Simple->new("$lbpconfigdir/smartmeter.cfg");
+my $plugin_cfg = SmartMeterConfig->new("$lbpconfigdir/smartmeter.json");
 my $expert_mode = $plugin_cfg && ($plugin_cfg->param("VZLOGGER.EXPERTMODE") || "0") eq "1";
 
 sub header_html

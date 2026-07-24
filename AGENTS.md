@@ -12,7 +12,7 @@ The normative product and engineering contracts are consolidated in `docs/develo
 - For UI text, update the matching language/template files together so German and English views stay consistent.
 - Update user documentation and `CHANGELOG.md` whenever behavior, setup, configuration, dependencies, or upgrade steps change.
 - Prefer existing scripts and helper patterns over adding new frameworks or dependencies.
-- Do not remove or overwrite user configuration defaults in `config/smartmeter.cfg` without a migration path.
+- Do not remove or overwrite user configuration defaults in `config/smartmeter.json` without a migration path.
 
 ## LoxBerry-Specific Checks
 

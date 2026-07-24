@@ -83,6 +83,7 @@ jobs:
         run: |
           set -euo pipefail
 
+          perl -I .github/ci/perl-lib -I bin tests/test_config.pl
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_channels.pl
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_generator.pl
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_validator.pl

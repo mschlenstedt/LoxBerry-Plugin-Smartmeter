@@ -4,7 +4,6 @@ use strict;
 use warnings;
 umask(0027);
 
-use Config::Simple;
 use File::Copy qw(copy);
 use File::Path qw(make_path);
 use File::Temp qw(tempdir);
@@ -13,6 +12,7 @@ use LoxBerry::System;
 use LoxBerry::Log;
 use FindBin;
 use lib $FindBin::Bin;
+use SmartMeterConfig;
 use SmartMeterVZLoggerExpert qw(read_text write_text_atomic update_expert_log_settings format_expert_validation);
 use SmartMeterVZLoggerRuntime qw(acquire_config_lock promote_files_atomic);
 use SmartMeterVZLoggerConfig qw(clean_number clean_qos sanitize_topic implementation_mode);
@@ -20,7 +20,7 @@ use SmartMeterVZLoggerConfig qw(clean_number clean_qos sanitize_topic implementa
 my $home = $lbhomedir;
 my $psubfolder = $lbpplugindir;
 my $bindir = "$home/bin/plugins/$psubfolder";
-my $plugin_config_file = "$home/config/plugins/$psubfolder/smartmeter.cfg";
+my $plugin_config_file = "$home/config/plugins/$psubfolder/smartmeter.json";
 my $config_file = "$home/config/plugins/$psubfolder/vzlogger.conf";
 my $expert_file = "$home/config/plugins/$psubfolder/vzlogger_expert.conf";
 my $mapping_file = "$home/config/plugins/$psubfolder/vzlogger_channels.json";
@@ -152,7 +152,7 @@ if ($action eq "disable-vzlogger") {
 }
 
 if ($action eq "status") {
-	print "implementation: " . implementation_mode(Config::Simple->new($plugin_config_file)) . "\n";
+	print "implementation: " . implementation_mode(SmartMeterConfig->new($plugin_config_file)) . "\n";
 	print "vzlogger binary: " . (command_exists("vzlogger") ? "available" : "missing") . "\n";
 	print "vzlogger package: " . package_state("vzlogger") . "\n";
 	print "Volkszaehler apt source: " . (-e "/etc/apt/sources.list.d/volkszaehler-volkszaehler-org-project.list" ? "configured" : "missing") . "\n";
@@ -327,9 +327,9 @@ sub update_vzlogger_log_config
 		return 1;
 	}
 
-	my $cfg = Config::Simple->new($plugin_config_file);
+	my $cfg = SmartMeterConfig->new($plugin_config_file);
 	if (!$cfg) {
-		my $error = Config::Simple->error() || "unknown Config::Simple error";
+		my $error = SmartMeterConfig->error() || "unknown Config::Simple error";
 		print "Could not read $plugin_config_file: $error\n";
 		return 1;
 	}
@@ -687,27 +687,27 @@ sub enable_vzlogger_autostart
 
 sub read_enabled
 {
-	my $cfg = Config::Simple->new($plugin_config_file);
+	my $cfg = SmartMeterConfig->new($plugin_config_file);
 	return 0 if (!$cfg);
 	return ($cfg->param("MAIN.READ") || "0") eq "1";
 }
 
 sub vzlogger_debug_enabled
 {
-	my $cfg = Config::Simple->new($plugin_config_file);
+	my $cfg = SmartMeterConfig->new($plugin_config_file);
 	return 0 if (!$cfg);
 	return ($cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0") eq "1";
 }
 
 sub vzlogger_mode_enabled
 {
-	return implementation_mode(Config::Simple->new($plugin_config_file)) eq "vzlogger";
+	return implementation_mode(SmartMeterConfig->new($plugin_config_file)) eq "vzlogger";
 }
 
 sub bridge_enabled
 {
 	return 0 if (!vzlogger_mode_enabled() || !read_enabled());
-	my $cfg = Config::Simple->new($plugin_config_file);
+	my $cfg = SmartMeterConfig->new($plugin_config_file);
 	return 0 if (!$cfg);
 	return generated_mqtt_enabled() if (($cfg->param("VZLOGGER.EXPERTMODE") || "0") eq "1");
 	my $mqtt_enabled = $cfg->param("VZLOGGER.MQTTENABLED");
@@ -1041,7 +1041,7 @@ sub print_mqtt_capture
 		print $fh "timeout is not available. Skipping bounded MQTT capture.\n";
 		return;
 	}
-	my $cfg = Config::Simple->new($plugin_config_file);
+	my $cfg = SmartMeterConfig->new($plugin_config_file);
 	my $base_topic = $cfg ? sanitize_topic($cfg->param("MAIN.MQTTTOPIC") || "smartmeter") : "smartmeter";
 	my $topic = "$base_topic/vzlogger/#";
 	my $mqtt = read_mqtt_settings();
@@ -1073,7 +1073,7 @@ sub print_mqtt_capture
 
 sub read_mqtt_settings
 {
-	my $cfg = Config::Simple->new($plugin_config_file);
+	my $cfg = SmartMeterConfig->new($plugin_config_file);
 	my %settings = %{SmartMeterVZLoggerConfig::read_mqtt_settings($home, $cfg)};
 	$settings{qos} = 0;
 	$settings{keepalive} = 30;

@@ -22,7 +22,6 @@
 # use Config::Simple '-strict';
 # use CGI::Carp qw(fatalsToBrowser);
 use CGI;
-use Config::Simple;
 use File::Copy qw(copy);
 use File::Path qw(make_path);
 use File::Temp qw(tempdir);
@@ -38,6 +37,7 @@ use strict;
 umask(0027);
 use lib $lbpbindir;
 use lib "$FindBin::Bin/../../bin";
+use SmartMeterConfig;
 use SmartMeterVZLoggerChannels qw(parse_obis compose_obis normalize_obis default_output_key stable_uuid read_json write_json_atomic load_catalog lookup_obis new_document migrate_legacy_meter validate_document localize_validation_errors);
 use SmartMeterVZLoggerExpert qw(read_text write_text_atomic validate_expert_text format_expert_validation localize_expert_validation build_expert_mapping update_expert_log_settings expert_configs_equal);
 use SmartMeterVZLoggerRuntime qw(acquire_config_lock promote_files_atomic);
@@ -109,8 +109,8 @@ if( $q->{ajax} ) {
 			$ENV{SMARTMETER_CONFIG_LOCK_HELD} = "1";
 		}
 		if ($action eq "obis-start") {
-			my $config_file = "$lbpconfigdir/smartmeter.cfg";
-			$plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file";
+			my $config_file = "$lbpconfigdir/smartmeter.json";
+			$plugin_cfg = SmartMeterConfig->new($config_file) or die "Could not read $config_file";
 			ensure_vzlogger_defaults();
 			die $L{'VZLOGGER.UI_SAVE_VZLOGGER_FIRST'} if (implementation_mode() ne "vzlogger");
 			my @heads = detect_heads();
@@ -185,8 +185,8 @@ exit;
 
 sub form_vzlogger
 {
-	my $config_file = "$lbpconfigdir/smartmeter.cfg";
-	$plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file";
+	my $config_file = "$lbpconfigdir/smartmeter.json";
+	$plugin_cfg = SmartMeterConfig->new($config_file) or die "Could not read $config_file";
 
 	my @heads = detect_heads();
 	{
@@ -261,7 +261,7 @@ sub form_vzlogger
 		}
 		$template->param("VZLOGGER_MESSAGE", $output);
 		}
-		$plugin_cfg = Config::Simple->new($config_file) or die "Could not reload $config_file";
+		$plugin_cfg = SmartMeterConfig->new($config_file) or die "Could not reload $config_file";
 		@heads = detect_heads();
 		load_or_migrate_channel_document(@heads);
 	}
@@ -500,8 +500,8 @@ sub service_installed
 
 sub load_service_ajax_config
 {
-	my $config_file = "$lbpconfigdir/smartmeter.cfg";
-	$plugin_cfg = Config::Simple->new($config_file) or die "Could not read $config_file";
+	my $config_file = "$lbpconfigdir/smartmeter.json";
+	$plugin_cfg = SmartMeterConfig->new($config_file) or die "Could not read $config_file";
 }
 
 sub service_status_response
@@ -707,8 +707,8 @@ sub run_draft_validation_ajax
 {
 	my $live_config_dir = $lbpconfigdir;
 	my $draft_dir = tempdir("smartmeter-vzlogger-validation-XXXXXX", TMPDIR => 1, CLEANUP => 1);
-	my $draft_config = "$draft_dir/smartmeter.cfg";
-	copy("$live_config_dir/smartmeter.cfg", $draft_config) or die ui_text($L{'VZLOGGER.UI_DRAFT_PREPARE_FAILED'}, error => $!);
+	my $draft_config = "$draft_dir/smartmeter.json";
+	copy("$live_config_dir/smartmeter.json", $draft_config) or die ui_text($L{'VZLOGGER.UI_DRAFT_PREPARE_FAILED'}, error => $!);
 	foreach my $source (glob("$live_config_dir/vzlogger_meter_*.jsonc")) {
 		my ($name) = $source =~ m{([^/\\]+)\z};
 		copy($source, "$draft_dir/$name") or die ui_text($L{'VZLOGGER.UI_DRAFT_CUSTOM_PREPARE_FAILED'}, error => $!);
@@ -717,7 +717,7 @@ sub run_draft_validation_ajax
 	my ($output, $exit);
 	{
 		local $lbpconfigdir = $draft_dir;
-		$plugin_cfg = Config::Simple->new($draft_config) or die $L{'VZLOGGER.UI_DRAFT_READ_FAILED'};
+		$plugin_cfg = SmartMeterConfig->new($draft_config) or die $L{'VZLOGGER.UI_DRAFT_READ_FAILED'};
 		ensure_vzlogger_defaults();
 		my @heads = detect_heads();
 		ensure_head_defaults(@heads);
@@ -1081,7 +1081,7 @@ sub detect_heads
 		$heads{$device} = 1 if (!$removed{$serial});
 	}
 	my %config;
-	Config::Simple->import_from("$lbpconfigdir/smartmeter.cfg", \%config);
+	SmartMeterConfig->import_from("$lbpconfigdir/smartmeter.json", \%config);
 	while (my ($name, $value) = each %config) {
 		$heads{$value} = 1 if ($name =~ /\.DEVICE\z/ && $value);
 	}
@@ -2302,7 +2302,7 @@ sub implementation_mode
 
 sub saved_implementation_mode
 {
-	my $saved = Config::Simple->new("$lbpconfigdir/smartmeter.cfg");
+	my $saved = SmartMeterConfig->new("$lbpconfigdir/smartmeter.json");
 	return $saved ? SmartMeterVZLoggerConfig::implementation_mode($saved) : "none";
 }
 
