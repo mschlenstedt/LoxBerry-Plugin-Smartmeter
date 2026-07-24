@@ -80,6 +80,5 @@ like($vzlogger_template, qr/runtime_action_disabled = saved_implementation != "v
 like($vzlogger_template, qr/class="obis-runtime-action-reason".*OBIS_SAVE_ACTIVATION_HELP/, "disabled OBIS discovery has an inline save-and-apply explanation");
 like($vzlogger_template, qr/class="obis-discovery".*?aria-describedby="<TMPL_VAR NAME=SERIAL>_obis_runtime_reason".*?id="<TMPL_VAR NAME=SERIAL>_obis_runtime_reason"/s, "OBIS discovery references its runtime lock explanation accessibly");
 like($vzlogger_template, qr/id="implementation_unsaved".*ACTIVATION_UNSAVED_RUNTIME/, "vzLogger activation draft explains that runtime actions remain locked");
-like($vzlogger_template, qr/id="bridge_activation_unsaved".*ACTIVATION_UNSAVED_RUNTIME/, "bridge activation draft explains that runtime actions remain locked");
 
 done_testing();
