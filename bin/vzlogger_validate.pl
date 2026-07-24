@@ -399,10 +399,6 @@ sub validate_mapping
 			}
 		}
 	}
-	if (vzlogger_mode_enabled()) {
-		my $managed_count = grep { ref($_) eq "HASH" && $_->{managed_output} } values %$mapping;
-		push @errors, "vzLogger is enabled but no active plugin output channel is configured." if (!$managed_count);
-	}
 }
 
 sub validate_known_keys

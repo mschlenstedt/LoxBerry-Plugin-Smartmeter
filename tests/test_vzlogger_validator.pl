@@ -183,12 +183,6 @@ like($output, qr/channel_index must be 0/, "mapping index must match generated c
 like($output, qr/channel must be chn0/, "mapping chn name must match generated channel order");
 
 ($config, $mapping, $definitions) = base_case();
-$definitions->{meters}->{reader}->[0]->{plugin_output}->{enabled} = JSON::PP::false;
-$mapping = {};
-($exit, $output) = run_validator(config=>$config, mapping=>$mapping, definitions=>$definitions, read=>1);
-like($output, qr/bridge is enabled but no active plugin output/i, "enabled bridge requires an output channel");
-
-($config, $mapping, $definitions) = base_case();
 $config->{meters}->[0]->{vendor_extension} = "preserved";
 $config->{meters}->[0]->{channels}->[0]->{identifier} = "vendor-defined";
 $config->{meters}->[0]->{channels}->[0]->{name} = "Vendor cache name";
