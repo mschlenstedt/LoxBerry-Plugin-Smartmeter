@@ -39,7 +39,7 @@ die "Could not read $json_file: " . SmartMeterConfig->error() . "\n" if (!$cfg);
 my $changed = 0;
 
 # Settings of features that no longer exist.
-foreach my $obsolete (qw(MAIN.CRON MAIN.SENDMQTT VZLOGGER.DEBUG)) {
+foreach my $obsolete (qw(MAIN.CRON MAIN.SENDMQTT MAIN.SENDUDP MAIN.UDPPORT MAIN.READ VZLOGGER.DEBUG VZLOGGER.UDPINTERVAL)) {
 	next if (!defined($cfg->param($obsolete)));
 	$cfg->delete($obsolete);
 	$changed = 1;
@@ -67,10 +67,7 @@ if (!defined($implementation) || $implementation !~ /\A(?:none|vzlogger)\z/) {
 }
 
 my %defaults = (
-	"MAIN.READ" => "0",
 	"MAIN.MQTTTOPIC" => "smartmeter",
-	"MAIN.SENDUDP" => "0",
-	"MAIN.UDPPORT" => "7000",
 	"VZLOGGER.EXPERTMODE" => "0",
 	"VZLOGGER.RETRY" => "30",
 	"VZLOGGER.LOCALENABLED" => "1",
@@ -78,7 +75,6 @@ my %defaults = (
 	"VZLOGGER.LOCALINDEX" => "1",
 	"VZLOGGER.LOCALTIMEOUT" => "30",
 	"VZLOGGER.LOCALBUFFER" => "-1",
-	"VZLOGGER.UDPINTERVAL" => "5",
 	"VZLOGGER.VZLOGGERDEBUG" => "0",
 	"VZLOGGER.LOGLEVEL" => "0",
 	"VZLOGGER.MQTTENABLED" => "1",
@@ -86,7 +82,7 @@ my %defaults = (
 	"VZLOGGER.MQTTRETAIN" => "1",
 	"VZLOGGER.MQTTRAWANDAGG" => "0",
 	"VZLOGGER.MQTTQOS" => "0",
-	"VZLOGGER.MQTTTIMESTAMP" => "1",
+	"VZLOGGER.MQTTTIMESTAMP" => "0",
 );
 foreach my $key (sort keys %defaults) {
 	next if (defined($cfg->param($key)));

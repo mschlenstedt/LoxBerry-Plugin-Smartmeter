@@ -17,7 +17,7 @@ SOURCE_LIST="/etc/apt/sources.list.d/volkszaehler-volkszaehler-org-project.list"
 KEYRING="/usr/share/keyrings/volkszaehler-volkszaehler-org-project-archive-keyring.gpg"
 
 if [ -f "$BRIDGE_UNIT" ]; then
-    echo "<INFO> Removing Smartmeter vzLogger bridge service"
+    echo "<INFO> Removing the MQTT bridge service left over from an older release"
     if command -v systemctl >/dev/null 2>&1; then
         systemctl stop "$BRIDGE_SERVICE" >/dev/null 2>&1 || true
         systemctl disable "$BRIDGE_SERVICE" >/dev/null 2>&1 || true

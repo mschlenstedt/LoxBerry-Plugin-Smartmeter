@@ -29,7 +29,6 @@ my $obis_watchdog_pid_file = "$runtime_dir/vzlogger_obis_watchdog.pid";
 my $obis_status_file = "$runtime_dir/vzlogger_obis_status.json";
 my $plugin_log_dir = "$home/log/plugins/$psubfolder";
 my $vzlogger_log_file = "$plugin_log_dir/vzlogger.log";
-my $bridge_service = "smartmeter-ng-vzlogger-bridge";
 my $vzlogger_override_file = "/etc/systemd/system/vzlogger.service.d/smartmeter-ng.conf";
 my $action = shift @ARGV || "status";
 
@@ -48,7 +47,7 @@ LOGSTART("control action=$action");
 
 my %mutating_action = map { $_ => 1 } qw(
 	generate apply apply-expert activate-vzlogger restart-vzlogger start-vzlogger stop-vzlogger
-	restart-bridge start-bridge stop-bridge disable-vzlogger
+	disable-vzlogger
 );
 my $config_lock;
 if ($mutating_action{$action}) {
@@ -99,20 +98,6 @@ if ($action eq "stop-vzlogger") {
 	exit stop_vzlogger();
 }
 
-if ($action eq "restart-bridge") {
-	if (!bridge_enabled()) {
-		print "MQTT bridge is disabled. Did not restart the MQTT bridge.\n";
-		exit 0;
-	}
-	my $rc = run_perl("$bindir/vzlogger_validate.pl");
-	exit $rc if ($rc != 0);
-	if (!generated_mqtt_enabled()) {
-		print "MQTT is disabled in the generated vzLogger configuration. Use Save and apply first.\n";
-		exit 1;
-	}
-	exit restart_bridge();
-}
-
 if ($action eq "validate") {
 	exit run_perl("$bindir/vzlogger_validate.pl");
 }
@@ -123,31 +108,11 @@ if ($action eq "apply-expert") {
 	exit activate_current_vzlogger_configuration();
 }
 
-if ($action eq "start-bridge") {
-	if (!bridge_enabled()) {
-		print "MQTT bridge is disabled. Did not start the MQTT bridge.\n";
-		exit 0;
-	}
-	my $rc = run_perl("$bindir/vzlogger_validate.pl");
-	exit $rc if ($rc != 0);
-	if (!generated_mqtt_enabled()) {
-		print "MQTT is disabled in the generated vzLogger configuration. Use Save and apply first.\n";
-		exit 1;
-	}
-	exit start_bridge();
-}
-
-if ($action eq "stop-bridge") {
-	exit stop_bridge();
-}
-
 if ($action eq "disable-vzlogger") {
-	my $rc = stop_bridge();
-	my $vzlogger_rc = stop_vzlogger(1);
-	$rc = $vzlogger_rc if ($rc == 0 && $vzlogger_rc != 0);
+	my $rc = stop_vzlogger(1);
 	my $override_rc = install_vzlogger_service_override("remove");
 	$rc = $override_rc if ($rc == 0 && $override_rc != 0);
-	print "Stopped vzLogger and bridge.\n";
+	print "Stopped vzLogger.\n";
 	exit $rc;
 }
 
@@ -160,8 +125,6 @@ if ($action eq "status") {
 	print "vzlogger service config: " . (-e $vzlogger_override_file ? $config_file : "system default") . "\n";
 	print "config validation: " . validation_state() . "\n";
 	print "vzlogger service: " . service_summary("vzlogger") . "\n";
-	print "MQTT bridge service: " . service_summary($bridge_service) . "\n";
-	print "MQTT bridge process: " . (bridge_running() ? "running" : "stopped") . "\n";
 	exit 0;
 }
 
@@ -169,7 +132,7 @@ if ($action eq "debug-log") {
 	exit create_debug_log();
 }
 
-print "Usage: $0 generate|validate|apply|apply-expert|activate-vzlogger|restart-vzlogger|start-vzlogger|stop-vzlogger|restart-bridge|start-bridge|stop-bridge|disable-vzlogger|status|debug-log\n";
+print "Usage: $0 generate|validate|apply|apply-expert|activate-vzlogger|restart-vzlogger|start-vzlogger|stop-vzlogger|disable-vzlogger|status|debug-log\n";
 exit 1;
 
 sub run_perl
@@ -192,12 +155,10 @@ sub apply_generated_configuration
 	my $rc = generate_validate_and_promote();
 	return $rc if ($rc != 0);
 	if (vzlogger_mode_enabled() && generated_meter_count() == 0) {
-		my $stop_rc = stop_bridge();
-		my $vzlogger_rc = stop_vzlogger(1);
-		$stop_rc = $vzlogger_rc if ($stop_rc == 0 && $vzlogger_rc != 0);
+		my $stop_rc = stop_vzlogger(1);
 		my $override_rc = install_vzlogger_service_override("remove");
 		$stop_rc = $override_rc if ($stop_rc == 0 && $override_rc != 0);
-		print "No meter is configured. Stopped vzLogger and bridge.\n";
+		print "No meter is configured. Stopped vzLogger.\n";
 		return $stop_rc;
 	}
 	return activate_current_vzlogger_configuration();
@@ -273,23 +234,13 @@ sub current_vzlogger_configuration_is_valid
 sub activate_current_vzlogger_configuration
 {
 	if (!vzlogger_mode_enabled()) {
-		my $rc = stop_bridge();
-		my $vzlogger_rc = stop_vzlogger(1);
-		$rc = $vzlogger_rc if ($rc == 0 && $vzlogger_rc != 0);
+		my $rc = stop_vzlogger(1);
 		my $override_rc = install_vzlogger_service_override("remove");
 		$rc = $override_rc if ($rc == 0 && $override_rc != 0);
-		print "vzLogger mode is disabled. Stopped vzLogger and bridge.\n";
+		print "vzLogger mode is disabled. Stopped vzLogger.\n";
 		return $rc;
 	}
-	my $rc = restart_vzlogger();
-	return $rc if ($rc != 0);
-	if (bridge_enabled()) {
-		$rc = restart_bridge();
-	} else {
-		$rc = stop_bridge();
-		print "MQTT bridge is disabled. Stopped bridge and left vzLogger running.\n";
-	}
-	return $rc;
+	return restart_vzlogger();
 }
 
 sub generated_meter_count
@@ -409,64 +360,8 @@ sub write_vzlogger_config_atomic
 	return 1;
 }
 
-sub start_bridge
-{
-	my $install_rc = install_bridge_service("install");
-	return $install_rc if ($install_rc != 0);
 
-	if (service_installed($bridge_service)) {
-		my $rc = run_privileged("start $bridge_service", systemctl_command(), "start", $bridge_service);
-		print "Started $bridge_service service.\n" if ($rc == 0);
-		$rc = 1 if ($rc == 0 && !wait_for_service_state($bridge_service, 1));
-		return $rc;
-	}
 
-	return 0 if (bridge_running());
-
-	my $pid = fork();
-	die "Could not fork bridge process: $!\n" if (!defined($pid));
-	if ($pid == 0) {
-		# The bridge writes its own LoxBerry log session, so its standard streams
-		# are discarded in this fork fallback (the systemd unit is the normal path).
-		open STDIN, "</dev/null";
-		open STDOUT, ">/dev/null";
-		open STDERR, ">/dev/null";
-		exec($^X, "$bindir/vzlogger_mqtt_bridge.pl");
-		exit 1;
-	}
-	print "Started bridge process $pid.\n";
-	return 0;
-}
-
-sub restart_bridge
-{
-	my $install_rc = install_bridge_service("install");
-	return $install_rc if ($install_rc != 0);
-
-	if (service_installed($bridge_service)) {
-		my $rc = run_privileged("restart $bridge_service", systemctl_command(), "restart", $bridge_service);
-		print "Restarted $bridge_service service.\n" if ($rc == 0);
-		$rc = 1 if ($rc == 0 && !wait_for_service_state($bridge_service, 1));
-		return $rc;
-	}
-
-	my $rc = stop_bridge();
-	return $rc if ($rc != 0);
-	return start_bridge();
-}
-
-sub stop_bridge
-{
-	if (service_installed($bridge_service)) {
-		my $rc = run_privileged("stop $bridge_service", systemctl_command(), "stop", $bridge_service);
-		run_privileged("reset failed state for $bridge_service", systemctl_command(), "reset-failed", $bridge_service) if ($rc == 0);
-		print "Stopped $bridge_service service.\n" if ($rc == 0);
-		$rc = 1 if ($rc == 0 && !wait_for_service_state($bridge_service, 0));
-		return $rc;
-	}
-
-	return run_perl("$bindir/vzlogger_mqtt_bridge.pl", "--stop");
-}
 
 sub restart_vzlogger
 {
@@ -685,12 +580,6 @@ sub enable_vzlogger_autostart
 	return $enable_rc;
 }
 
-sub read_enabled
-{
-	my $cfg = SmartMeterConfig->new($plugin_config_file);
-	return 0 if (!$cfg);
-	return ($cfg->param("MAIN.READ") || "0") eq "1";
-}
 
 sub vzlogger_debug_enabled
 {
@@ -704,54 +593,8 @@ sub vzlogger_mode_enabled
 	return implementation_mode(SmartMeterConfig->new($plugin_config_file)) eq "vzlogger";
 }
 
-sub bridge_enabled
-{
-	return 0 if (!vzlogger_mode_enabled() || !read_enabled());
-	my $cfg = SmartMeterConfig->new($plugin_config_file);
-	return 0 if (!$cfg);
-	return generated_mqtt_enabled() if (($cfg->param("VZLOGGER.EXPERTMODE") || "0") eq "1");
-	my $mqtt_enabled = $cfg->param("VZLOGGER.MQTTENABLED");
-	return !defined($mqtt_enabled) || $mqtt_enabled eq "1";
-}
 
-sub generated_mqtt_enabled
-{
-	return 0 if (!-e $config_file);
-	open(my $fh, "<", $config_file) or return 0;
-	local $/;
-	my $json = <$fh>;
-	close($fh);
-	my $config = eval { JSON::PP->new->utf8->decode($json) };
-	return 0 if ($@ || ref($config) ne "HASH" || ref($config->{mqtt}) ne "HASH");
-	return $config->{mqtt}->{enabled} ? 1 : 0;
-}
 
-sub install_bridge_service
-{
-	my ($action) = @_;
-	my $script = "$bindir/install_vzlogger_bridge_service.sh";
-	return message_exit("Bridge service helper not found: $script", 1) if (!-e $script);
-
-	if ($> == 0) {
-		system("sh", $script, $home, $psubfolder, $action);
-		my $exit = $? >> 8;
-		log_control("exit=$exit: sh $script $home $psubfolder $action");
-		return $exit;
-	}
-
-	if (command_exists("sudo")) {
-		system("sudo", "-n", "/bin/sh", $script, $home, $psubfolder, $action);
-		my $exit = $? >> 8;
-		log_control("exit=$exit: sudo -n /bin/sh $script $home $psubfolder $action");
-		return $exit if ($exit == 0);
-		print "Could not run sudo non-interactively. Run as root: sh $script $home $psubfolder $action\n";
-		return $exit || 1;
-	}
-
-	print "Root privileges are required. Run as root: sh $script $home $psubfolder $action\n";
-	log_control("root required: sh $script $home $psubfolder $action");
-	return 2;
-}
 
 sub install_vzlogger_service_override
 {
@@ -780,17 +623,6 @@ sub install_vzlogger_service_override
 	return 2;
 }
 
-sub bridge_running
-{
-	my $pid_file = "$runtime_dir/vzlogger_mqtt_bridge.pid";
-	return 0 if (!-e $pid_file);
-	open(my $fh, "<", $pid_file) or return 0;
-	my $pid = <$fh>;
-	close($fh);
-	chomp($pid);
-	return 0 if (!$pid || $pid !~ /\A\d+\z/);
-	return kill(0, $pid) ? 1 : 0;
-}
 
 sub service_state
 {
@@ -887,22 +719,17 @@ sub create_debug_log
 	print $fh "vzlogger service config: " . (-e $vzlogger_override_file ? $config_file : "system default") . "\n";
 	print $fh "config validation: " . validation_state() . "\n";
 	print $fh "vzlogger service: " . service_summary("vzlogger") . "\n";
-	print $fh "MQTT bridge service: " . service_summary($bridge_service) . "\n";
-	print $fh "MQTT bridge process: " . (bridge_running() ? "running" : "stopped") . "\n";
 
 	print_section($fh, "Command Output");
 	print_command($fh, "vzlogger --version", "vzlogger", "--version");
 	print_command($fh, "systemctl status vzlogger", "systemctl", "status", "vzlogger", "--no-pager");
 	print_command($fh, "systemctl cat vzlogger", "systemctl", "cat", "vzlogger", "--no-pager");
-	print_command($fh, "systemctl status $bridge_service", "systemctl", "status", $bridge_service, "--no-pager");
 	print_command($fh, "journalctl -u vzlogger", "journalctl", "-u", "vzlogger", "-n", "80", "--no-pager");
-	print_command($fh, "journalctl -u $bridge_service", "journalctl", "-u", $bridge_service, "-n", "80", "--no-pager");
 
 	print_file($fh, "Plugin config", $plugin_config_file, 1);
 	print_file($fh, "Generated vzLogger config", $config_file, 1);
 	print_file($fh, "Channel mapping", $mapping_file, 0);
 	print_file($fh, "Control action log", latest_plugin_log("control"), 0, 200);
-	print_file($fh, "Bridge log tail", latest_plugin_log("bridge"), 0, 200);
 	print_loxberry_logs($fh, $debug_file);
 	print_runtime_cache($fh);
 	print_mqtt_capture($fh);
@@ -910,7 +737,7 @@ sub create_debug_log
 	close($fh);
 	cleanup_debug_logs();
 	print "Created debug log: $debug_file\n";
-	print "Attach this file when reporting vzLogger/MQTT bridge issues.\n";
+	print "Attach this file when reporting vzLogger issues.\n";
 	return 0;
 }
 

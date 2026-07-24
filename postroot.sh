@@ -9,8 +9,6 @@ ARGV5=$5
 
 CONFIG_FILE="$ARGV5/config/plugins/$ARGV3/smartmeter.json"
 CONFIG_READER="$ARGV5/bin/plugins/$ARGV3/config_value.pl"
-BRIDGE_SERVICE="smartmeter-ng-vzlogger-bridge.service"
-BRIDGE_INSTALLER="$ARGV5/bin/plugins/$ARGV3/install_vzlogger_bridge_service.sh"
 VZLOGGER_CONTROL="$ARGV5/bin/plugins/$ARGV3/vzlogger_control.pl"
 VZLOGGER_OVERRIDE_INSTALLER="$ARGV5/bin/plugins/$ARGV3/install_vzlogger_service_override.sh"
 PREUPGRADE_ACTIVE_FILE="$ARGV5/config/plugins/$ARGV3/vzlogger.preupgrade-service-active"
@@ -48,21 +46,6 @@ install_ir_head_udev_rule()
 		fi
 	else
 		echo "<WARNING> udevadm is not available. SmartMeter I/R head rule was written but not triggered."
-	fi
-}
-
-refresh_bridge_service()
-{
-	if [ ! -x "$BRIDGE_INSTALLER" ]; then
-		echo "<WARNING> vzLogger bridge service installer is missing or not executable."
-		return
-	fi
-
-	echo "<INFO> Refresh vzLogger bridge systemd service"
-	if /bin/sh "$BRIDGE_INSTALLER" "$ARGV5" "$ARGV3" install; then
-		echo "<INFO> Refreshed vzLogger bridge systemd service"
-	else
-		echo "<WARNING> Could not refresh vzLogger bridge systemd service"
 	fi
 }
 
@@ -123,10 +106,6 @@ if [ -f "$VZLOGGER_OVERRIDE_INSTALLER" ]; then
 fi
 
 if command -v systemctl >/dev/null 2>&1; then
-	if systemctl list-unit-files "$BRIDGE_SERVICE" >/dev/null 2>&1; then
-		refresh_bridge_service
-	fi
-
 	if systemctl list-unit-files vzlogger.service >/dev/null 2>&1; then
 		if [ "$implementation" = "vzlogger" ]; then
 			echo "<INFO> vzLogger mode is active but no meter is configured. Stopping and disabling vzLogger service."
@@ -138,15 +117,6 @@ if command -v systemctl >/dev/null 2>&1; then
 		systemctl reset-failed vzlogger.service >/dev/null 2>&1 || true
 	else
 		echo "<INFO> vzLogger service is not installed."
-	fi
-	if systemctl list-unit-files "$BRIDGE_SERVICE" >/dev/null 2>&1; then
-		if [ "$implementation" = "vzlogger" ]; then
-			echo "<INFO> Stopping MQTT bridge because no vzLogger meter is configured."
-		else
-			echo "<INFO> Stopping MQTT bridge because vzLogger mode is disabled."
-		fi
-		systemctl stop "$BRIDGE_SERVICE" >/dev/null 2>&1 || true
-		systemctl reset-failed "$BRIDGE_SERVICE" >/dev/null 2>&1 || true
 	fi
 else
 	echo "<INFO> systemctl is not available. Skipping vzLogger service handling."

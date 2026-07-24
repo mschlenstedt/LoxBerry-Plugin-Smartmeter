@@ -416,32 +416,6 @@
 		</table>
 	</div>
 
-	<div class="service-panel">
-		<h3><TMPL_VAR NAME=VZLOGGER.BRIDGE_SERVICE></h3>
-		<p class="service-panel-description"><TMPL_VAR NAME=VZLOGGER.BRIDGE_SERVICE_DESCRIPTION></p>
-		<table border="0">
-		<tr>
-			<td class="service-label"><label for="read"><TMPL_VAR NAME=VZLOGGER.READ_METERS></label></td>
-			<td class="service-controls"><select onChange="update_bridge_controls();" id="read" name="read" data-role="flipswitch" disabled><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select><span id="bridge_activation_unsaved" class="activation-unsaved" hidden><TMPL_VAR NAME=VZLOGGER.ACTIVATION_UNSAVED_RUNTIME></span></td>
-			<td class="service-spacer">&nbsp;</td>
-			<td class="service-help"><TMPL_VAR NAME=VZLOGGER.READ_METERS_HELP></td>
-		</tr>
-		<tr>
-			<td class="service-label"><TMPL_VAR NAME=VZLOGGER.STATUS></td>
-			<td class="service-controls">
-				<span id="bridge_service_status" class="service-status <TMPL_VAR BRIDGE_SERVICE_STATUS_CLASS>"><TMPL_VAR BRIDGE_SERVICE_STATUS></span>
-				<div class="service-action-line">
-					<button id="bridge_restart_button" class="service-control-button" type="button" onclick="run_service_action('restart-bridge');" title="<TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" disabled><TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE></button>
-					<button id="bridge_start_button" class="service-control-button" type="button" onclick="run_service_action('start-bridge');" title="<TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="power" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING>style="display:none"</TMPL_IF>><TMPL_VAR NAME=VZLOGGER.START_SERVICE></button>
-					<button id="bridge_stop_button" class="service-control-button" type="button" onclick="run_service_action('stop-bridge');" title="<TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP>" data-help-title="<TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP>" data-role="button" data-inline="true" data-mini="true" data-icon="delete" disabled <TMPL_IF BRIDGE_SERVICE_RUNNING><TMPL_ELSE>style="display:none"</TMPL_IF>><TMPL_VAR NAME=VZLOGGER.STOP_SERVICE></button>
-					<a href="<TMPL_VAR BRIDGE_LOG_URL>" target="log" data-role="button" data-inline="true" data-mini="true" data-icon="bars" class="<TMPL_VAR BRIDGE_LOG_DISABLED>"><TMPL_VAR NAME=VZLOGGER.SHOW_LOG></a>
-				</div>
-				<div id="bridge_service_action_reason" class="service-action-reason" aria-live="polite"></div>
-			</td>
-			<td class="service-spacer">&nbsp;</td>
-			<td class="service-help"><TMPL_VAR BRIDGE_AVAILABILITY_HELP><br><TMPL_VAR NAME=VZLOGGER.START_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.STOP_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.RESTART_SERVICE_HELP><br><TMPL_VAR NAME=VZLOGGER.DEBUG_LOG_HELP><br>/opt/loxberry/log/plugins/smartmeter-ng/vzlogger_mqtt_bridge.log</td>
-		</tr>
-		</table>
 	</div>
 	<div class="service-control-log"><span><TMPL_VAR NAME=VZLOGGER.SERVICE_CONTROL_LOG_LABEL></span> <a href="<TMPL_VAR CONTROL_LOG_URL>" target="log" class="<TMPL_VAR CONTROL_LOG_DISABLED>"><TMPL_VAR NAME=VZLOGGER.SHOW_CONTROL_LOG></a></div>
 
@@ -664,48 +638,6 @@
 	</table>
 	</div>
 
-	<div id="bridge_configuration_section" class="configuration-section">
-	<h2><TMPL_VAR NAME=VZLOGGER.BRIDGE_CONFIGURATION></h2>
-	<p><TMPL_VAR NAME=VZLOGGER.BRIDGE_CONFIGURATION_HELP></p>
-	<table border="0" class="settings-table">
-	<tr>
-		<td colspan="4">
-			<div id="bridge_settings_panel" data-role="collapsible" data-collapsed="true" data-mini="true">
-				<h3><TMPL_VAR NAME=VZLOGGER.BRIDGE_SETTINGS></h3>
-				<p><TMPL_VAR NAME=VZLOGGER.BRIDGE_SETTINGS_HELP></p>
-				<table border="0" class="settings-table compact-settings">
-				<tr>
-					<td width="20%"><label for="vzlogger_udpinterval"><TMPL_VAR NAME=VZLOGGER.UPDATE_CYCLE></label></td>
-					<td width="55%"><select id="vzlogger_udpinterval" name="vzlogger_udpinterval" data-mini="true" data-native-menu="true"><TMPL_LOOP NAME=VZLOGGER_UDPINTERVAL_OPTIONS><option value="<TMPL_VAR NAME=VALUE>" <TMPL_VAR NAME=SELECTED>><TMPL_VAR NAME=LABEL></option></TMPL_LOOP></select></td>
-					<td width="5%">&nbsp;</td>
-					<td width="20%"><font size="-1"><TMPL_VAR NAME=VZLOGGER.UPDATE_CYCLE_HELP></font></td>
-				</tr>
-				<tr><td colspan="4"><h4><TMPL_VAR NAME=VZLOGGER.HTTP_CACHE></h4></td></tr>
-				<tr id="http_cache_status_row">
-					<td><TMPL_VAR NAME=VZLOGGER.HTTP_CACHE_STATUS></td>
-					<td><span><TMPL_VAR NAME=HTTP_CACHE_STATUS></span><br><a id="http_cache_link" data-cache-available="<TMPL_VAR HTTP_CACHE_AVAILABLE>" class="inline-link <TMPL_VAR HTTP_CACHE_DISABLED>" href="<TMPL_VAR HTTP_CACHE_URL>" target="_blank"><TMPL_VAR NAME=VZLOGGER.OPEN_HTTP_CACHE></a></td>
-					<td>&nbsp;</td>
-					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.HTTP_CACHE_HELP></font></td>
-				</tr>
-				<tr><td colspan="4"><h4><TMPL_VAR NAME=VZLOGGER.UDP_OPTIONS></h4></td></tr>
-				<tr>
-					<td><label for="sendudp"><TMPL_VAR NAME=VZLOGGER.SEND_UDP></label></td>
-					<td><select id="sendudp" name="sendudp" data-role="flipswitch"><option value="0"><TMPL_VAR NAME=COMMON.OFF></option><option value="1"><TMPL_VAR NAME=COMMON.ON></option></select></td>
-					<td>&nbsp;</td>
-					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.SEND_UDP_HELP></font></td>
-				</tr>
-				<tr>
-					<td><label id="labeludpport" for="udpport"><TMPL_VAR NAME=VZLOGGER.PORT></label></td>
-					<td><input id="udpport" name="udpport" type="text" data-validation="number" value="<TMPL_VAR UDPPORT>" data-validation-allowing="range[1;65000]"></td>
-					<td>&nbsp;</td>
-					<td><font size="-1"><TMPL_VAR NAME=VZLOGGER.UDP_PORT_HELP></font></td>
-				</tr>
-				</table>
-			</div>
-		</td>
-	</tr>
-	</table>
-	</div>
 
 	<table border="0" class="settings-table">
 	<tr>
@@ -779,9 +711,6 @@
 			<span id="service_action_start_vzlogger_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_START_VZLOGGER></span>
 			<span id="service_action_stop_vzlogger_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_STOP_VZLOGGER></span>
 			<span id="service_action_restart_vzlogger_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_RESTART_VZLOGGER></span>
-			<span id="service_action_start_bridge_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_START_BRIDGE></span>
-			<span id="service_action_stop_bridge_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_STOP_BRIDGE></span>
-			<span id="service_action_restart_bridge_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_RESTART_BRIDGE></span>
 			<span id="service_action_wait_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_WAIT></span>
 			<span id="service_action_slow_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_SLOW></span>
 			<span id="service_action_success_text" hidden><TMPL_VAR NAME=VZLOGGER.SERVICE_ACTION_SUCCESS></span>
@@ -886,7 +815,6 @@
 			last_service_snapshot = response;
 			if (response.config) expert_runtime_applied = !!response.config.expert_applied;
 			render_service_status("vzlogger", response.services.vzlogger);
-			render_service_status("bridge", response.services.bridge);
 			update_all_control_states();
 		}
 
@@ -990,7 +918,6 @@
 				data.append("vzlogger_loglevel", $("#vzlogger_loglevel").val());
 			} else {
 				data.append("implementation", $("#implementation").val());
-				data.append("read", $("#read").val());
 			}
 			fetch("./index.cgi", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" })
 				.then(function (response) {
@@ -1005,7 +932,6 @@
 					if (response.ok && /^(?:start|restart)-/.test(action)) {
 						initial_implementation_value = $("#implementation").val();
 						saved_implementation = initial_implementation_value;
-						if (/-bridge$/.test(action)) initial_read_value = $("#read").val();
 						update_activation_dirty_hints();
 					}
 					render_service_snapshot(response);
@@ -1143,7 +1069,6 @@
 		function mark_configuration_form_saved(response) {
 			initial_implementation_value = $("#implementation").val();
 			saved_implementation = initial_implementation_value;
-			initial_read_value = $("#read").val();
 			document.getElementById("implementation_changed").value = "0";
 			update_activation_dirty_hints();
 			$("#vzlogger_mqttpass, #vzlogger_mqttkeypass").val("");
@@ -1691,19 +1616,13 @@
 
 		var saved_implementation = "<TMPL_VAR IMPLEMENTATION>";
 		var initial_implementation_value = "<TMPL_VAR IMPLEMENTATION_SWITCH_VALUE>";
-		var initial_read_value = "<TMPL_VAR READ>";
 		var expert_mode_active = "<TMPL_VAR VZLOGGER_EXPERT_MODE_VALUE>" == "1";
 		var expert_source_present = "<TMPL_VAR VZLOGGER_EXPERT_SOURCE_PRESENT>" == "1";
 		var expert_runtime_applied = "<TMPL_VAR VZLOGGER_EXPERT_APPLIED>" == "1";
 		var expert_mqtt_enabled = "<TMPL_VAR EXPERT_MQTT_ENABLED>" == "1";
-		$("#read").val(initial_read_value);
 		$("#implementation").val(initial_implementation_value);
 		$("#expert_mode").val(expert_mode_active ? "1" : "0");
-		var sendudp_control = $("#sendudp");
-		sendudp_control.val("<TMPL_VAR SENDUDP>");
-		sendudp_control.off("change.smartmeterUdp").on("change.smartmeterUdp", disable_udp);
-		try { sendudp_control.flipswitch("refresh"); } catch (error) {}
-		$("#rescan_ir_heads, #http_cache_link, #vzlogger_live_link, #vzlogger_rendered_link").off("click.smartmeterDisabled").on("click.smartmeterDisabled", function (event) {
+		$("#rescan_ir_heads, #vzlogger_live_link, #vzlogger_rendered_link").off("click.smartmeterDisabled").on("click.smartmeterDisabled", function (event) {
 			if ($(this).attr("aria-disabled") == "true") event.preventDefault();
 		});
 		$("#vzlogger_service_debug").val("<TMPL_VAR VZLOGGER_SERVICE_DEBUG>");
@@ -1715,11 +1634,9 @@
 		$("#vzlogger_mqttrawandagg").val("<TMPL_VAR VZLOGGER_MQTTRAWANDAGG>");
 		$("#vzlogger_mqttqos").val("<TMPL_VAR VZLOGGER_MQTTQOS>");
 		$("#vzlogger_mqtttimestamp").val("<TMPL_VAR VZLOGGER_MQTTTIMESTAMP>");
-		$("#vzlogger_udpinterval").val("<TMPL_VAR VZLOGGER_UDPINTERVAL>");
 		try { $("#expert_mode").flipswitch("refresh"); } catch (error) {}
 		update_activation_dirty_hints();
 		disable_cron();
-		disable_udp();
 
 		function disable_cron() {
 			update_all_control_states();
@@ -1763,22 +1680,19 @@
 				$(".service-control-button").prop("disabled", true).addClass("ui-disabled").each(function () {
 					set_service_button_title($(this), waiting_reason);
 				});
-				$("#vzlogger_service_action_reason, #bridge_service_action_reason").text(waiting_reason);
+				$("#vzlogger_service_action_reason").text(waiting_reason);
 				return;
 			}
 			var services = last_service_snapshot.services;
 			var config = last_service_snapshot.config || {};
 			var applied = last_service_snapshot.applied || {};
 			var saved_vzlogger = !!applied.vzlogger_enabled;
-			var saved_bridge = saved_vzlogger && !!applied.bridge_enabled;
 			var busy_reason = service_reason("busy");
 			var expert_invalid = !!config.expert_mode && !config.expert_valid;
 			var expert_unapplied = !!config.expert_mode && !config.expert_applied;
 			var vz_reason = !saved_vzlogger ? service_reason("activation") : (expert_invalid || expert_unapplied || !config.valid) ? service_reason("config") : "";
-			var bridge_reason = !saved_bridge ? service_reason("activation") : (expert_invalid || expert_unapplied || !config.valid) ? service_reason("config") :
 				(!applied.mqtt_enabled || !config.mqtt_enabled ? service_reason("mqtt") : "");
 			var vz_enabled = saved_vzlogger && ui.vzlogger && !!config.valid && !expert_invalid && !expert_unapplied && !service_action_running;
-			var bridge_enabled = saved_bridge && ui.bridge && !!config.valid && !expert_invalid && !expert_unapplied && !!applied.mqtt_enabled && !!config.mqtt_enabled && !service_action_running;
 			set_control_disabled("#save_apply_button", expert_invalid || configuration_action_running || service_action_running);
 			if (expert_invalid && config.expert_message) {
 				var feedback = document.getElementById("service_action_feedback");
@@ -1793,13 +1707,9 @@
 				}
 			}
 			$("#vzlogger_service_action_reason").text(vz_enabled ? "" : (service_action_running ? busy_reason : vz_reason));
-			$("#bridge_service_action_reason").text(bridge_enabled ? "" : (service_action_running ? busy_reason : bridge_reason));
 			set_service_button_state("vzlogger_start_button", !services.vzlogger.running, vz_enabled, service_action_running ? busy_reason : vz_reason);
 			set_service_button_state("vzlogger_restart_button", true, vz_enabled, service_action_running ? busy_reason : vz_reason);
 			set_service_button_state("vzlogger_stop_button", !!services.vzlogger.running, !!services.vzlogger.running && !service_action_running, service_action_running ? busy_reason : "");
-			set_service_button_state("bridge_start_button", !services.bridge.running, bridge_enabled, service_action_running ? busy_reason : bridge_reason);
-			set_service_button_state("bridge_restart_button", true, bridge_enabled, service_action_running ? busy_reason : bridge_reason);
-			set_service_button_state("bridge_stop_button", !!services.bridge.running, !!services.bridge.running && !service_action_running, service_action_running ? busy_reason : "");
 			set_anchor_disabled("#vzlogger_live_link, #vzlogger_rendered_link", !services.vzlogger.running);
 		}
 
@@ -1807,12 +1717,8 @@
 			var ui = {
 				vzlogger: $("#implementation").val() == "vzlogger",
 				local: $("#vzlogger_localenabled").val() == "1",
-				mqtt: expert_mode_active ? expert_mqtt_enabled : $("#vzlogger_mqttenabled").val() == "1",
-				bridge_switch: $("#read").val() == "1",
-				udp: $("#sendudp").val() == "1"
+				mqtt: expert_mode_active ? expert_mqtt_enabled : $("#vzlogger_mqttenabled").val() == "1"
 			};
-			ui.bridge_available = ui.vzlogger && ui.mqtt;
-			ui.bridge = ui.bridge_available && ui.bridge_switch;
 
 			$("#vzlogger_configuration_section").toggleClass("configuration-disabled", !ui.vzlogger || expert_mode_active);
 			set_control_disabled("#vzlogger_service_debug, #vzlogger_loglevel, #vzlogger_retry, #vzlogger_localenabled, #vzlogger_mqttenabled", !ui.vzlogger);
@@ -1825,16 +1731,6 @@
 			$("#rescan_ir_heads").closest("tr").toggleClass("setting-disabled", !ui.vzlogger);
 			$(".meter-panel").each(function () { update_meter_enabled(this.id.substring("meter_".length)); });
 
-			set_control_disabled("#read", !ui.bridge_available);
-			$("#bridge_configuration_section").toggleClass("configuration-disabled", !ui.bridge);
-			set_control_disabled("#vzlogger_udpinterval, #sendudp", !ui.bridge);
-			$("#bridge_settings_panel > p").toggleClass("setting-disabled-inline", !ui.bridge);
-			$("#bridge_settings_panel h4").closest("tr").toggleClass("setting-disabled", !ui.bridge);
-			$("#http_cache_status_row").toggleClass("setting-disabled", !ui.bridge);
-			var cache_available = $("#http_cache_link").attr("data-cache-available") == "1";
-			set_anchor_disabled("#http_cache_link", !ui.bridge || !cache_available);
-			set_control_disabled("#udpport", !ui.bridge || !ui.udp);
-			$("#labeludpport").toggleClass("ui-disabled", !ui.bridge || !ui.udp);
 			if (expert_mode_active) {
 				$("#vzlogger_configuration_section").find("input, select, textarea, button").not("#expert_mode").each(function () {
 					set_control_disabled($(this), true);
@@ -1952,20 +1848,14 @@
 
 		function update_activation_dirty_hints() {
 			var implementation_changed = $("#implementation").val() != initial_implementation_value;
-			var bridge_changed = $("#read").val() != initial_read_value;
 			$("#implementation_changed").val(implementation_changed ? "1" : "0");
 			$("#implementation_unsaved").prop("hidden", !implementation_changed);
-			$("#bridge_activation_unsaved").prop("hidden", !bridge_changed);
 			set_implementation_tab_states(saved_implementation);
 		}
 
 		function update_vzlogger_controls() { update_activation_dirty_hints(); update_all_control_states(); }
 		function update_local_controls() { update_all_control_states(); }
 		function update_mqtt_controls() { update_all_control_states(); }
-		function update_bridge_controls() { update_activation_dirty_hints(); update_all_control_states(); }
-		function disable_udp() {
-			update_all_control_states();
-		}
 
 		function update_meter_protocol(serial) {
 			var panelElement = document.getElementById("meter_" + serial);

@@ -92,7 +92,6 @@ jobs:
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_runtime.pl
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_custom_channels.pl
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_config_validation.pl
-          perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_bridge.pl
 
       - name: Test test-device file normalization
         shell: pwsh

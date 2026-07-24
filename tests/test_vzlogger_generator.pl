@@ -83,6 +83,12 @@ is_deeply($generated->{meters}->[0]->{channels}->[0]->{tags}, {meter=>"main"}, "
 ok(!exists($generated->{meters}->[0]->{channels}->[0]->{middleware}), "inactive API field omitted");
 ok(!exists($generated->{meters}->[0]->{channels}->[0]->{display_name}), "display name is not a vzLogger field");
 ok(!exists($generated->{meters}->[0]->{channels}->[0]->{name}), "no general channel name is invented");
+is($generated->{meters}->[0]->{channels}->[0]->{mqtt_topic}, "reader/Import_Storage_5",
+	"the plugin output key becomes the vzLogger MQTT topic of the channel");
+unlike($generated->{meters}->[0]->{channels}->[1]->{mqtt_topic} || "", qr/[#+]/,
+	"generated MQTT topics contain no MQTT wildcards");
+is($generated->{mqtt}->{topic}, "smartmeter",
+	"the MQTT base topic carries no extra path segment because channels supply their own");
 ok(!exists($generated->{meters}->[0]->{channels}->[1]->{duplicates}), "duplicates omitted for null API");
 
 my $mapping = read_json_file("$dir/vzlogger_channels.json");

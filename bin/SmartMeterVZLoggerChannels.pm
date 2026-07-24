@@ -136,12 +136,14 @@ sub default_output_key
 sub valid_output_key
 {
 	my ($key) = @_;
-	return defined($key) && !ref($key) && $key =~ /\A[A-Za-z0-9 _#|()\[\]\/\'%\$!.*\-]{1,64}\z/;
+	# The key becomes the MQTT topic of the channel, so the MQTT wildcards
+	# '#' and '+' are not allowed. '/' stays valid as a topic separator.
+	return defined($key) && !ref($key) && $key =~ /\A[A-Za-z0-9 _|()\[\]\/\'%\$!.*\-]{1,64}\z/;
 }
 
 sub output_key_format
 {
-	return "1-64 characters; allowed: letters, digits, spaces, underscore, # | ( ) [ ] / ' % \$ ! . * -";
+	return "1-64 characters; allowed: letters, digits, spaces, underscore, | ( ) [ ] / ' % \$ ! . * -";
 }
 
 sub read_json

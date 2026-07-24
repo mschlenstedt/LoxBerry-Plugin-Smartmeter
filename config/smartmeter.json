@@ -2,11 +2,8 @@
    "MAIN" : {
       "IMPLEMENTATION" : "none",
       "MQTTTOPIC" : "smartmeter",
-      "READ" : "0",
       "SCRIPTNAME" : "REPLACEBYNAME",
-      "SENDUDP" : "0",
-      "SUBFOLDER" : "REPLACEBYSUBFOLDER",
-      "UDPPORT" : "7000"
+      "SUBFOLDER" : "REPLACEBYSUBFOLDER"
    },
    "METERS" : {},
    "VZLOGGER" : {
@@ -31,11 +28,10 @@
       "MQTTQOS" : "0",
       "MQTTRAWANDAGG" : "0",
       "MQTTRETAIN" : "1",
-      "MQTTTIMESTAMP" : "1",
+      "MQTTTIMESTAMP" : "0",
       "MQTTUSER" : "",
       "REMOVEDHEADS" : "",
       "RETRY" : "30",
-      "UDPINTERVAL" : "5",
       "VZLOGGERDEBUG" : "0"
    }
 }

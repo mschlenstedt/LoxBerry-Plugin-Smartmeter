@@ -32,7 +32,7 @@ ok($cfg, "create() starts a new configuration");
 
 # Global sections and meter sections use the same flat accessor.
 $cfg->param("MAIN.IMPLEMENTATION", "vzlogger");
-$cfg->param("MAIN.READ", "1");
+$cfg->param("MAIN.MQTTTOPIC", "1");
 $cfg->param("VZLOGGER.LOCALPORT", "18080");
 $cfg->param("reader1.SERIAL", "reader1");
 $cfg->param("reader1.METER", "sml");
@@ -53,7 +53,7 @@ my $reopened = SmartMeterConfig->new($file);
 ok($reopened, "existing configuration opens");
 is($reopened->param("VZLOGGER.LOCALPORT"), "18080", "value survives a reopen");
 is_deeply([sort $reopened->param()],
-	[sort qw(MAIN.IMPLEMENTATION MAIN.READ VZLOGGER.LOCALPORT reader1.SERIAL reader1.METER)],
+	[sort qw(MAIN.IMPLEMENTATION MAIN.MQTTTOPIC VZLOGGER.LOCALPORT reader1.SERIAL reader1.METER)],
 	"param() lists global and meter keys as SECTION.KEY");
 
 # delete() removes the key and drops the meter once it is empty.
@@ -67,12 +67,12 @@ ok(!exists(slurp_json($file)->{METERS}->{reader1}), "empty meter section is remo
 # import_from fills the flat hash the generator uses to find readers.
 my $flat_file = "$dir/flat.json";
 my $flat_cfg = SmartMeterConfig->create($flat_file);
-$flat_cfg->param("MAIN.READ", "1");
+$flat_cfg->param("MAIN.MQTTTOPIC", "1");
 $flat_cfg->param("readerA.SERIAL", "readerA");
 $flat_cfg->save;
 my %flat;
 ok(SmartMeterConfig->import_from($flat_file, \%flat), "import_from succeeds");
-is($flat{"MAIN.READ"}, "1", "flat hash contains global keys");
+is($flat{"MAIN.MQTTTOPIC"}, "1", "flat hash contains global keys");
 is($flat{"readerA.SERIAL"}, "readerA", "flat hash contains meter keys as <serial>.KEY");
 
 # The INI migration converts the old layout, including meter sections.
@@ -104,6 +104,7 @@ my $migrated = SmartMeterConfig->new("$migrate_dir/smartmeter.json");
 ok($migrated, "migration produced a JSON configuration");
 is($migrated->param("MAIN.IMPLEMENTATION"), "none", "a stored Legacy mode becomes inactive");
 is($migrated->param("MAIN.CRON"), undef, "obsolete CRON is dropped");
+is($migrated->param("MAIN.READ"), undef, "the obsolete bridge activation switch is dropped");
 is($migrated->param("MAIN.SENDMQTT"), undef, "obsolete SENDMQTT is dropped");
 is($migrated->param("VZLOGGER.DEBUG"), undef, "obsolete bridge debug switch is dropped");
 is($migrated->param("1ISK0001.METER"), "sml", "meter settings survive the migration");

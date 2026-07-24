@@ -100,6 +100,10 @@ foreach my $config_key (sort keys %flat_config) {
 		foreach my $definition (@$definitions) {
 			next if (!$definition->{enabled});
 			my $channel = native_channel($definition, $aggtime);
+			# vzLogger publishes each channel under <mqtt.topic>/<mqtt_topic>/raw.
+			# Without mqtt_topic it would fall back to its internal channel name,
+			# so the readable output key is written here instead.
+			$channel->{mqtt_topic} = mqtt_channel_topic($serial, $definition, $channel->{identifier});
 			push @channels, $channel;
 			my $uuid = $definition->{uuid};
 			if ($definition->{plugin_output}->{enabled}) {
@@ -129,6 +133,31 @@ foreach my $config_key (sort keys %flat_config) {
 	push @meters, $meter_config;
 }
 
+# Builds the per-channel MQTT topic as "<reader>/<output key>", so a published
+# value ends up at <base topic>/<reader>/<output key>/raw. Falls back to the
+# OBIS identifier when a channel has no plugin output key. MQTT wildcards are
+# stripped defensively; the output-key validation already rejects them.
+sub mqtt_channel_topic
+{
+	my ($serial, $definition, $identifier) = @_;
+	my $name = "";
+	$name = $definition->{plugin_output}->{key}
+		if (ref($definition->{plugin_output}) eq "HASH" && $definition->{plugin_output}->{enabled});
+	$name = obis_cache_name($identifier) if (!defined($name) || $name eq "");
+	return sanitize_topic_segment($serial) . "/" . sanitize_topic_segment($name);
+}
+
+sub sanitize_topic_segment
+{
+	my ($value) = @_;
+	$value = "" if (!defined($value) || ref($value));
+	$value =~ s/[#+]//g;
+	$value =~ s{/+}{/}g;
+	$value =~ s{\A/+|/+\z}{}g;
+	$value =~ s/\A\s+|\s+\z//g;
+	return $value ne "" ? $value : "unknown";
+}
+
 sub live_display_factor
 {
 	my ($identifier) = @_;
@@ -145,7 +174,7 @@ my $mqtt_config = {
 	host => $mqtt->{host},
 	port => $mqtt->{port},
 	keepalive => clean_number($plugin_cfg->param("VZLOGGER.MQTTKEEPALIVE"), 30),
-	topic => "$base_topic/vzlogger",
+	topic => $base_topic,
 	retain => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTRETAIN"), 1) ? JSON::PP::true : JSON::PP::false,
 	rawAndAgg => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTRAWANDAGG"), 0) ? JSON::PP::true : JSON::PP::false,
 	qos => clean_qos($plugin_cfg->param("VZLOGGER.MQTTQOS"), 0),
@@ -328,6 +357,12 @@ sub enrich_user_channels
 		die "Custom channel $meter_channel_index for reader $serial has no assigned UUID.\n"
 			if (!defined($channel->{uuid}) || ref($channel->{uuid}) || $channel->{uuid} eq "");
 		$channel->{api} = "null" if (!exists($channel->{api}));
+		# An explicit mqtt_topic in the custom source wins; otherwise the channel
+		# is published under the same "<reader>/<name>" scheme as standard meters.
+		if (!defined($channel->{mqtt_topic}) || ref($channel->{mqtt_topic}) || $channel->{mqtt_topic} eq "") {
+			$channel->{mqtt_topic} = sanitize_topic_segment($serial) . "/"
+				. sanitize_topic_segment(user_channel_name($channel, $identifier, $meter_channel_index));
+		}
 		my $uuid = defined($channel->{uuid}) && !ref($channel->{uuid}) ? "$channel->{uuid}" : "";
 		if ($uuid ne "") {
 			my $catalog_de = lookup_obis($obis_catalog, $identifier, "de");
@@ -458,7 +493,7 @@ sub ordered_keys
 		local => [qw(enabled port index timeout buffer)],
 		mqtt => [qw(enabled host port keepalive topic id user pass retain rawAndAgg qos timestamp cafile capath certfile keyfile keypass)],
 		meter => [qw(enabled allowskip aggtime protocol device interval host dump_file pullseq ackseq baudrate baudrate_read parity wait_sync read_timeout baudrate_change_delay key mbus_debug use_local_time channels)],
-		channel => [qw(api uuid identifier)],
+		channel => [qw(api uuid identifier mqtt_topic)],
 	);
 	my @preferred = @{$orders{$context} || []};
 	my %seen;

@@ -228,7 +228,7 @@ sub form_vzlogger
 		my $implementation_before_save = implementation_mode();
 		my $replace_expert_runtime = !expert_mode_enabled() && expert_configuration_applied();
 		my $save_output = "";
-		if ($action =~ /\A(?:start|stop|restart)-(?:vzlogger|bridge)\z/) {
+		if ($action =~ /\A(?:start|stop|restart)-vzlogger\z/) {
 			save_service_log_settings($action);
 		} else {
 			$save_output = save_vzlogger_form(@heads);
@@ -240,9 +240,6 @@ sub form_vzlogger
 		$control_action = "restart-vzlogger" if ($action eq "restart-vzlogger");
 		$control_action = "start-vzlogger" if ($action eq "start-vzlogger");
 		$control_action = "stop-vzlogger" if ($action eq "stop-vzlogger");
-		$control_action = "restart-bridge" if ($action eq "restart-bridge");
-		$control_action = "start-bridge" if ($action eq "start-bridge");
-		$control_action = "stop-bridge" if ($action eq "stop-bridge");
 		$control_action = "read-obis" if ($action eq "read-obis");
 		my $output = $save_output;
 		if ($action eq "read-obis") {
@@ -287,9 +284,6 @@ sub form_vzlogger
 	$template->param("IMPLEMENTATION" => $implementation);
 	$template->param("IMPLEMENTATION_SWITCH_VALUE" => ($implementation eq "vzlogger" ? "vzlogger" : "none"));
 	$template->param("VZLOGGER_IMPLEMENTATION_ACTIVE" => ($implementation eq "vzlogger"));
-	$template->param("READ" => $plugin_cfg->param("MAIN.READ") || 0);
-	$template->param("SENDUDP" => $plugin_cfg->param("MAIN.SENDUDP") || 0);
-	$template->param("UDPPORT" => $plugin_cfg->param("MAIN.UDPPORT") || 7000);
 	$template->param("MQTTTOPIC" => $mqtttopic);
 	$template->param("VZLOGGER_LOCALENABLED" => $local_enabled);
 	$template->param("VZLOGGER_LOCALPORT" => $local_port);
@@ -297,9 +291,6 @@ sub form_vzlogger
 	$template->param("VZLOGGER_LOCALTIMEOUT" => $local_timeout);
 	$template->param("VZLOGGER_LOCALBUFFER" => $local_buffer);
 	$template->param("VZLOGGER_RETRY" => $retry);
-	my $udp_interval = clean_udp_interval($plugin_cfg->param("VZLOGGER.UDPINTERVAL"), "5");
-	$template->param("VZLOGGER_UDPINTERVAL" => $udp_interval);
-	$template->param("VZLOGGER_UDPINTERVAL_OPTIONS" => udp_interval_options($udp_interval));
 	$template->param("VZLOGGER_SERVICE_DEBUG" => $plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || 0);
 	$template->param("VZLOGGER_LOGLEVEL" => clean_log_level($plugin_cfg->param("VZLOGGER.LOGLEVEL"), "0"));
 	$template->param("VZLOGGER_MQTTENABLED" => clean_boolean($plugin_cfg->param("VZLOGGER.MQTTENABLED"), 1));
@@ -336,7 +327,6 @@ sub form_vzlogger
 	$template->param("CHANNEL_DEFINITIONS_JSON" => JSON::PP->new->utf8->canonical->encode($channel_document || new_document()));
 	$template->param("CHANNEL_INDICES_JSON" => JSON::PP->new->utf8->canonical->encode(runtime_channel_indices()));
 	$template->param("OBIS_CATALOG_JSON" => JSON::PP->new->utf8->canonical->encode($obis_catalog || load_catalog("$lbptemplatedir/obis_catalog.json")));
-	add_http_cache_template_params(@rows);
 	$template->param("ROWS" => \@rows);
 	return();
 }
@@ -344,84 +334,26 @@ sub form_vzlogger
 sub add_service_template_params
 {
 	my $vzlogger_expected_active = implementation_mode() eq "vzlogger";
-	my $mqtt_enabled = effective_vzlogger_mqtt_enabled();
-	my $bridge_expected_active = $vzlogger_expected_active && $mqtt_enabled && (($plugin_cfg->param("MAIN.READ") || "0") eq "1");
 	my $vzlogger_state = service_state("vzlogger");
-	my $bridge_state = service_state("smartmeter-ng-vzlogger-bridge");
 
 	$template->param("VZLOGGER_SERVICE_STATUS" => service_summary("vzlogger"));
-	$template->param("BRIDGE_SERVICE_STATUS" => service_summary("smartmeter-ng-vzlogger-bridge"));
-	$template->param("BRIDGE_AVAILABILITY_HELP" => ($L{'VZLOGGER.BRIDGE_SERVICE_CONTROL_HELP'} || "Manual control of the SmartMeter bridge."));
 	$template->param("VZLOGGER_SERVICE_STATUS_CLASS" => service_status_class($vzlogger_state, $vzlogger_expected_active));
-	$template->param("BRIDGE_SERVICE_STATUS_CLASS" => service_status_class($bridge_state, $bridge_expected_active));
 	$template->param("VZLOGGER_SERVICE_RUNNING" => $vzlogger_state eq "active");
-	$template->param("BRIDGE_SERVICE_RUNNING" => $bridge_state eq "active");
 	$template->param("VZLOGGER_LIVE_DISABLED" => ($vzlogger_state eq "active" ? "" : "ui-disabled"));
 
 	# vzLogger writes its own log at a fixed path (configured in vzlogger.conf).
-	# The bridge and control logs are LoxBerry sessions with timestamped names,
-	# so their buttons link to the most recent file; all of them also appear in
-	# the central LoxBerry log manager.
+	# The control log is a LoxBerry session with a timestamped name, so its button
+	# links to the most recent file; both also appear in the LoxBerry log manager.
 	my $vzlogger_log = "$lbhomedir/log/plugins/$lbpplugindir/vzlogger.log";
 	$template->param("VZLOGGER_LOG_URL" => log_url("plugins/$lbpplugindir/vzlogger.log"));
 	$template->param("VZLOGGER_LOG_DISABLED" => (-e $vzlogger_log ? "" : "ui-disabled"));
-
-	my $bridge_log = latest_plugin_log_name("bridge");
-	$template->param("BRIDGE_LOG_URL" => $bridge_log ? log_url("plugins/$lbpplugindir/$bridge_log") : "#");
-	$template->param("BRIDGE_LOG_DISABLED" => ($bridge_log ? "" : "ui-disabled"));
 
 	my $control_log = latest_plugin_log_name("control");
 	$template->param("CONTROL_LOG_URL" => $control_log ? log_url("plugins/$lbpplugindir/$control_log") : "#");
 	$template->param("CONTROL_LOG_DISABLED" => ($control_log ? "" : "ui-disabled"));
 }
 
-sub add_http_cache_template_params
-{
-	my (@rows) = @_;
-	my @summaries;
-	my $has_cache = 0;
 
-	foreach my $row (@rows) {
-		my $serial = $row->{SERIAL} || next;
-		my $cache_file = "/var/run/shm/$lbpplugindir/$serial.data";
-		if (!-e $cache_file) {
-			push @summaries, html_escape("$serial: $L{'VZLOGGER.HTTP_CACHE_MISSING'}");
-			next;
-		}
-
-		$has_cache = 1;
-		my ($last_update, $value_count) = cache_file_summary($cache_file, $serial);
-		my $summary = "$serial: $L{'VZLOGGER.HTTP_CACHE_AVAILABLE'}";
-		$summary .= " | $L{'VZLOGGER.HTTP_CACHE_LAST_UPDATE'}: $last_update" if ($last_update ne "");
-		$summary .= " | $value_count $L{'VZLOGGER.HTTP_CACHE_VALUES'}" if ($value_count > 0);
-		push @summaries, html_escape($summary);
-	}
-
-	$template->param("HTTP_CACHE_STATUS" => (@summaries ? join("<br>", @summaries) : html_escape($L{'VZLOGGER.HTTP_CACHE_NO_METERS'})));
-	$template->param("HTTP_CACHE_URL" => "/plugins/$lbpplugindir/index.php");
-	$template->param("HTTP_CACHE_AVAILABLE" => ($has_cache ? "1" : "0"));
-	$template->param("HTTP_CACHE_DISABLED" => ($has_cache ? "" : "ui-disabled"));
-}
-
-sub cache_file_summary
-{
-	my ($cache_file, $serial) = @_;
-	my $last_update = "";
-	my $value_count = 0;
-
-	if (open(my $fh, "<", $cache_file)) {
-		while (my $line = <$fh>) {
-			chomp($line);
-			my ($line_serial, $key, $value) = split(/:/, $line, 3);
-			next if (!defined($line_serial) || !defined($key) || $line_serial ne $serial);
-			$last_update = $value if ($key eq "Last_Update" && defined($value));
-			$value_count++ if ($key ne "Last_Update" && $key ne "Last_UpdateLoxEpoche");
-		}
-		close($fh);
-	}
-
-	return ($last_update, $value_count);
-}
 
 sub html_escape
 {
@@ -446,7 +378,7 @@ sub log_url
 }
 
 # Returns the basename of the newest LoxBerry log file for a base name
-# (e.g. "bridge", "control"), or undef. The high-resolution timestamp prefix
+# (e.g. "control"), or undef. The high-resolution timestamp prefix
 # sorts chronologically, so the last entry is the most recent.
 sub latest_plugin_log_name
 {
@@ -508,8 +440,6 @@ sub service_status_response
 {
 	my $vzlogger_expected = implementation_mode() eq "vzlogger";
 	my $mqtt_enabled = effective_vzlogger_mqtt_enabled();
-	my $bridge_enabled = (($plugin_cfg->param("MAIN.READ") || "0") eq "1");
-	my $bridge_expected = $vzlogger_expected && $mqtt_enabled && $bridge_enabled;
 	my $config = generated_config_status();
 	my $expert = expert_draft_status();
 	my $expert_applied = expert_configuration_applied();
@@ -520,13 +450,11 @@ sub service_status_response
 	$config->{expert_applied} = $expert_applied ? JSON::PP::true : JSON::PP::false;
 	my $vzlogger_startable = $config->{valid};
 	$vzlogger_startable = 0 if (expert_mode_enabled() && (!$expert->{valid} || !$expert_applied));
-	my $bridge_startable = $vzlogger_startable && $mqtt_enabled && $config->{mqtt_enabled};
 	return {
 		ok => JSON::PP::true,
 		applied => {
 			vzlogger_enabled => $vzlogger_expected ? JSON::PP::true : JSON::PP::false,
 			mqtt_enabled => $mqtt_enabled ? JSON::PP::true : JSON::PP::false,
-			bridge_enabled => $bridge_enabled ? JSON::PP::true : JSON::PP::false,
 		},
 		config => {
 			present => $config->{present} ? JSON::PP::true : JSON::PP::false,
@@ -540,7 +468,6 @@ sub service_status_response
 		},
 		services => {
 			vzlogger => service_status_data("vzlogger", $vzlogger_expected, $vzlogger_startable),
-			bridge => service_status_data("smartmeter-ng-vzlogger-bridge", $bridge_expected, $bridge_startable),
 		},
 	};
 }
@@ -571,14 +498,10 @@ sub run_service_ajax_action
 	my ($action) = @_;
 	my %allowed = map { $_ => 1 } qw(
 		start-vzlogger stop-vzlogger restart-vzlogger
-		start-bridge stop-bridge restart-bridge
 	);
 	die $L{'VZLOGGER.UI_UNKNOWN_SERVICE_ACTION'} if (!$allowed{$action || ""});
 	my $starting = $action =~ /\A(?:start|restart)-/;
-	my $bridge_action = $action =~ /-bridge\z/;
 	die $L{'VZLOGGER.UI_SAVE_VZLOGGER_FIRST'} if ($starting && implementation_mode() ne "vzlogger");
-	die $L{'VZLOGGER.UI_SAVE_BRIDGE_FIRST'}
-		if ($starting && $bridge_action && ($plugin_cfg->param("MAIN.READ") || "0") ne "1");
 	my $requested_implementation = clean_config_value($q->{implementation}, qr/\A(?:none|vzlogger)\z/, "");
 	my $config = generated_config_status();
 	my $expert = expert_draft_status();
@@ -586,21 +509,17 @@ sub run_service_ajax_action
 		if ($starting && expert_mode_enabled() && !$expert->{valid});
 	die $L{'VZLOGGER.UI_EXPERT_NOT_APPLIED'}
 		if ($starting && expert_mode_enabled() && !expert_configuration_applied());
-	if ($action =~ /-vzlogger\z/) {
-		die $L{'VZLOGGER.UI_ENABLE_VZLOGGER'} if ($starting && $requested_implementation ne "vzlogger");
-	} else {
-		my $requested_read = clean_config_value($q->{read}, qr/\A[01]\z/, "");
-		die $L{'VZLOGGER.UI_ENABLE_BRIDGE'} if ($starting && ($requested_implementation ne "vzlogger" || $requested_read ne "1"));
-	}
+	die $L{'VZLOGGER.UI_ENABLE_VZLOGGER'} if ($starting && $requested_implementation ne "vzlogger");
 	die $L{'VZLOGGER.UI_GENERATED_CONFIG_INVALID'} if ($starting && !$config->{valid});
-	die $L{'VZLOGGER.UI_ENABLE_MQTT_BRIDGE'} if ($starting && $bridge_action && !effective_vzlogger_mqtt_enabled());
-	die $L{'VZLOGGER.UI_MQTT_DISABLED_CONFIG'} if ($starting && $bridge_action && !$config->{mqtt_enabled});
+	# MQTT is the only transport, so starting without it would produce no output.
+	die $L{'VZLOGGER.UI_ENABLE_MQTT'} if ($starting && !effective_vzlogger_mqtt_enabled());
+	die $L{'VZLOGGER.UI_MQTT_DISABLED_CONFIG'} if ($starting && !$config->{mqtt_enabled});
 
 	save_service_log_settings($action);
 
 	my ($output, $exit) = run_control_result($action);
 	my $response = service_status_response();
-	my $service_name = $bridge_action ? "bridge" : "vzlogger";
+	my $service_name = "vzlogger";
 	my $expected_running = $action =~ /\A(?:start|restart)-/ ? 1 : 0;
 	my $running = $response->{services}->{$service_name}->{running} ? 1 : 0;
 	if ($exit == 0 && $running != $expected_running) {
@@ -676,22 +595,13 @@ sub run_form_ajax_action
 	$operation_ok = 0 if ($output =~ /(?:\ACould not|\nCould not|\bnot available\b)/i);
 	my $meterless = $output =~ /No meter is configured/i;
 	my $vzlogger_expected = $response->{applied}->{vzlogger_enabled} && !$meterless;
-	my $bridge_expected = $vzlogger_expected && $response->{applied}->{mqtt_enabled} && $response->{applied}->{bridge_enabled};
 	if ($vzlogger_expected && !$response->{services}->{vzlogger}->{running}) {
 		$operation_ok = 0;
 		$output .= "\n" . $L{'VZLOGGER.UI_APPLY_VZLOGGER_NOT_RUNNING'} . "\n";
 	}
-	if ($bridge_expected && !$response->{services}->{bridge}->{running}) {
-		$operation_ok = 0;
-		$output .= "\n" . $L{'VZLOGGER.UI_APPLY_BRIDGE_NOT_RUNNING'} . "\n";
-	}
 	if (!$vzlogger_expected && $response->{services}->{vzlogger}->{running}) {
 		$operation_ok = 0;
 		$output .= "\n" . $L{'VZLOGGER.UI_APPLY_VZLOGGER_NOT_STOPPED'} . "\n";
-	}
-	if (!$bridge_expected && $response->{services}->{bridge}->{running}) {
-		$operation_ok = 0;
-		$output .= "\n" . $L{'VZLOGGER.UI_APPLY_BRIDGE_NOT_STOPPED'} . "\n";
 	}
 	write_apply_log($output, \$output);
 	$response->{ok} = $operation_ok ? JSON::PP::true : JSON::PP::false;
@@ -819,7 +729,6 @@ sub save_service_log_settings
 	} else {
 		if ($starting) {
 			die $L{'VZLOGGER.UI_INVALID_ACTIVATION'} if (!defined($q->{implementation}) || $q->{implementation} ne "vzlogger");
-			die $L{'VZLOGGER.UI_INVALID_BRIDGE_ACTIVATION'} if (!defined($q->{read}) || $q->{read} ne "1");
 		}
 	}
 	$plugin_cfg->save;
@@ -891,15 +800,12 @@ sub ensure_vzlogger_defaults
 		$plugin_cfg->param($key, $value);
 		$changed = 1;
 	};
-	$set_default->("MAIN.READ", "0", 0);
 	$set_default->("MAIN.IMPLEMENTATION", implementation_mode(), 1);
-	$set_default->("MAIN.SENDUDP", "0", 0);
-	$set_default->("MAIN.UDPPORT", "7000", 1);
 	$set_default->("MAIN.MQTTTOPIC", "smartmeter", 1);
 	foreach my $entry (
 		["VZLOGGER.EXPERTMODE", "0"], ["VZLOGGER.RETRY", "30"], ["VZLOGGER.LOCALENABLED", "1"],
 		["VZLOGGER.LOCALINDEX", "1"], ["VZLOGGER.LOCALTIMEOUT", "30"], ["VZLOGGER.LOCALBUFFER", "-1"],
-		["VZLOGGER.UDPINTERVAL", "5"], ["VZLOGGER.VZLOGGERDEBUG", "0"],
+		["VZLOGGER.VZLOGGERDEBUG", "0"],
 		["VZLOGGER.LOGLEVEL", "0"], ["VZLOGGER.MQTTENABLED", "1"], ["VZLOGGER.MQTTHOST", ""],
 		["VZLOGGER.MQTTPORT", ""], ["VZLOGGER.MQTTCAFILE", ""], ["VZLOGGER.MQTTCAPATH", ""],
 		["VZLOGGER.MQTTCERTFILE", ""], ["VZLOGGER.MQTTKEYFILE", ""], ["VZLOGGER.MQTTKEYPASS", ""],
@@ -1037,10 +943,6 @@ sub save_expert_allowed_form
 		$implementation = clean_config_value($q->{implementation}, qr/\A(?:none|vzlogger)\z/, $implementation);
 	}
 	set_implementation_mode($plugin_cfg, $implementation);
-	$plugin_cfg->param("MAIN.READ", clean_config_value($q->{read}, qr/\A[01]\z/, $plugin_cfg->param("MAIN.READ") || "0"));
-	$plugin_cfg->param("MAIN.SENDUDP", clean_config_value($q->{sendudp}, qr/\A[01]\z/, $plugin_cfg->param("MAIN.SENDUDP") || "0"));
-	$plugin_cfg->param("MAIN.UDPPORT", clean_config_value($q->{udpport}, qr/\A\d+\z/, $plugin_cfg->param("MAIN.UDPPORT") || "7000"));
-	$plugin_cfg->param("VZLOGGER.UDPINTERVAL", clean_udp_interval($q->{vzlogger_udpinterval}, $plugin_cfg->param("VZLOGGER.UDPINTERVAL") || "5"));
 	$plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG", clean_config_value($q->{vzlogger_service_debug}, qr/\A[01]\z/, $plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0"));
 	$plugin_cfg->param("VZLOGGER.LOGLEVEL", clean_log_level($q->{vzlogger_loglevel}, $plugin_cfg->param("VZLOGGER.LOGLEVEL") || "0"));
 	$plugin_cfg->save;
@@ -1055,7 +957,7 @@ sub save_expert_allowed_form
 	);
 	return format_expert_validation(localize_expert_validation($result, \%L)) . $L{'VZLOGGER.UI_EXPERT_LOG_UPDATE_FAILED'} . "\n" if (!defined($updated));
 	return $L{'VZLOGGER.UI_EXPERT_LOG_SAVE_FAILED'} . "\n" if (!write_text_atomic(expert_config_file(), $updated));
-	return "Updated Expert Mode service and bridge settings.\n";
+	return "Updated Expert Mode service settings.\n";
 }
 
 sub detect_heads
@@ -1221,11 +1123,8 @@ sub save_vzlogger_form
 		$implementation = clean_config_value($q->{implementation}, qr/\A(?:none|vzlogger)\z/, $implementation);
 	}
 	set_implementation_mode($plugin_cfg, $implementation);
-	$plugin_cfg->param("MAIN.READ", clean_config_value($q->{read}, qr/\A[01]\z/, defined($plugin_cfg->param("MAIN.READ")) ? $plugin_cfg->param("MAIN.READ") : "0"));
 	# Disabled form controls are not submitted. Preserve their saved values while
 	# meter reading is off instead of silently restoring defaults.
-	$plugin_cfg->param("MAIN.SENDUDP", clean_config_value($q->{sendudp}, qr/\A[01]\z/, $plugin_cfg->param("MAIN.SENDUDP") || "0"));
-	$plugin_cfg->param("MAIN.UDPPORT", clean_config_value($q->{udpport}, qr/\A\d+\z/, $plugin_cfg->param("MAIN.UDPPORT") || "7000"));
 	$plugin_cfg->param("MAIN.MQTTTOPIC", clean_config_value($q->{mqtttopic}, qr/\A[^#+]+\z/, $plugin_cfg->param("MAIN.MQTTTOPIC") || "smartmeter"));
 	$plugin_cfg->param("VZLOGGER.RETRY", clean_config_value($q->{vzlogger_retry}, qr/\A\d+\z/, defined($plugin_cfg->param("VZLOGGER.RETRY")) ? $plugin_cfg->param("VZLOGGER.RETRY") : "30"));
 	$plugin_cfg->param("VZLOGGER.LOCALENABLED", clean_config_value($q->{vzlogger_localenabled}, qr/\A[01]\z/, defined($plugin_cfg->param("VZLOGGER.LOCALENABLED")) ? $plugin_cfg->param("VZLOGGER.LOCALENABLED") : "1"));
@@ -1233,7 +1132,6 @@ sub save_vzlogger_form
 	$plugin_cfg->param("VZLOGGER.LOCALINDEX", clean_config_value($q->{vzlogger_localindex}, qr/\A[01]\z/, defined($plugin_cfg->param("VZLOGGER.LOCALINDEX")) ? $plugin_cfg->param("VZLOGGER.LOCALINDEX") : "1"));
 	$plugin_cfg->param("VZLOGGER.LOCALTIMEOUT", clean_config_value($q->{vzlogger_localtimeout}, qr/\A\d+\z/, defined($plugin_cfg->param("VZLOGGER.LOCALTIMEOUT")) ? $plugin_cfg->param("VZLOGGER.LOCALTIMEOUT") : "30"));
 	$plugin_cfg->param("VZLOGGER.LOCALBUFFER", clean_config_value($q->{vzlogger_localbuffer}, qr/\A-?\d+\z/, defined($plugin_cfg->param("VZLOGGER.LOCALBUFFER")) ? $plugin_cfg->param("VZLOGGER.LOCALBUFFER") : "-1"));
-	$plugin_cfg->param("VZLOGGER.UDPINTERVAL", clean_udp_interval($q->{vzlogger_udpinterval}, $plugin_cfg->param("VZLOGGER.UDPINTERVAL") || "5"));
 	$plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG", clean_config_value($q->{vzlogger_service_debug}, qr/\A[01]\z/, $plugin_cfg->param("VZLOGGER.VZLOGGERDEBUG") || "0"));
 	$plugin_cfg->param("VZLOGGER.LOGLEVEL", clean_log_level($q->{vzlogger_loglevel}, $plugin_cfg->param("VZLOGGER.LOGLEVEL") || "0"));
 	$plugin_cfg->param("VZLOGGER.MQTTENABLED", clean_config_value($q->{vzlogger_mqttenabled}, qr/\A[01]\z/, defined($plugin_cfg->param("VZLOGGER.MQTTENABLED")) ? $plugin_cfg->param("VZLOGGER.MQTTENABLED") : "1"));
@@ -1336,7 +1234,6 @@ sub validate_submitted_vzlogger_form
 		vzlogger_retry => [0, undef], vzlogger_localport => [1, 65535],
 		vzlogger_localtimeout => [0, undef], vzlogger_localbuffer => [undef, undef],
 		vzlogger_mqttport => [1, 65535], vzlogger_mqttkeepalive => [0, undef],
-		udpport => [1, 65535],
 	);
 	foreach my $field (sort keys %integer_fields) {
 		next if (!defined($q->{$field}) || ($field eq "vzlogger_mqttport" && $q->{$field} eq ""));
@@ -1346,7 +1243,7 @@ sub validate_submitted_vzlogger_form
 		push @errors, "$field must be at least $minimum" if (defined($minimum) && $q->{$field} < $minimum);
 		push @errors, "$field must not exceed $maximum" if (defined($maximum) && $q->{$field} > $maximum);
 	}
-	foreach my $field (qw(read sendudp vzlogger_localenabled vzlogger_localindex vzlogger_debug vzlogger_service_debug vzlogger_mqttenabled vzlogger_mqttretain vzlogger_mqttrawandagg vzlogger_mqtttimestamp)) {
+	foreach my $field (qw(read vzlogger_localenabled vzlogger_localindex vzlogger_debug vzlogger_service_debug vzlogger_mqttenabled vzlogger_mqttretain vzlogger_mqttrawandagg vzlogger_mqtttimestamp)) {
 		push @errors, "$field must be 0 or 1" if (defined($q->{$field}) && $q->{$field} !~ /\A[01]\z/);
 	}
 	push @errors, "vzlogger_mqttqos must be 0 or 1" if (defined($q->{vzlogger_mqttqos}) && $q->{vzlogger_mqttqos} !~ /\A[01]\z/);
@@ -2864,36 +2761,7 @@ sub clean_log_level
 	return $default;
 }
 
-sub clean_udp_interval
-{
-	my ($value, $default) = @_;
-	return $value if (defined($value) && $value =~ /\A(?:5|10|30|60|180|300|600|900|1800|3600)\z/);
-	return $default;
-}
 
-sub udp_interval_options
-{
-	my ($selected) = @_;
-	my @options = (
-		[ "5", $L{'VZLOGGER.INTERVAL_MINIMAL'} || "Minimal" ],
-		[ "10", $L{'VZLOGGER.INTERVAL_10_SECONDS'} || "Every 10 seconds" ],
-		[ "30", $L{'VZLOGGER.INTERVAL_30_SECONDS'} || "Every 30 seconds" ],
-		[ "60", $L{'VZLOGGER.INTERVAL_1_MINUTE'} || "Every 1 minute" ],
-		[ "180", $L{'VZLOGGER.INTERVAL_3_MINUTES'} || "Every 3 minutes" ],
-		[ "300", $L{'VZLOGGER.INTERVAL_5_MINUTES'} || "Every 5 minutes" ],
-		[ "600", $L{'VZLOGGER.INTERVAL_10_MINUTES'} || "Every 10 minutes" ],
-		[ "900", $L{'VZLOGGER.INTERVAL_15_MINUTES'} || "Every 15 minutes" ],
-		[ "1800", $L{'VZLOGGER.INTERVAL_30_MINUTES'} || "Every 30 minutes" ],
-		[ "3600", $L{'VZLOGGER.INTERVAL_60_MINUTES'} || "Every 60 minutes" ],
-	);
-	return [ map {
-		{
-			VALUE => $_->[0],
-			LABEL => $_->[1],
-			SELECTED => ($_->[0] eq $selected ? "selected" : ""),
-		}
-	} @options ];
-}
 
 ##########################################################################
 # Print Form

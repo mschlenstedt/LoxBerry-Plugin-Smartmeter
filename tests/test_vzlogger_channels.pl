@@ -44,9 +44,11 @@ for my $case (
 like(lookup_obis($catalog, "1-0:1.8.0*5", "en")->{long}, qr/index: 5/, "F augments description");
 is(default_output_key("1-0:2.8.0", $catalog), "Delivery_Total_OBIS_2.8.0", "default output key combines catalog name and short OBIS code");
 is(default_output_key("1-0:2.8.0*5", $catalog), "Delivery_Total_OBIS_2.8.0*5", "default output key retains the canonical storage index");
-ok(valid_output_key(q{Name #|().-_ []/'%$!*}), "documented spaces and special characters are accepted");
-ok(!valid_output_key("Name:Value"), "cache field delimiter is rejected in output keys");
-ok(!valid_output_key("Name;Value"), "UDP entry delimiter is rejected in output keys");
+ok(valid_output_key(q{Name |().-_ []/'%$!*}), "documented spaces and special characters are accepted");
+ok(!valid_output_key("Name#Value"), "MQTT wildcard # is rejected in output keys");
+ok(!valid_output_key("Name+Value"), "MQTT wildcard + is rejected in output keys");
+ok(!valid_output_key("Name:Value"), "colon is rejected in output keys");
+ok(!valid_output_key("Name;Value"), "semicolon is rejected in output keys");
 ok(!lookup_obis($catalog, "99-0:88.77.66", "en")->{known}, "unknown code stays configurable");
 like(lookup_obis($catalog, "99-0:88.77.66", "en")->{long}, qr/A=99.*C=88/, "unknown code is decomposed");
 

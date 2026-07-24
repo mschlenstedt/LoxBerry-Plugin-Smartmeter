@@ -280,7 +280,7 @@ sub validate_native_channel
 	my ($channel, $prefix, $meter, $custom_meter) = @_;
 	my $api = scalar_text($channel->{api});
 	my $protocol = scalar_text($meter->{protocol});
-	my %base = map { $_ => 1 } qw(api uuid identifier aggmode);
+	my %base = map { $_ => 1 } qw(api uuid identifier aggmode mqtt_topic);
 	my %api_fields = (
 		null => {},
 		volkszaehler => { map { $_ => 1 } qw(middleware timeout duplicates) },
@@ -399,9 +399,9 @@ sub validate_mapping
 			}
 		}
 	}
-	if (bridge_enabled()) {
+	if (vzlogger_mode_enabled()) {
 		my $managed_count = grep { ref($_) eq "HASH" && $_->{managed_output} } values %$mapping;
-		push @errors, "The SmartMeter bridge is enabled but no active plugin output channel is configured." if (!$managed_count);
+		push @errors, "vzLogger is enabled but no active plugin output channel is configured." if (!$managed_count);
 	}
 }
 
@@ -517,8 +517,3 @@ sub vzlogger_mode_enabled
 	return (($config->{"MAIN.IMPLEMENTATION"} || "") eq "vzlogger") ? 1 : 0;
 }
 
-sub bridge_enabled
-{
-	my $config = read_plugin_config();
-	return (($config->{"MAIN.IMPLEMENTATION"} || "") eq "vzlogger" && ($config->{"MAIN.READ"} || "0") eq "1") ? 1 : 0;
-}
