@@ -47,8 +47,7 @@ chmod 0644 "$UNIT_FILE"
 
 if command -v systemctl >/dev/null 2>&1; then
 	systemctl daemon-reload
-	systemctl enable "$SERVICE_NAME"
-	echo "<OK> Installed and enabled $SERVICE_NAME"
+	echo "<OK> Installed $SERVICE_NAME"
 else
-	echo "<WARNING> systemctl is not available. Unit file was written, but not enabled."
+	echo "<WARNING> systemctl is not available. Unit file was written but not loaded."
 fi

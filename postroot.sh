@@ -145,6 +145,7 @@ if command -v systemctl >/dev/null 2>&1; then
 			echo "<INFO> Stopping MQTT bridge because vzLogger mode is disabled."
 		fi
 		systemctl stop "$BRIDGE_SERVICE" >/dev/null 2>&1 || true
+		systemctl disable "$BRIDGE_SERVICE" >/dev/null 2>&1 || true
 		systemctl reset-failed "$BRIDGE_SERVICE" >/dev/null 2>&1 || true
 	fi
 else

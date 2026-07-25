@@ -81,7 +81,7 @@ Die APIs schalten ausschließlich ihre eigenen Parameter frei. `null` besitzt ke
 
 ### Anwenden
 
-Mit **Speichern und anwenden** wird die Konfiguration erzeugt und geprüft. Das Plugin richtet fuer den `vzlogger`-Dienst einen systemd-Drop-in ein, der vzLogger direkt mit `/opt/loxberry/config/plugins/smartmeter-v2/vzlogger.conf` startet. Danach wird der Dienst fuer den Start nach einem LoxBerry-Neustart aktiviert und neu gestartet. Wenn **Bridge-Service aktiv** eingeschaltet ist, wird zusätzlich die MQTT-Bridge als systemd-Service installiert und gestartet; andernfalls wird nur die Bridge gestoppt.
+Mit **Speichern und anwenden** wird die Konfiguration erzeugt und geprüft. Das Plugin richtet fuer den `vzlogger`-Dienst einen systemd-Drop-in ein, der vzLogger direkt mit `/opt/loxberry/config/plugins/smartmeter-v2/vzlogger.conf` startet. Danach wird der Dienst fuer den Start nach einem LoxBerry-Neustart aktiviert und neu gestartet. Wenn **Bridge-Service aktiv** eingeschaltet ist, wird zusätzlich die MQTT-Bridge als systemd-Service installiert, aktiviert und gestartet; andernfalls wird die Bridge gestoppt und ihr Autostart beim Neustart deaktiviert.
 
 Die erzeugte `vzlogger.conf` ordnet Sektionen und Parameter entsprechend der vzLogger-Dokumentation an. Die Root-Parameter beginnen mit `retry`, `verbosity` und `log`; anschließend folgen `local`, `mqtt` und `meters` mit jeweils fester Parameterreihenfolge.
 

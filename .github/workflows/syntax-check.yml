@@ -95,6 +95,7 @@ jobs:
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_custom_channels.pl
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_config_validation.pl
           perl -I .github/ci/perl-lib -I bin tests/test_vzlogger_bridge.pl
+          perl tests/test_bridge_service_lifecycle.pl
           perl -I .github/ci/perl-lib -I bin tests/test_legacy_runtime.pl
 
       - name: Test test-device file normalization

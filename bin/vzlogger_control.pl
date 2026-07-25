@@ -133,7 +133,7 @@ if ($action eq "stop-bridge") {
 }
 
 if ($action eq "disable-vzlogger") {
-	my $rc = stop_bridge();
+	my $rc = stop_and_disable_bridge();
 	my $vzlogger_rc = stop_vzlogger(1);
 	$rc = $vzlogger_rc if ($rc == 0 && $vzlogger_rc != 0);
 	my $override_rc = install_vzlogger_service_override("remove");
@@ -183,7 +183,7 @@ sub apply_generated_configuration
 	my $rc = generate_validate_and_promote();
 	return $rc if ($rc != 0);
 	if (vzlogger_mode_enabled() && generated_meter_count() == 0) {
-		my $stop_rc = stop_bridge();
+		my $stop_rc = stop_and_disable_bridge();
 		my $vzlogger_rc = stop_vzlogger(1);
 		$stop_rc = $vzlogger_rc if ($stop_rc == 0 && $vzlogger_rc != 0);
 		my $override_rc = install_vzlogger_service_override("remove");
@@ -264,7 +264,7 @@ sub current_vzlogger_configuration_is_valid
 sub activate_current_vzlogger_configuration
 {
 	if (!vzlogger_mode_enabled()) {
-		my $rc = stop_bridge();
+		my $rc = stop_and_disable_bridge();
 		my $vzlogger_rc = stop_vzlogger(1);
 		$rc = $vzlogger_rc if ($rc == 0 && $vzlogger_rc != 0);
 		my $override_rc = install_vzlogger_service_override("remove");
@@ -277,7 +277,7 @@ sub activate_current_vzlogger_configuration
 	if (bridge_enabled()) {
 		$rc = restart_bridge();
 	} else {
-		$rc = stop_bridge();
+		$rc = stop_and_disable_bridge();
 		print "MQTT bridge is disabled. Stopped bridge and left vzLogger running.\n";
 	}
 	return $rc;
@@ -406,6 +406,8 @@ sub start_bridge
 	return $install_rc if ($install_rc != 0);
 
 	if (service_installed($bridge_service)) {
+		my $enable_rc = set_bridge_autostart(1);
+		return $enable_rc if ($enable_rc != 0);
 		my $rc = run_privileged("start $bridge_service", systemctl_command(), "start", $bridge_service);
 		print "Started $bridge_service service.\n" if ($rc == 0);
 		$rc = 1 if ($rc == 0 && !wait_for_service_state($bridge_service, 1));
@@ -433,6 +435,8 @@ sub restart_bridge
 	return $install_rc if ($install_rc != 0);
 
 	if (service_installed($bridge_service)) {
+		my $enable_rc = set_bridge_autostart(1);
+		return $enable_rc if ($enable_rc != 0);
 		my $rc = run_privileged("restart $bridge_service", systemctl_command(), "restart", $bridge_service);
 		print "Restarted $bridge_service service.\n" if ($rc == 0);
 		$rc = 1 if ($rc == 0 && !wait_for_service_state($bridge_service, 1));
@@ -455,6 +459,31 @@ sub stop_bridge
 	}
 
 	return run_perl("$bindir/vzlogger_mqtt_bridge.pl", "--stop");
+}
+
+sub stop_and_disable_bridge
+{
+	my $rc = stop_bridge();
+	my $disable_rc = set_bridge_autostart(0);
+	$rc = $disable_rc if ($rc == 0 && $disable_rc != 0);
+	return $rc;
+}
+
+sub set_bridge_autostart
+{
+	my ($enabled) = @_;
+	return 0 if (!service_installed($bridge_service));
+	return message_exit("systemctl is not available. Could not update $bridge_service autostart.", 1)
+		if (!command_exists("systemctl"));
+	my $action = $enabled ? "enable" : "disable";
+	my $rc = run_privileged(
+		"$action $bridge_service autostart",
+		systemctl_command(),
+		$action,
+		$bridge_service,
+	);
+	print ucfirst($action) . "d $bridge_service autostart.\n" if ($rc == 0);
+	return $rc;
 }
 
 sub restart_vzlogger
