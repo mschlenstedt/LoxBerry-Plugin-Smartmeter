@@ -502,6 +502,361 @@ elsif ( $protocol eq "sagemcomt211d0f" ) {
 	&PROTO_GENERICD0("FLANDERS");
 }
 
+elsif ( $protocol eq "apatornorax3dsml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "5" if !$timeout;
+	our $delay = "1" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "apatorpicusehz060sml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "5" if !$timeout;
+	our $delay = "0" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "bauerbsmqd36ad0" ) {
+
+	### Defaults
+	our $baudrate = 300 if !$baudrate;
+	our $startbaudrate = 300 if !$startbaudrate;
+	our $databits = 7 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "even" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "30" if !$timeout;
+	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICD0;
+}
+
+elsif ( $protocol eq "dzgdvs7410sml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "60" if !$timeout;
+	our $delay = "2" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "dzgdvs7420sml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "30" if !$timeout;
+	our $delay = "2" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "easymeteresy5q3dad0" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 7 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "even" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "5" if !$timeout;
+	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICD0;
+}
+
+elsif ( $protocol eq "easymeterq3asml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "5" if !$timeout;
+	our $delay = "1" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "efrsgmc2sml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "5" if !$timeout;
+	our $delay = "1" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "efrsgmc4sml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "5" if !$timeout;
+	our $delay = "1" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "efrsgmddsml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "30" if !$timeout;
+	our $delay = "1" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "elsteras3000d0" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 300 if !$startbaudrate;
+	our $databits = 7 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "even" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "13" if !$timeout;
+	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICD0;
+}
+
+elsif ( $protocol eq "hagerehz363sml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "5" if !$timeout;
+	our $delay = "1" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "holleydtz541sml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "5" if !$timeout;
+	our $delay = "1" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "landisgyre220sml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "5" if !$timeout;
+	our $delay = "1" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "logarexlk13bdd0" ) {
+
+	### Defaults
+	our $baudrate = 4800 if !$baudrate;
+	our $startbaudrate = 300 if !$startbaudrate;
+	our $databits = 7 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "even" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "5" if !$timeout;
+	our $delay = "2" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICD0;
+}
+
+elsif ( $protocol eq "logarexlk13be8030d0" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 7 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "even" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "4" if !$timeout;
+	our $delay = "1" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICD0;
+}
+
+elsif ( $protocol eq "sagemcomsmartybzsml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "5" if !$timeout;
+	our $delay = "1" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
+elsif ( $protocol eq "sagemcomt210d0" ) {
+
+	### Defaults
+	our $baudrate = 115200 if !$baudrate;
+	our $startbaudrate = 115200 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "20" if !$timeout;
+	our $delay = "5" if !$delay;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICD0;
+}
+
+elsif ( $protocol eq "zpagh305sml" ) {
+
+	### Defaults
+	our $baudrate = 9600 if !$baudrate;
+	our $startbaudrate = 9600 if !$startbaudrate;
+	our $databits = 8 if !$databits;
+	our $stopbits = 1 if !$stopbits;
+	our $parity = "none" if !$parity;
+	our $handshake = "none" if !$handshake;
+	our $timeout = "5" if !$timeout;
+	our $delay = "1" if !$delay;
+	our $crc = "CRC16_X_25" if !$crc;
+	our $preinitcommand = "";
+	our $precommand = "";
+	our $postcommand = "";
+
+	&PROTO_GENERICSML;
+}
+
 else {
 	$verbose =1;
 	&LOG ("No known protocol specified. Try --help to get an overview of possible options.", "FAIL");
@@ -977,21 +1332,21 @@ sub PARSE_DUMP
 		($readingdelT9) = $dumpbuffer =~ /[\n|\r|:]2\.8\.9[\*255|\*00]*\(([\d\.]+)/;
 
 		### Energy consumption: Power  (OBIS mixture - no standard?)
-		($power1) = $dumpbuffer =~ /[\n|\r|:]1\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
-		($power2) = $dumpbuffer =~ /[\n|\r|:]2\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
-		($power3) = $dumpbuffer =~ /[\n|\r|:]15\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
-		($power4) = $dumpbuffer =~ /[\n|\r|:]16\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
-		($power5) = $dumpbuffer =~ /[\n|\r|:]21\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
-		($power6) = $dumpbuffer =~ /[\n|\r|:]41\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
-		($power7) = $dumpbuffer =~ /[\n|\r|:]61\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($power1) = $dumpbuffer =~ /[\n|\r|:]1\.7(?:\.0)?[\*255|\*00]*\(([-\d\.]+)/;
+		($power2) = $dumpbuffer =~ /[\n|\r|:]2\.7(?:\.0)?[\*255|\*00]*\(([-\d\.]+)/;
+		($power3) = $dumpbuffer =~ /[\n|\r|:]15\.7(?:\.0)?[\*255|\*00]*\(([-\d\.]+)/;
+		($power4) = $dumpbuffer =~ /[\n|\r|:]16\.7(?:\.0)?[\*255|\*00]*\(([-\d\.]+)/;
+		($power5) = $dumpbuffer =~ /[\n|\r|:]21\.7(?:\.0)?[\*255|\*00]*\(([-\d\.]+)/;
+		($power6) = $dumpbuffer =~ /[\n|\r|:]41\.7(?:\.0)?[\*255|\*00]*\(([-\d\.]+)/;
+		($power7) = $dumpbuffer =~ /[\n|\r|:]61\.7(?:\.0)?[\*255|\*00]*\(([-\d\.]+)/;
 
 		### Instantaneous voltage
-		($volt1) = $dumpbuffer =~ /[\n|\r|:]32\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
-		($volt2) = $dumpbuffer =~ /[\n|\r|:]52\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
-		($volt3) = $dumpbuffer =~ /[\n|\r|:]72\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
-		($current1) = $dumpbuffer =~ /[\n|\r|:]31\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
-		($current2) = $dumpbuffer =~ /[\n|\r|:]51\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
-		($current3) = $dumpbuffer =~ /[\n|\r|:]71\.7\.0[\*255|\*00]*\(([-\d\.]+)/;
+		($volt1) = $dumpbuffer =~ /[\n|\r|:]32\.7(?:\.0)?[\*255|\*00]*\(([-\d\.]+)/;
+		($volt2) = $dumpbuffer =~ /[\n|\r|:]52\.7(?:\.0)?[\*255|\*00]*\(([-\d\.]+)/;
+		($volt3) = $dumpbuffer =~ /[\n|\r|:]72\.7(?:\.0)?[\*255|\*00]*\(([-\d\.]+)/;
+		($current1) = $dumpbuffer =~ /[\n|\r|:]31\.7(?:\.0)?[\*255|\*00]*\(([-\d\.]+)/;
+		($current2) = $dumpbuffer =~ /[\n|\r|:]51\.7(?:\.0)?[\*255|\*00]*\(([-\d\.]+)/;
+		($current3) = $dumpbuffer =~ /[\n|\r|:]71\.7(?:\.0)?[\*255|\*00]*\(([-\d\.]+)/;
 		
 		### Equipment Data
 		($eid) = $dumpbuffer =~ /[\n|\r|:]96\.1\.1[\*255|\*00]*\(([-\d\.]+)/;
