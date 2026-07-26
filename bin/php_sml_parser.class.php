@@ -5,7 +5,7 @@ class SML_PARSER {
 		'0100000000FF' => array('1-0:0.0.0*255','Seriennummer'),
 		'0100200700FF' => array('1-0:32.7.0*255','Spannung Phase 1'),
 		'0100340700FF' => array('1-0:52.7.0*255','Spannung Phase 2'),
-		'0100480700FF' => array('1-0:32.7.0*255','Spannung Phase 3'),
+		'0100480700FF' => array('1-0:72.7.0*255','Spannung Phase 3'),
 		'01001F0700FF' => array('1-0:31.7.0*255','Strom Phase 1'),
 		'0100330700FF' => array('1-0:51.7.0*255','Strom Phase 2'),
 		'0100470700FF' => array('1-0:71.7.0*255','Strom Phase 3'),
