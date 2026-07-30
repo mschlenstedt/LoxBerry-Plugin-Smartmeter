@@ -97,13 +97,11 @@ opendir(DIR,"/var/run/shm/$psubfolder");
 	@files = readdir(DIR);
 close DIR;
 # Read all devices
-my @devices = split(/\n/,`ls /dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_*`);
+my @devices = split(/\n/,`ls /dev/serial/smartmeter/ 2>/dev/null`);
 foreach (@devices)
 {
 	my $device 	= $_;
 	$device 	=~ s/([\n])//g;
-	$device		=~ s%/dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_%%g;
-	$device		=~ s%-if00-port0%%g;
 	push (@heads, $device);
 }
 
