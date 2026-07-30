@@ -126,7 +126,7 @@ if ( $protocol eq "genericd0" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "120" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -144,7 +144,7 @@ elsif ( $protocol eq "genericsml" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "120" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -163,7 +163,7 @@ elsif ( $protocol eq "emhed300sml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "20" if !$timeout;
-	our $delay = "1" if !$delay;
+	our $delay = "1" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -182,7 +182,7 @@ elsif ( $protocol eq "emhehzksml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "30" if !$timeout;
-	our $delay = "30" if !$delay;
+	our $delay = "30" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -201,7 +201,7 @@ elsif ( $protocol eq "iskra173d0" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -219,7 +219,7 @@ elsif ( $protocol eq "iskra173sml" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -238,7 +238,7 @@ elsif ( $protocol eq "iskra174d0" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -256,7 +256,7 @@ elsif ( $protocol eq "iskra174sml" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -275,7 +275,7 @@ elsif ( $protocol eq "iskra175d0" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "60" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -293,7 +293,7 @@ elsif ( $protocol eq "iskra175sml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "60" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -312,7 +312,7 @@ elsif ( $protocol eq "iskra382d0" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -330,7 +330,7 @@ elsif ( $protocol eq "iskra681sml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "60" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -349,7 +349,7 @@ elsif ( $protocol eq "iskra691sml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "5" if !$timeout;
-	our $delay = "1" if !$delay;
+	our $delay = "1" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -368,7 +368,7 @@ elsif ( $protocol eq "itronace3000type260d0" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
-	our $delay = "4" if !$delay;
+	our $delay = "4" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -386,7 +386,7 @@ elsif ( $protocol eq "landisgyre320d0" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "20" if !$timeout;
-	our $delay = "4" if !$delay;
+	our $delay = "4" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -404,7 +404,7 @@ elsif ( $protocol eq "landisgyre350d0" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "20" if !$timeout;
-	our $delay = "4" if !$delay;
+	our $delay = "4" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -422,7 +422,7 @@ elsif ( $protocol eq "pafal20ec3grd0" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "5" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -440,7 +440,7 @@ elsif ( $protocol eq "siemenstd3511d0" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "303531";
 	our $postcommand = "";
@@ -458,7 +458,7 @@ elsif ( $protocol eq "landisgyret550d0" || $protocol eq "siemensuh50do" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
-	our $delay = "1" if !$delay;
+	our $delay = "1" if !defined $delay;
 	our $preinitcommand = "0000000000000000000000000000000000000000";
 	our $precommand = "";
 	our $postcommand = "";
@@ -476,7 +476,7 @@ elsif ( $protocol eq "sagemcomt211d0" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -494,7 +494,7 @@ elsif ( $protocol eq "sagemcomt211d0f" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "10" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -512,7 +512,7 @@ elsif ( $protocol eq "apatornorax3dsml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "5" if !$timeout;
-	our $delay = "1" if !$delay;
+	our $delay = "1" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -531,7 +531,7 @@ elsif ( $protocol eq "apatorpicusehz060sml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "5" if !$timeout;
-	our $delay = "0" if !$delay;
+	our $delay = "0" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -550,7 +550,7 @@ elsif ( $protocol eq "bauerbsmqd36ad0" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "30" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -568,7 +568,7 @@ elsif ( $protocol eq "dzgdvs7410sml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "60" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -587,7 +587,7 @@ elsif ( $protocol eq "dzgdvs7420sml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "30" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -606,7 +606,7 @@ elsif ( $protocol eq "easymeteresy5q3dad0" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "5" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -624,7 +624,7 @@ elsif ( $protocol eq "easymeterq3asml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "5" if !$timeout;
-	our $delay = "1" if !$delay;
+	our $delay = "1" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -643,7 +643,7 @@ elsif ( $protocol eq "efrsgmc2sml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "5" if !$timeout;
-	our $delay = "1" if !$delay;
+	our $delay = "1" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -662,7 +662,7 @@ elsif ( $protocol eq "efrsgmc4sml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "5" if !$timeout;
-	our $delay = "1" if !$delay;
+	our $delay = "1" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -681,7 +681,7 @@ elsif ( $protocol eq "efrsgmddsml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "30" if !$timeout;
-	our $delay = "1" if !$delay;
+	our $delay = "1" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -700,7 +700,7 @@ elsif ( $protocol eq "elsteras3000d0" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "13" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -718,7 +718,7 @@ elsif ( $protocol eq "hagerehz363sml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "5" if !$timeout;
-	our $delay = "1" if !$delay;
+	our $delay = "1" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -737,7 +737,7 @@ elsif ( $protocol eq "holleydtz541sml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "5" if !$timeout;
-	our $delay = "1" if !$delay;
+	our $delay = "1" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -756,7 +756,7 @@ elsif ( $protocol eq "landisgyre220sml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "5" if !$timeout;
-	our $delay = "1" if !$delay;
+	our $delay = "1" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -775,7 +775,7 @@ elsif ( $protocol eq "logarexlk13bdd0" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "5" if !$timeout;
-	our $delay = "2" if !$delay;
+	our $delay = "2" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -793,7 +793,7 @@ elsif ( $protocol eq "logarexlk13be8030d0" ) {
 	our $parity = "even" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "4" if !$timeout;
-	our $delay = "1" if !$delay;
+	our $delay = "1" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -811,7 +811,7 @@ elsif ( $protocol eq "sagemcomsmartybzsml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "5" if !$timeout;
-	our $delay = "1" if !$delay;
+	our $delay = "1" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
@@ -830,7 +830,7 @@ elsif ( $protocol eq "sagemcomt210d0" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "20" if !$timeout;
-	our $delay = "5" if !$delay;
+	our $delay = "5" if !defined $delay;
 	our $preinitcommand = "";
 	our $precommand = "";
 	our $postcommand = "";
@@ -848,7 +848,7 @@ elsif ( $protocol eq "zpagh305sml" ) {
 	our $parity = "none" if !$parity;
 	our $handshake = "none" if !$handshake;
 	our $timeout = "5" if !$timeout;
-	our $delay = "1" if !$delay;
+	our $delay = "1" if !defined $delay;
 	our $crc = "CRC16_X_25" if !$crc;
 	our $preinitcommand = "";
 	our $precommand = "";
